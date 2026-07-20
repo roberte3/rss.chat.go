@@ -1,4 +1,5 @@
 *.db
 *.db-wal
 *.db-shm
-/archive/* 
+/archive/*
+/rss-chat 
