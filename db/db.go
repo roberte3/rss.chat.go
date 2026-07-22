@@ -42,8 +42,55 @@ func CreateTables(db *sql.DB) error {
 		CREATE TABLE IF NOT EXISTS users (
 			screenname TEXT PRIMARY KEY,
 			emailAddress TEXT,
-			whenCreated DATETIME DEFAULT CURRENT_TIMESTAMP
+			emailSecret TEXT,
+			imageUrl TEXT,
+			prefs TEXT,
+			ctHits INTEGER NOT NULL DEFAULT 0,
+			ctHitsToday INTEGER NOT NULL DEFAULT 0,
+			whenLastHit DATETIME,
+			whenCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
+			whenUpdated DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+		CREATE INDEX IF NOT EXISTS idx_users_emailAddress ON users (emailAddress);
+		CREATE TRIGGER IF NOT EXISTS trg_users_whenUpdated
+			AFTER UPDATE ON users FOR EACH ROW
+			BEGIN
+				UPDATE users SET whenUpdated = CURRENT_TIMESTAMP WHERE screenname = NEW.screenname;
+			END;
+
+		CREATE TABLE IF NOT EXISTS items (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			feedUrl TEXT,
+			author TEXT,
+			inReplyTo INTEGER,
+			title TEXT,
+			link TEXT,
+			description TEXT,
+			pubDate DATETIME,
+			enclosureUrl TEXT,
+			enclosureType TEXT,
+			enclosureLength INTEGER,
+			whenCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
+			whenUpdated DATETIME DEFAULT CURRENT_TIMESTAMP,
+			markdowntext TEXT,
+			outlineJsontext TEXT,
+			flDeleted INTEGER NOT NULL DEFAULT 0
+		);
+		CREATE INDEX IF NOT EXISTS idx_items_feedUrl ON items (feedUrl);
+		CREATE INDEX IF NOT EXISTS idx_items_author ON items (author);
+		CREATE TRIGGER IF NOT EXISTS trg_items_whenUpdated
+			AFTER UPDATE ON items FOR EACH ROW
+			BEGIN
+				UPDATE items SET whenUpdated = CURRENT_TIMESTAMP WHERE id = NEW.id;
+			END;
+
+		CREATE TABLE IF NOT EXISTS likes (
+			screenname TEXT NOT NULL,
+			itemId INTEGER NOT NULL,
+			whenCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (screenname, itemId)
+		);
+		CREATE INDEX IF NOT EXISTS idx_likes_itemId ON likes (itemId);
 	`)
 	if err != nil {
 		return fmt.Errorf("create tables: %w", err)

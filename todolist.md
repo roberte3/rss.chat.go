@@ -18,19 +18,25 @@ Current `db/db.go` only creates a `users` table (`screenname`, `emailAddress`,
 `whenCreated`). The archive's MySQL schema (`server/docs/install.md`) has three tables
 with more columns. Port to SQLite, not MySQL:
 
-- [ ] Extend `users`: `emailSecret`, `imageUrl`, `prefs` (JSON text), `ctHits`,
+- [x] Extend `users`: `emailSecret`, `imageUrl`, `prefs` (JSON text), `ctHits`,
       `ctHitsToday`, `whenLastHit`, `whenUpdated`. Keep `screenname` as primary key.
-- [ ] Add `items` table: `id` (autoincrement), `feedUrl`, `author`, `inReplyTo`,
+      (Added a `trg_users_whenUpdated` trigger since SQLite has no `ON UPDATE
+      CURRENT_TIMESTAMP` column clause like MySQL.)
+- [x] Add `items` table: `id` (autoincrement), `feedUrl`, `author`, `inReplyTo`,
       `title`, `link`, `description`, `pubDate`, `enclosureUrl`, `enclosureType`,
       `enclosureLength`, `whenCreated`, `whenUpdated`, `markdowntext`,
-      `outlineJsontext`, `flDeleted`. Index `feedUrl` and `author`.
-- [ ] Add `likes` table: `screenname`, `itemId`, `whenCreated`, primary key
+      `outlineJsontext`, `flDeleted`. Index `feedUrl` and `author`. (Same
+      `whenUpdated` trigger pattern as `users`.)
+- [x] Add `likes` table: `screenname`, `itemId`, `whenCreated`, primary key
       `(screenname, itemId)`, index on `itemId`.
-- [ ] Confirm `modernc.org/sqlite` supports `json_extract()` — the JS code leans on
+- [x] Confirm `modernc.org/sqlite` supports `json_extract()` — the JS code leans on
       MySQL's `prefs ->> '$.myFeedTitle'` all over the read queries; the SQLite
-      equivalent is `json_extract(prefs, '$.myFeedTitle')`.
-- [ ] Replace MySQL's `insert ... on duplicate` / `replace into likes` idiom with
-      SQLite's `INSERT ... ON CONFLICT DO ...` or `INSERT OR REPLACE`.
+      equivalent is `json_extract(prefs, '$.myFeedTitle')`. Verified working against
+      a live DB.
+- [x] Replace MySQL's `insert ... on duplicate` / `replace into likes` idiom with
+      SQLite's `INSERT ... ON CONFLICT DO ...` or `INSERT OR REPLACE`. Verified
+      `INSERT ... ON CONFLICT (screenname, itemId) DO UPDATE ...` works for the
+      likes upsert.
 
 ## Phase 1 — data layer (`db` package)
 
@@ -179,3 +185,13 @@ piece. Reference: `api.md`'s "How authentication works" section.
   wanted.
 - Full `daveappserver` feature parity (admin tools, etc.) beyond what `rssnetwork.js`
   actually calls into.
+
+
+## NOTES: 
+Key things worth knowing about the plan:
+- rssnetwork.js itself is thin glue around private npm packages not included in the archive (daveappserver, daverss, davesql, daves3, opml, turndown, autolinker) — each needs a Go equivalent, so the todo list treats those as their own phases, not just a straight port of the one file.
+- Phase 0 flags that your current SQLite schema (db/db.go) only has a bare users table, while the archive's MySQL schema has users/items/likes with a lot more columns — that needs porting first, including translating MySQL's ->> JSON operator to SQLite's json_extract.
+- Phase 5 (auth/magic-link email) is the trickiest piece since daveappserver isn't in the archive at all — I derived its contract from api.md and a worknotes entry about a real bug (email-scanner pre-fetch breaking naive secret regeneration), not from source code.
+- The end has an explicit "out of scope for v1" section (extras-list OPML, rssCloud ping, full daveappserver admin parity) so it doesn't read as mandatory.
+
+Note: I left main.go alone since it looked like you were mid-edit there (currently has a stray mux.HandlerFunc("") causing a syntax error at line 66) — let me know if you want that cleaned up.
