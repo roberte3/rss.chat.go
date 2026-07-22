@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 
+	"github.com/coder/websocket"
 	"rss.chat.go/db"
 	"rss.chat.go/setup"
 )
@@ -58,12 +59,20 @@ func main() {
 func runHttpSvr() {
 	mux := http.NewServeMux()
 
+	//Health Handler
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusOK)
 		fmt.Fprint(w, "OK")
 	})
 
-	mux.HandlerFunc("")
+	//Websocket
+	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
+		c, err := websocket.Accept(w, r, nil)
+		if err != nil {
+			panic(err)
+		}
+		defer c.CloseNow()
+	})
 
 	fmt.Println("Server is running on :8081...")
 	if err := http.ListenAndServe(":8081", mux); err != nil {
