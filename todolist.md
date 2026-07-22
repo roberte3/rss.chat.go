@@ -44,20 +44,37 @@ Direct port of the `//sql code` section of `rssnetwork.js` (lines ~164–550) to
 `database/sql` calls — no need to replicate `davesql`'s string-building API, just use
 parameterized queries.
 
-- [ ] `convertUser` / `convertItem` row-scanning helpers → Go structs (`User`, `Item`)
+- [x] `convertUser` / `convertItem` row-scanning helpers → Go structs (`User`, `Item`)
       with the same field set as `server/docs/api.md`'s "item record" section.
-- [ ] `GetUserInfoByScreenname`, `GetUserInfoByEmail`, `AddUser`, `UpdateUser`,
-      `GetAllScreennames`.
-- [ ] `AddItem`, `UpdateItem`, `GetItemById`, `GetItemByGuid`, `GetItemAndReplies`,
+      (`db/models.go`)
+- [x] `GetUserInfoByScreenname`, `GetUserInfoByEmail`, `AddUser`, `UpdateUser`,
+      `GetAllScreennames`. (`db/users.go`)
+- [x] `AddItem`, `UpdateItem`, `GetItemById`, `GetItemByGuid`, `GetItemAndReplies`,
       `GetRecentItems`, `GetRecentUserItems` — these all share one large computed-column
       query (ctLikes, flLiked, ctReplies, inReplyToAuthor as subselects); port that
-      query once and reuse it.
-- [ ] `AddToLikesTable`, `RemoveFromLikesTable`, `IsLiked`, `GetLikersList`.
-- [ ] `BumpUserHits` (the ctHits/ctHitsToday/whenLastHit day-rollover logic — see
-      `install.md`'s note on `bumpUserHits`).
-- [ ] `GetMostActiveToday`.
-- [ ] Permalink/guid helpers: `getPermalinkUrl`, `getInReplyToPermalink`,
+      query once and reuse it. (`db/items.go`; note `GetItemById` deliberately uses a
+      separate non-joined query — the JS original doesn't join `users` there, so it
+      returns items without `imageUrl`/`feedTitle`/`feedLink`/`feedDescription`, unlike
+      every other item read. `UpdateItem` takes an `ItemPatch` with pointer fields so a
+      nil field means "leave as is", matching the JS "only set fields the caller
+      provided" dynamic set-clause.)
+- [x] `AddToLikesTable`, `RemoveFromLikesTable`, `IsLiked`, `GetLikersList`.
+      (`db/likes.go`)
+- [x] `BumpUserHits` (the ctHits/ctHitsToday/whenLastHit day-rollover logic — see
+      `install.md`'s note on `bumpUserHits`). (`db/users.go`)
+- [x] `GetMostActiveToday`. (`db/users.go`)
+- [x] Permalink/guid helpers: `getPermalinkUrl`, `getInReplyToPermalink`,
       `getCommentsFeedUrl` — pure string functions, no DB, but item-shaped.
+      (`db/permalink.go`; take `baseURL`/`rssFeedURL` as explicit parameters rather
+      than reading a global config, since Go config loading is Phase 7 — revisit the
+      call sites once that lands.)
+
+All of the above verified end-to-end against a live SQLite DB (user CRUD, hit-bumping
+with day rollover, bare-vs-joined item queries, reply threading, partial updates, the
+deleted-post read guard, and likes upsert/toggle/idempotency).
+
+Note: `DefaultMaxItems = 100` in `db/items.go` stands in for `config.maxRecentItems`/
+`maxFeedItems` until Phase 7 wires up real config.
 
 ## Phase 2 — RSS + OPML generation
 
