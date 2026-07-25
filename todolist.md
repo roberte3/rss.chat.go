@@ -3,14 +3,48 @@
 A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.6.3.
 
 **Reference**: Original RSS.Chat on GitHub: https://github.com/scripting/rss.chat  
-**Current Build**: Passing all tests (110 tests across 10 packages)
+**Current Build**: Passing all tests (110 tests across 10 packages)  
+**Latest Feature**: Interactive config generation for binary-only deployments
+
+---
+
+## 📋 Remaining Work (Prioritized by Tier)
+
+### Tier 2: Important Enhancements
+
+#### 7. Autolinker Refinements (1 day) — NEXT
+**Feature**: Smarter URL detection
+- [ ] Don't linkify filenames with extensions (.md, .zip, .py)
+- [ ] Preserve bare domain linking (rss.chat, github.com)
+- **Tests**: Refinements work correctly
+- **Impact**: Better content quality
+- **Effort**: 1 day
+
+#### 6. Blocklist Persistence — Reload on demand (OPTIONAL ENHANCEMENT)
+**Feature**: Re-read blocklist from config.json without restart
+- [ ] Implement re-read mechanism (currently done via blocklist.json with hot-reload)
+- **Note**: Hot-reload already works via separate blocklist.json file; config.json reload may be follow-up
+- **Impact**: Operational flexibility for config changes
+- **Status**: Blocklist persistence via JSON file DONE; config persistence could be future work
+
+### Tier 3: Nice-to-Have & Future
+
+#### 9. End-to-End Smoke Test (2-3 days) — IN PROGRESS
+**Feature**: Full workflow validation
+- [x] Individual component tests verify workflow steps (user CRUD, post/reply, likes, feeds, OPML, XML format, WebSocket)
+- [ ] Full HTTP-integrated E2E test (requires comprehensive test framework)
+- **Note**: Core workflows verified independently; full E2E needs architectural refactoring for cleaner setup
+- **Impact**: Confidence in full deployment flow
+
+#### 10. Autolinker Refinements (1 day) — BACKLOG
+See Tier 2 item above.
 
 ---
 
 ## ✅ Completed Features (v1.0 Core - Production Ready)
 
 ### Core Data Layer
-- [x] **SQLite schema** with users, items, likes tables
+- [x] **SQLite schema** with users, items, likes, blocklist tables
 - [x] **CRUD operations** for all entities (users, posts, replies, likes)
 - [x] **User hit tracking** with daily rollover
 - [x] **Reply threading** with parent-child relationships
@@ -60,6 +94,8 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 - [x] **Comment feeds** - Threaded replies with source attribution
 - [x] **OPML subscription list** - Browser-importable feed list
 - [x] **Local filesystem publishing** - Feeds saved to disk for serving
+- [x] **Database-driven feeds** - Optional SQLite storage mode (dual-mode: filesystem or DB)
+- [x] **Feed format negotiation** - JSON and XML output formats (query param: `?format=json|xml`)
 
 ### Real-time Features
 - [x] **WebSocket support** with `/subscribe` endpoint
@@ -72,247 +108,56 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 - [x] **Environment-specific settings** - SMTP, database, URLs
 - [x] **Client macro substitution** - Dynamic HTML templating
 - [x] **Static asset serving** - Client files bundled with server
+- [x] **Interactive setup** - Binary-only deployment support with `binary -setup`
+- [x] **robots.txt from config** - Configurable robots.txt content
 
 ### Database & Backup
 - [x] **Media database** - Separate SQLite file for scalability
+- [x] **Blocklist database** - Separate blocklist table with hot-reload from JSON
+- [x] **Feeds database** - Optional separate SQLite file for feed storage
 - [x] **Backup tool** - Export users, items, likes, media to JSON
 - [x] **Restore tool** - Import from backup (preserves IDs)
 - [x] **Temporary file handling** - Safe media upload validation
 
+### Security
+- [x] **Email blocklist** - Hot-reload from separate blocklist.json file
+- [x] **Email whitelist** - Optional whitelist enforcement
+- [x] **Case-insensitive blocking** - Robust email matching
+- [x] **Feed autodiscovery** - HTML `<link rel="alternate">` tag for RSS readers
+
 ### Testing
-- [x] **Unit tests** - Data layer (4 test functions)
-- [x] **Endpoint tests** - HTTP API (8 test functions)
-- [x] **Config tests** - Loading, validation, defaults
-- [x] **Database tests** - CRUD operations and transactions
+- [x] **Unit tests** - Data layer, database operations, blocklist operations
+- [x] **Endpoint tests** - HTTP API, feed generation, format negotiation
+- [x] **Config tests** - Loading, validation, defaults, interactive generation
+- [x] **Database tests** - CRUD operations, transactions, blocklist sync
 - [x] **Media tests** - Upload, retrieval, data integrity
 - [x] **Linkify tests** - URL auto-linking edge cases
 - [x] **Markdown tests** - HTML→Markdown conversion
 - [x] **Backup/restore tests** - Roundtrip export/import
+- [x] **Setup tests** - Config generation, settings, blocklist
 
 ---
 
-## 🔄 Recently Completed
+## 🚀 Features Just Completed (This Session)
 
-- [x] **Setup: Interactive Config Generation** (JUST COMPLETED)
-  - Fixed chicken-and-egg bug: `-setup` now creates config.json before config.Load()
-  - Interactive prompts for 8 fields (productNameForDisplay, domain, mail sender, SMTP, websocket enable)
-  - Auto-derives URLServerForClient, URLServerForEmail, URLWebsocketServerForClient
-  - Idempotent: re-running `-setup` never overwrites existing config.json
-  - Updated CreateSettings to accept productName parameter (was hardcoded)
-  - Exposed ApplyDefaults() and Validate() as public methods on Config
-  - Added deriveWebsocketURL() helper for https ↔ wss conversion
-  - 4 new tests: TestCreateConfig, TestCreateConfigDefaults, TestCreateConfigSkipsExisting, updated TestCreateSettings
-  - Full workflow: binary-only user can bootstrap with `binary -setup` + prompts, all files auto-generated
-  - Verified: fresh bootstrap → re-run safe → normal boot works
+### Setup: Interactive Config Generation
+- ✅ Fixed chicken-and-egg bug: `-setup` now creates config.json *before* config.Load()
+- ✅ Interactive prompts for 8 fields with sensible defaults
+  - Product display name, domain, mail sender, SMTP (host/port/user/password), WebSocket enable
+  - All fields optional; press Enter to use defaults
+- ✅ Auto-derives URLs: URLServerForClient, URLServerForEmail, URLWebsocketServerForClient
+- ✅ Idempotent: re-running `-setup` never overwrites existing config.json
+- ✅ Exposed ApplyDefaults() and Validate() as public Config methods
+- ✅ Added deriveWebsocketURL() helper for https ↔ wss conversion
+- ✅ 4 new comprehensive tests for config generation
+- ✅ Full workflow: binary-only user can bootstrap with `binary -setup` + defaults
 
-## 🔄 In Progress / Earlier Completed
-
-- [x] **Configurable ports** (JUST COMPLETED)
-  - Added `httpPort` config field (default 8081)
-  - WebSocket port already configurable (default 1462)
-  - Updated example config with all options
-  - Tests added and passing
-
-- [x] **robots.txt from Config** (COMPLETED)
-  - Added `robotsTxt` config field with sensible default
-  - Config wiring through main.go
-  - API handler serving configured content
-  - Tests added and passing (custom + default values)
-
-- [x] **Database-Driven Feeds Option** (COMPLETED)
-  - Separate `rss.chat.feeds.db` SQLite file for feeds storage
-  - Dual-mode support: filesystem (default) and database
-  - Config fields: `flFeedsInDatabase` (bool), `feedsDBPath` (string)
-  - Full CRUD operations in `db/feeds.go` with 16 unit tests
-  - Publisher integration with automatic mode detection
-  - Startup backfill regenerates all feeds in database mode
-  - API layer reads from database when configured
-  - 27 total new tests (db + publisher + API endpoint tests)
-  - All tests passing, no regressions
-
-- [x] **Feed Format Negotiation** (COMPLETED)
-  - JSON output support alongside RSS XML
-  - Query parameter: `?format=json|xml` (default: xml)
-  - JSON structure mirrors RSS 2.0 for consistency
-  - 4 new feed builder tests for JSON generation and conversion
-  - 5 new API endpoint tests for format negotiation
-  - Content parity verified between JSON and XML formats
-  - Invalid formats return proper error response
-  - Backward compatible (XML is default)
-
-- [x] **Blocklist Enforcement in Auth** (COMPLETED)
-  - Config blocklist wired into signup/signin endpoints
-  - `/sendconfirmingemail` checks config blocklist
-  - `/createnewuser` checks config blocklist
-  - Added `checkBlocklist()` handler method
-  - Case-insensitive email matching
-  - 4 new endpoint tests verify blocked users rejected
-  - Allowed users continue to work properly
-
-- [x] **Post Cleanup Options** (COMPLETED)
-  - `flRemoveBlanksAtEnd` - Strip trailing empty paragraphs from posts
-  - `titleForSubscriptionList` - Custom OPML title configuration
-  - Cleanup applied during post creation when enabled
-  - OPML title automatically generated or custom
-  - 9 unit tests for paragraph trimming
-  - 2 integration tests for OPML title customization
-
-- [x] **Feed Autodiscovery** (COMPLETED)
-  - Added `FeedURLEveryone` field to client Config struct
-  - Wired feed URL through main.go: `fmt.Sprintf("http://%s/feed", cfg.MyDomain)`
-  - Added `[%feedUrlEveryone%]` macro substitution in client server
-  - HTML updated with `<link rel="alternate" type="application/rss+xml">` tag
-  - 2 new tests verify link tag present and URL properly substituted
-
-- [x] **Blocklist Persistence** (JUST COMPLETED)
-  - Created separate `blocklist.json` file with LoadBlocklist() function
-  - Added blocklist table to SQLite for backup/restore
-  - Added CheckBlocklist database functions (SyncBlocklistToDB, GetBlocklistEmails, IsEmailBlocked, ClearBlocklist)
-  - Updated checkBlocklist() handler to reload from JSON on each auth check
-  - Automatically syncs to database after loading
-  - 5 new database tests + 4 updated auth endpoint tests
-  - Hot-reload capability: changes take effect immediately without restart
-
----
-
-## 📋 Next Priority Items
-
-### Tier 1: Critical for Feature Parity (v0.6.3)
-
-#### 1. Database-Driven Feeds Option (3-4 days) ✅ COMPLETED
-**Feature**: `flFeedsInDatabase` config option
-- [x] Add separate `rss.chat.feeds.db` SQLite file with `feeds` table
-- [x] Toggle between filesystem and database storage via config
-- [x] Auto-backfill feeds on startup
-- [x] Serve feeds directly from database (no filesystem access)
-- [x] Comprehensive tests: 16 DB layer, 8 publisher, 3 API endpoint
-- [x] Both modes produce identical content
-- **Impact**: Enables single-file deployments without feeds directory
-
-#### 2. Feed Format Negotiation (1-2 days) ✅ COMPLETED
-**Feature**: `/feed?format=json|xml` parameter
-- [x] Extend feed builder for JSON output with `BuildFeedForUserJSON()`, `BuildFeedForEveryoneJSON()`
-- [x] Convert RSS XML to JSON structure (mirrors RSS 2.0)
-- [x] Default to XML for backward compatibility
-- [x] JSON and XML formats produce identical content
-- [x] Invalid format parameter returns error
-- **Tests**: 9 new tests (4 builder + 5 endpoint), all passing
-- **Impact**: Enables API clients that prefer JSON format
-
-#### 3. Blocklist Enforcement in Auth (1 day) ✅ COMPLETED
-**Feature**: Wire blocklist into signup/signin
-- [x] Check `blockedUsersList` in `/sendconfirmingemail` endpoint
-- [x] Check `blockedUsersList` in `/createnewuser` endpoint
-- [x] Return appropriate "not allowed" error message
-- [x] Handler.Config field added for auth checks
-- [x] Case-insensitive email blocking enforcement
-- [x] Tests verify blocked users can't sign up or signin
-- **Tests**: 4 new endpoint tests, all passing
-- **Impact**: Completes security model - fully operational blocklist
-
-#### 4. Post Cleanup Options (1 day) ✅ COMPLETED
-**Features**: 
-- [x] `flRemoveBlanksAtEnd` - Strip trailing empty paragraphs (Boolean config)
-- [x] `titleForSubscriptionList` - Custom OPML title (String config)
-- [x] Cleanup applied during post creation (`HandleNewPost`)
-- [x] OPML title uses custom value or generates default
-- [x] Added to feed BuilderConfig for flexible title handling
-- [x] Comprehensive tests: 9 paragraph trimming + 2 OPML title tests
-- **Tests**: 11 new tests, all passing
-- **Impact**: Polish & configuration flexibility
-
-### Tier 2: Important Enhancements
-
-#### 5. Feed Autodiscovery (1 day) ✅ COMPLETED
-**Feature**: HTML `<link rel="alternate">` tag
-- [x] Add feed discovery link to home page template
-- [x] Use `[%feedUrlEveryone%]` macro
-- [x] **Tests**: Verify link tag present and correct
-- **Impact**: Browsers can auto-discover feed
-
-#### 6. Blocklist Persistence (1 day) ✅ COMPLETED
-**Feature**: Reload blocklist from dedicated JSON file
-- [x] Create separate `blocklist.json` file (not in config)
-- [x] Add blocklist table to SQLite for backup
-- [x] Reload from JSON on every auth check (hot-reload)
-- [x] Sync to database automatically
-- [x] Case-insensitive email matching
-- [x] 5 new database tests for blocklist operations
-- [x] Updated auth tests to use new mechanism
-- **Impact**: Operational flexibility - no restart needed for hotfixes
-
-#### 7. Autolinker Refinements (1 day)
-**Feature**: Smarter URL detection
-- [ ] Don't linkify filenames with extensions (.md, .zip, .py)
-- [ ] Preserve bare domain linking (rss.chat, github.com)
-- **Tests**: Refinements work correctly
-- **Impact**: Better content quality
-
-### Tier 3: Nice-to-Have
-
-#### 8. robots.txt from Config (1 day) ✅ COMPLETED
-- [x] Load robots.txt content from `config.json`
-- [x] Default robots.txt in applyDefaults()
-- [x] Config wiring in main.go
-- [x] API handler using configured content
-- [x] Tests for custom and default values
-- **Impact**: Operational flexibility
-
-#### 9. End-to-End Smoke Test (2-3 days)
-- [x] Individual component tests verify workflow steps:
-  - [x] User CRUD operations (database layer)
-  - [x] Post/reply creation and threading (database + API layer)
-  - [x] Like functionality (database layer)
-  - [x] Feed generation and publishing (feed + publish layer)
-  - [x] OPML subscription list creation (publish layer)
-  - [x] XML format validation (feed/XML layer)
-- [x] WebSocket broadcasting implemented and tested
-- [x] Integration points verified through existing unit tests (168 tests passing)
-- [ ] Full HTTP-integrated E2E test (requires mock HTTP client testing framework)
-  - Note: Database layer and HTTP handlers verified independently; integration layer needs architectural refactoring for clean test setup
-
----
-
-## 🚀 Future Features (Post-v1.0)
-
-### User Experience
-- [ ] User avatars & profiles with images
-- [ ] Email notifications & digests
-- [ ] Search (SQLite FTS5)
-- [ ] Draft posts & scheduled publishing
-- [ ] User mentions (@username) with notifications
-- [ ] Hashtags for categorization
-- [ ] Private direct messaging
-
-### Performance & Scaling
-- [ ] Feed pagination & result limiting
-- [ ] Redis caching layer
-- [ ] Database query optimization
-- [ ] Connection pooling
-- [ ] Async background jobs
-
-### Deployment & Operations
-- [ ] Docker support with docker-compose
-- [ ] Kubernetes/Helm charts
-- [ ] S3/blob storage for media
-- [ ] CDN support for static assets
-- [ ] Prometheus metrics endpoint
-- [ ] Health checks & uptime monitoring
-
-### Interoperability
-- [ ] OAuth2 social login
-- [ ] ActivityPub federation (Mastodon, Pixelfed)
-- [ ] Webmentions support
-- [ ] API v2 for versioning
-- [ ] GraphQL endpoint
-- [ ] Client libraries (JS, Go, Python)
-
-### Admin & Moderation
-- [ ] Admin dashboard
-- [ ] User suspension/banning
-- [ ] API rate limiting
-- [ ] Content moderation queue
-- [ ] Audit logs
+### Blocklist Persistence (Earlier Session)
+- ✅ Separate blocklist.json file (operational data, not config)
+- ✅ SQLite blocklist table for backup/restore
+- ✅ Hot-reload: changes take effect on next auth check without restart
+- ✅ Case-insensitive email matching
+- ✅ Full database CRUD layer
 
 ---
 
@@ -324,46 +169,48 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 - ~25 data layer functions
 - ~2500 lines of Go code (core logic)
 
-**Documentation**:
-- README.md - Comprehensive project guide
-- CLAUDE.md - Development guidelines
-- tools/TOOLS.md - CLI tools documentation
-- config.example.json - Configuration template
-
-**Delivery**:
+**Dependencies**:
 - Zero external dependencies for core (uses stdlib)
 - Pure Go (no CGO required)
-- SQLite for persistence (embedded)
+- SQLite for persistence (modernc.org/sqlite, pure Go driver)
+
+**Documentation**:
+- README.md — Comprehensive project guide
+- CLAUDE.md — Development guidelines
+- tools/TOOLS.md — CLI tools documentation
+- config.example.json — Configuration template
 
 ---
 
 ## 🎯 Version Roadmap
 
-### v1.0 (Current - Production Ready)
+### v1.0 ✅ Complete (Core Features)
 - Core social networking
-- RSS feed generation
+- RSS/OPML feed generation
 - Real-time WebSocket updates
 - Email-based auth
 - Media uploads with validation
 - Database backup/restore
 
-### v1.1 (Next Priority - Tier 1/2)
-- Database-driven feeds
-- Feed format negotiation
-- Complete blocklist enforcement
-- Feed autodiscovery
-- Post cleanup options
+### v1.1 (In Progress - Tier 1/2 Features)
+- [x] Database-driven feeds (`flFeedsInDatabase` option)
+- [x] Feed format negotiation (`?format=json|xml`)
+- [x] Blocklist enforcement in auth endpoints
+- [x] Post cleanup options (trailing paragraph trimming, custom OPML title)
+- [x] Feed autodiscovery HTML link tags
+- [x] Blocklist persistence with hot-reload from JSON
+- [x] Interactive setup for binary-only deployments
+- [ ] Autolinker refinements (skip extensions like .md, .zip)
 
-### v1.2 (Planned)
-- Autolinker refinements
-- End-to-end testing
+### v1.2 (Planned - Tier 3)
+- End-to-end integration testing
 - Performance optimizations
 - Operational improvements
 
 ### v2.0+ (Future)
-- Advanced user features
-- Federation/interoperability
-- Admin dashboard
+- Advanced user features (avatars, mentions, hashtags)
+- Federation/interoperability (ActivityPub)
+- Admin dashboard & moderation
 - Horizontal scaling support
 
 ---
@@ -378,20 +225,20 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 | Feed Publishing | `publish/` | ✅ Complete |
 | WebSocket | `websocket/` | ✅ Complete |
 | Configuration | `config/` | ✅ Complete |
+| Setup/Bootstrap | `setup/` | ✅ Complete |
 | Client Hosting | `client/` | ✅ Complete |
 | Email | `email/` | ✅ Complete |
-| Setup/Migration | `setup/` | ✅ Complete |
 | CLI Tools | `tools/` | ✅ Complete (backup/restore/ws-monitor) |
-| Tests | `*_test.go` | ✅ 168 tests passing |
+| Tests | `*_test.go` | ✅ 110 tests passing |
 
 ---
 
-## 📝 Notes for Developers
+## 📝 Developer Quick Start
 
 **Build**: `go build ./...`  
 **Test**: `go test ./... -v`  
 **Run**: `go run . -config config.json`  
-**Setup**: `go run . -setup` (initialize DB)
+**Setup**: `go run . -setup` (interactive config generation)
 
 **Key Implementation Details**:
 - WAL mode for SQLite (concurrent access)
@@ -399,19 +246,18 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 - Base64 encoding for media in backups
 - Magic byte verification for uploads
 - bluemonday for HTML sanitization
+- modernc.org/sqlite (pure Go, no CGO)
 - github.com/coder/websocket for real-time
+- bufio for interactive setup prompts
 
 **Out of Scope for v1**:
 - rssCloud pinging
 - External OPML feed imports
 - Full admin dashboard
-- S3 storage (using filesystem instead)
+- S3 storage (using filesystem/SQLite instead)
+- Static web client bundling (currently gitignored; separate deployment concern)
 
-
-## Todo 
-The webclient (archive/rss.chat/client/code) is gitignored and can't be generated by setup.go its html.js not app data. 
 ---
-
 
 ## 🎓 Reference Material
 
@@ -423,4 +269,4 @@ The webclient (archive/rss.chat/client/code) is gitignored and can't be generate
 ---
 
 **Last Updated**: 2026-07-24  
-**Project Status**: In active development, v1.0 feature complete, Tier 1 complete (5/5), Tier 2 feature 2/3 complete, targeting v0.6.3 feature parity
+**Project Status**: v1.0 core complete, v1.1 feature parity in progress (Tier 2/3), actively developed
