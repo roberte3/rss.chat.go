@@ -2,4 +2,14 @@
 *.db-wal
 *.db-shm
 /archive/*
-/rss-chat 
+/rss-chat
+/notes/*
+
+# Build artifacts
+backup
+restore
+tools/backup
+tools/restore
+
+# Runtime configuration (use config.example.json as template)
+config.json
