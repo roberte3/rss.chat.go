@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"os"
 	"rss.chat.go/config"
 	"rss.chat.go/db"
 	"strings"
@@ -218,24 +219,38 @@ func (h *Handler) checkWhitelist(email string) bool {
 
 // checkBlocklist checks if an email is NOT blocked.
 // Returns true if email is allowed, false if blocked.
-// Reloads blocklist from JSON file on each call for hot-reload capability.
+// Uses mtime cache to avoid expensive reloads when file hasn't changed.
 func (h *Handler) checkBlocklist(email string) bool {
 	if h.Config == nil || h.DB == nil {
 		return true // No config, allow all
 	}
 
-	// Reload blocklist from JSON file
-	emails, err := config.LoadBlocklist(h.Config.BlocklistPath)
+	// Check if blocklist file has been modified
+	fi, err := os.Stat(h.Config.BlocklistPath)
 	if err != nil {
-		// Log error but allow access if file can't be read
-		fmt.Printf("Warning: failed to load blocklist: %v\n", err)
+		// File doesn't exist or can't be read, allow all
 		return true
 	}
 
-	// Sync to database for backup
-	if err := db.SyncBlocklistToDB(h.DB, emails); err != nil {
-		fmt.Printf("Warning: failed to sync blocklist to database: %v\n", err)
-		// Continue even if sync fails
+	currentMtime := fi.ModTime().Unix()
+
+	// Only reload if file has been modified since last check
+	if currentMtime != h.blocklistMtime {
+		h.blocklistMtime = currentMtime
+
+		// Reload blocklist from JSON file
+		emails, err := config.LoadBlocklist(h.Config.BlocklistPath)
+		if err != nil {
+			// Log error but allow access if file can't be read
+			fmt.Printf("Warning: failed to load blocklist: %v\n", err)
+			return true
+		}
+
+		// Sync to database for backup
+		if err := db.SyncBlocklistToDB(h.DB, emails); err != nil {
+			fmt.Printf("Warning: failed to sync blocklist to database: %v\n", err)
+			// Continue even if sync fails
+		}
 	}
 
 	// Check if email is blocked

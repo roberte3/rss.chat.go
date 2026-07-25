@@ -23,6 +23,7 @@ type Handler struct {
 	MaxMediaUploadBytes int
 	TempMediaPath string
 	RobotsContent string
+	blocklistMtime int64 // Last modification time of blocklist file
 }
 
 // NewHandler creates a new API handler.
