@@ -66,6 +66,26 @@ func TestLinkifyURLs(t *testing.T) {
 			input:    "Just plain text",
 			expected: "Just plain text",
 		},
+		{
+			name:     "skip .md files",
+			input:    "See http://example.com/readme.md for docs",
+			expected: `See http://example.com/readme.md for docs`,
+		},
+		{
+			name:     "skip .zip files",
+			input:    "Download http://example.com/archive.zip here",
+			expected: `Download http://example.com/archive.zip here`,
+		},
+		{
+			name:     "skip .MD uppercase",
+			input:    "Read http://example.com/README.MD carefully",
+			expected: `Read http://example.com/README.MD carefully`,
+		},
+		{
+			name:     "linkify regular URLs alongside skipped files",
+			input:    "Visit http://example.com and download http://files.com/data.zip",
+			expected: `Visit <a href="http://example.com">http://example.com</a> and download http://files.com/data.zip`,
+		},
 	}
 
 	for _, tc := range tests {

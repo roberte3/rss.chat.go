@@ -139,9 +139,20 @@ func linkifyTextNode(textNode *html.Node) {
 			newNodes = append(newNodes, beforeNode)
 		}
 
-		// Create the link with trimmed URL
-		linkNode := createLinkNode(trimmedURL)
-		newNodes = append(newNodes, linkNode)
+		// Skip linkifying .md and .zip files
+		if strings.HasSuffix(strings.ToLower(trimmedURL), ".md") ||
+			strings.HasSuffix(strings.ToLower(trimmedURL), ".zip") {
+			// Add as plain text instead of a link
+			urlNode := &html.Node{
+				Type: html.TextNode,
+				Data: trimmedURL,
+			}
+			newNodes = append(newNodes, urlNode)
+		} else {
+			// Create the link with trimmed URL
+			linkNode := createLinkNode(trimmedURL)
+			newNodes = append(newNodes, linkNode)
+		}
 
 		// Add trailing punctuation as text if any
 		if trailingPunct != "" {
