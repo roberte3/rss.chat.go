@@ -35,3 +35,11 @@ func IsEmailBlocked(email string) bool {
 	// For now, allow all emails (no blocklist)
 	return false
 }
+
+// IsUserAdmin checks if a user is an admin.
+// Currently a stub—the JS original also returns false.
+// TODO: Implement admin logic if needed
+func IsUserAdmin(conn *sql.DB, screenname string) (bool, error) {
+	// For v1, no admins
+	return false, nil
+}

@@ -43,6 +43,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /checkwhitelist", h.CheckWhitelist)
 	mux.HandleFunc("GET /robots.txt", h.RobotsTxt)
 
+	// Auth endpoints (no auth required, but rate-limited in production)
+	mux.HandleFunc("GET /sendconfirmingemail", h.SendConfirmingEmail)
+	mux.HandleFunc("GET /createnewuser", h.CreateNewUser)
+
 	// Write endpoints (authenticated)
 	mux.HandleFunc("POST /newpost", h.NewPost)
 	mux.HandleFunc("POST /updatepost", h.UpdatePost)
