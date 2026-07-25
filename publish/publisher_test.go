@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"rss.chat.go/db"
 	"rss.chat.go/feed"
 
 	_ "modernc.org/sqlite"
@@ -260,4 +261,375 @@ func contains(s, substr string) bool {
 		}
 	}
 	return false
+}
+
+// Database mode tests
+
+func TestPublishUserFeedDatabase(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "feeds_db_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create main database
+	mainDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create main db: %v", err)
+	}
+	defer mainDB.Close()
+
+	if err := initTestDB(mainDB); err != nil {
+		t.Fatalf("failed to init main db: %v", err)
+	}
+
+	// Create feeds database
+	feedsDBPath := filepath.Join(tmpDir, "test_feeds.db")
+	feedsDB, err := db.OpenFeedsDB(feedsDBPath)
+	if err != nil {
+		t.Fatalf("failed to create feeds db: %v", err)
+	}
+	defer feedsDB.Close()
+
+	// Add test user and item
+	now := time.Now()
+	_, err = mainDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"alice", "alice@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=alice"
+	_, err = mainDB.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "alice", "Hello World", "My first post", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Create publisher in database mode
+	config := feed.BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+	pub := NewPublisher(tmpDir, config)
+	pub.SetDatabaseMode(feedsDB)
+
+	// Publish user feed
+	err = pub.PublishUserFeed(mainDB, "alice")
+	if err != nil {
+		t.Fatalf("failed to publish user feed: %v", err)
+	}
+
+	// Verify feed is in database
+	content, err := db.GetFeed(feedsDB, "user", "alice")
+	if err != nil {
+		t.Fatalf("failed to get feed from database: %v", err)
+	}
+
+	if len(content) == 0 {
+		t.Errorf("feed content is empty")
+	}
+
+	if !contains(string(content), "Hello World") {
+		t.Errorf("feed does not contain item title")
+	}
+}
+
+func TestPublishEveryoneFeedDatabase(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "feeds_db_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	mainDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create main db: %v", err)
+	}
+	defer mainDB.Close()
+
+	if err := initTestDB(mainDB); err != nil {
+		t.Fatalf("failed to init main db: %v", err)
+	}
+
+	feedsDBPath := filepath.Join(tmpDir, "test_feeds.db")
+	feedsDB, err := db.OpenFeedsDB(feedsDBPath)
+	if err != nil {
+		t.Fatalf("failed to create feeds db: %v", err)
+	}
+	defer feedsDB.Close()
+
+	now := time.Now()
+	_, err = mainDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bob", "bob@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=bob"
+	_, err = mainDB.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "bob", "Network Post", "Posted by bob", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	config := feed.BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+	pub := NewPublisher(tmpDir, config)
+	pub.SetDatabaseMode(feedsDB)
+
+	err = pub.PublishEveryoneFeed(mainDB)
+	if err != nil {
+		t.Fatalf("failed to publish everyone feed: %v", err)
+	}
+
+	content, err := db.GetFeed(feedsDB, "global", "")
+	if err != nil {
+		t.Fatalf("failed to get global feed: %v", err)
+	}
+
+	if !contains(string(content), "Network Post") {
+		t.Errorf("global feed does not contain item")
+	}
+}
+
+func TestPublishSubscriptionListDatabase(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "feeds_db_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	mainDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create main db: %v", err)
+	}
+	defer mainDB.Close()
+
+	if err := initTestDB(mainDB); err != nil {
+		t.Fatalf("failed to init main db: %v", err)
+	}
+
+	feedsDBPath := filepath.Join(tmpDir, "test_feeds.db")
+	feedsDB, err := db.OpenFeedsDB(feedsDBPath)
+	if err != nil {
+		t.Fatalf("failed to create feeds db: %v", err)
+	}
+	defer feedsDB.Close()
+
+	now := time.Now()
+	_, err = mainDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"charlie", "charlie@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	config := feed.BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+	pub := NewPublisher(tmpDir, config)
+	pub.SetDatabaseMode(feedsDB)
+
+	err = pub.PublishSubscriptionList(mainDB)
+	if err != nil {
+		t.Fatalf("failed to publish subscription list: %v", err)
+	}
+
+	content, err := db.GetFeed(feedsDB, "opml", "")
+	if err != nil {
+		t.Fatalf("failed to get OPML from database: %v", err)
+	}
+
+	if !contains(string(content), "charlie") {
+		t.Errorf("OPML does not contain user")
+	}
+}
+
+func TestBackfillMissingFeeds(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "feeds_db_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	mainDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create main db: %v", err)
+	}
+	defer mainDB.Close()
+
+	if err := initTestDB(mainDB); err != nil {
+		t.Fatalf("failed to init main db: %v", err)
+	}
+
+	feedsDBPath := filepath.Join(tmpDir, "test_feeds.db")
+	feedsDB, err := db.OpenFeedsDB(feedsDBPath)
+	if err != nil {
+		t.Fatalf("failed to create feeds db: %v", err)
+	}
+	defer feedsDB.Close()
+
+	// Add multiple users
+	now := time.Now()
+	for _, name := range []string{"alice", "bob", "charlie"} {
+		_, err = mainDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+			values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			name, name+"@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+		if err != nil {
+			t.Fatalf("failed to insert user %s: %v", name, err)
+		}
+	}
+
+	config := feed.BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+	pub := NewPublisher(tmpDir, config)
+	pub.SetDatabaseMode(feedsDB)
+
+	// Backfill should generate: global + opml + 3 user feeds = 5 feeds
+	count, err := pub.BackfillMissingFeeds(mainDB)
+	if err != nil {
+		t.Fatalf("failed to backfill feeds: %v", err)
+	}
+
+	if count != 5 {
+		t.Errorf("expected 5 feeds, got %d", count)
+	}
+
+	// Verify all feeds exist
+	for _, name := range []string{"alice", "bob", "charlie"} {
+		content, err := db.GetFeed(feedsDB, "user", name)
+		if err != nil {
+			t.Fatalf("failed to get feed for %s: %v", name, err)
+		}
+		if len(content) == 0 {
+			t.Errorf("feed for %s is empty", name)
+		}
+	}
+
+	// Verify global and OPML
+	globalContent, err := db.GetFeed(feedsDB, "global", "")
+	if err != nil {
+		t.Fatalf("failed to get global feed: %v", err)
+	}
+	if len(globalContent) == 0 {
+		t.Error("global feed is empty")
+	}
+
+	opmlContent, err := db.GetFeed(feedsDB, "opml", "")
+	if err != nil {
+		t.Fatalf("failed to get OPML: %v", err)
+	}
+	if len(opmlContent) == 0 {
+		t.Error("OPML is empty")
+	}
+}
+
+func TestBothModesSameContent(t *testing.T) {
+	tmpFSDir, err := os.MkdirTemp("", "feeds_fs")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpFSDir)
+
+	tmpDBDir, err := os.MkdirTemp("", "feeds_db")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDBDir)
+
+	// Create main database
+	mainDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create main db: %v", err)
+	}
+	defer mainDB.Close()
+
+	if err := initTestDB(mainDB); err != nil {
+		t.Fatalf("failed to init main db: %v", err)
+	}
+
+	// Add test data
+	now := time.Now()
+	_, err = mainDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"alice", "alice@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=alice"
+	_, err = mainDB.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "alice", "Test Post", "Test content", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	config := feed.BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+
+	// Filesystem mode
+	pubFS := NewPublisher(tmpFSDir, config)
+	if err := pubFS.EnsureDir(); err != nil {
+		t.Fatalf("failed to ensure dir: %v", err)
+	}
+	if err := pubFS.PublishUserFeed(mainDB, "alice"); err != nil {
+		t.Fatalf("failed to publish user feed (fs): %v", err)
+	}
+
+	fsContent, err := os.ReadFile(filepath.Join(tmpFSDir, "alice", "rss.xml"))
+	if err != nil {
+		t.Fatalf("failed to read filesystem feed: %v", err)
+	}
+
+	// Database mode
+	feedsDBPath := filepath.Join(tmpDBDir, "test_feeds.db")
+	feedsDB, err := db.OpenFeedsDB(feedsDBPath)
+	if err != nil {
+		t.Fatalf("failed to create feeds db: %v", err)
+	}
+	defer feedsDB.Close()
+
+	pubDB := NewPublisher(tmpDBDir, config)
+	pubDB.SetDatabaseMode(feedsDB)
+	if err := pubDB.PublishUserFeed(mainDB, "alice"); err != nil {
+		t.Fatalf("failed to publish user feed (db): %v", err)
+	}
+
+	dbContent, err := db.GetFeed(feedsDB, "user", "alice")
+	if err != nil {
+		t.Fatalf("failed to get feed from database: %v", err)
+	}
+
+	// Both should be identical
+	if string(fsContent) != string(dbContent) {
+		t.Error("filesystem and database feed content differs")
+	}
 }

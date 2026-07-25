@@ -53,6 +53,10 @@ type Config struct {
 	TempMediaPath     string `json:"tempMediaPath"`     // Temporary storage for uploads
 	MaxMediaUploadBytes int  `json:"maxMediaUploadBytes"` // Max upload size in bytes
 
+	// Feed storage
+	FeedsInDatabase bool   `json:"flFeedsInDatabase"`  // Store feeds in database (default: false)
+	FeedsDBPath     string `json:"feedsDBPath"`        // Path to feeds database
+
 	// SEO and robots
 	RobotsTxt string `json:"robotsTxt"` // Content for robots.txt file
 
@@ -135,6 +139,10 @@ func (c *Config) applyDefaults() {
 
 	if c.MaxMediaUploadBytes == 0 {
 		c.MaxMediaUploadBytes = 2 * 1024 * 1024 // 2MB default
+	}
+
+	if c.FeedsDBPath == "" {
+		c.FeedsDBPath = "rss.chat.feeds.db"
 	}
 
 	if c.RobotsTxt == "" {

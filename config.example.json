@@ -18,6 +18,9 @@
   "feedsPath": "feeds",
   "subscriptionListPath": "feeds/subs.opml",
 
+  "flFeedsInDatabase": false,
+  "feedsDBPath": "rss.chat.feeds.db",
+
   "mailSender": "admin@localhost",
   "smtpHost": "smtp.gmail.com",
   "smtpPort": 587,

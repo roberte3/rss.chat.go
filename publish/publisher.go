@@ -5,21 +5,31 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"rss.chat.go/db"
 	"rss.chat.go/feed"
 )
 
-// Publisher handles writing feeds to disk.
+// Publisher handles writing feeds to disk or database.
 type Publisher struct {
-	baseDir string
-	config  feed.BuilderConfig
+	baseDir     string
+	config      feed.BuilderConfig
+	FeedsDB     *sql.DB // Nil if filesystem mode
+	StorageMode string  // "filesystem" or "database"
 }
 
-// NewPublisher creates a new feed publisher.
+// NewPublisher creates a new feed publisher (filesystem mode by default).
 func NewPublisher(baseDir string, config feed.BuilderConfig) *Publisher {
 	return &Publisher{
-		baseDir: baseDir,
-		config:  config,
+		baseDir:     baseDir,
+		config:      config,
+		StorageMode: "filesystem",
 	}
+}
+
+// SetDatabaseMode configures the publisher to store feeds in a database.
+func (p *Publisher) SetDatabaseMode(feedsDB *sql.DB) {
+	p.FeedsDB = feedsDB
+	p.StorageMode = "database"
 }
 
 // EnsureDir ensures the feeds directory structure exists.
@@ -38,12 +48,16 @@ func (p *Publisher) EnsureDir() error {
 	return nil
 }
 
-// PublishUserFeed generates and writes a user's feed to disk.
-// File: feeds/<screenname>/rss.xml
+// PublishUserFeed generates and writes a user's feed to disk or database.
+// File (filesystem): feeds/<screenname>/rss.xml
 func (p *Publisher) PublishUserFeed(conn *sql.DB, screenname string) error {
 	rss, err := feed.BuildFeedForUser(conn, screenname, p.config.BaseURL, p.config)
 	if err != nil {
 		return fmt.Errorf("build feed for user %s: %w", screenname, err)
+	}
+
+	if p.StorageMode == "database" {
+		return db.StoreFeed(p.FeedsDB, "user", screenname, "text/xml", []byte(rss))
 	}
 
 	userDir := filepath.Join(p.baseDir, screenname)
@@ -59,12 +73,16 @@ func (p *Publisher) PublishUserFeed(conn *sql.DB, screenname string) error {
 	return nil
 }
 
-// PublishEveryoneFeed generates and writes the network-wide feed to disk.
-// File: feeds/rss.xml
+// PublishEveryoneFeed generates and writes the network-wide feed to disk or database.
+// File (filesystem): feeds/rss.xml
 func (p *Publisher) PublishEveryoneFeed(conn *sql.DB) error {
 	rss, err := feed.BuildFeedForEveryone(conn, p.config.BaseURL, p.config)
 	if err != nil {
 		return fmt.Errorf("build everyone feed: %w", err)
+	}
+
+	if p.StorageMode == "database" {
+		return db.StoreFeed(p.FeedsDB, "global", "", "text/xml", []byte(rss))
 	}
 
 	path := filepath.Join(p.baseDir, "rss.xml")
@@ -97,12 +115,16 @@ func (p *Publisher) PublishCommentsFeed(conn *sql.DB, screenname string, itemID 
 	return nil
 }
 
-// PublishSubscriptionList generates and writes the subscription list to disk.
-// File: feeds/subs.opml
+// PublishSubscriptionList generates and writes the subscription list to disk or database.
+// File (filesystem): feeds/subs.opml
 func (p *Publisher) PublishSubscriptionList(conn *sql.DB) error {
 	opml, err := feed.BuildSubscriptionList(conn, p.config.BaseURL, p.config)
 	if err != nil {
 		return fmt.Errorf("build subscription list: %w", err)
+	}
+
+	if p.StorageMode == "database" {
+		return db.StoreFeed(p.FeedsDB, "opml", "", "application/xml", []byte(opml))
 	}
 
 	path := filepath.Join(p.baseDir, "subs.opml")
@@ -193,6 +215,59 @@ func (p *Publisher) BackfillCommentFeeds(conn *sql.DB) (int, error) {
 
 	if err := rows.Err(); err != nil {
 		return count, fmt.Errorf("rows error: %w", err)
+	}
+
+	return count, nil
+}
+
+// BackfillMissingFeeds regenerates feeds in database mode.
+// Called on startup when FeedsInDatabase is enabled.
+// Regenerates: global feed, OPML list, and user feeds for all users.
+func (p *Publisher) BackfillMissingFeeds(conn *sql.DB) (int, error) {
+	if p.StorageMode != "database" || p.FeedsDB == nil {
+		return 0, nil // Not in database mode, nothing to backfill
+	}
+
+	count := 0
+
+	// Always generate global feed and OPML
+	if err := p.PublishEveryoneFeed(conn); err != nil {
+		return count, fmt.Errorf("publish everyone feed: %w", err)
+	}
+	count++
+
+	if err := p.PublishSubscriptionList(conn); err != nil {
+		return count, fmt.Errorf("publish subscription list: %w", err)
+	}
+	count++
+
+	// Get all user screennames
+	query := `SELECT screenname FROM users WHERE screenname IS NOT NULL ORDER BY screenname`
+	rows, err := conn.Query(query)
+	if err != nil {
+		return count, fmt.Errorf("query users: %w", err)
+	}
+	defer rows.Close()
+
+	var screennames []string
+	for rows.Next() {
+		var screenname string
+		if err := rows.Scan(&screenname); err != nil {
+			return count, fmt.Errorf("scan screenname: %w", err)
+		}
+		screennames = append(screennames, screenname)
+	}
+
+	if err := rows.Err(); err != nil {
+		return count, fmt.Errorf("rows error: %w", err)
+	}
+
+	// Regenerate user feeds
+	for _, screenname := range screennames {
+		if err := p.PublishUserFeed(conn, screenname); err != nil {
+			return count, fmt.Errorf("publish user feed for %s: %w", screenname, err)
+		}
+		count++
 	}
 
 	return count, nil

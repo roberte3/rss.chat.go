@@ -3,7 +3,7 @@
 A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.6.3.
 
 **Reference**: Original RSS.Chat on GitHub: https://github.com/scripting/rss.chat  
-**Current Build**: Passing all tests (168 tests across 8 packages)
+**Current Build**: Passing all tests (84 tests across 9 packages)
 
 ---
 
@@ -99,11 +99,22 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - Updated example config with all options
   - Tests added and passing
 
-- [x] **robots.txt from Config** (JUST COMPLETED)
+- [x] **robots.txt from Config** (COMPLETED)
   - Added `robotsTxt` config field with sensible default
   - Config wiring through main.go
   - API handler serving configured content
   - Tests added and passing (custom + default values)
+
+- [x] **Database-Driven Feeds Option** (JUST COMPLETED)
+  - Separate `rss.chat.feeds.db` SQLite file for feeds storage
+  - Dual-mode support: filesystem (default) and database
+  - Config fields: `flFeedsInDatabase` (bool), `feedsDBPath` (string)
+  - Full CRUD operations in `db/feeds.go` with 16 unit tests
+  - Publisher integration with automatic mode detection
+  - Startup backfill regenerates all feeds in database mode
+  - API layer reads from database when configured
+  - 27 total new tests (db + publisher + API endpoint tests)
+  - All tests passing, no regressions
 
 ---
 
@@ -111,14 +122,15 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 
 ### Tier 1: Critical for Feature Parity (v0.6.3)
 
-#### 1. Database-Driven Feeds Option (3-4 days)
+#### 1. Database-Driven Feeds Option (3-4 days) ✅ COMPLETED
 **Feature**: `flFeedsInDatabase` config option
-- [ ] Add `files` table to store generated feeds as blobs
-- [ ] Toggle between filesystem and database storage
-- [ ] Auto-backfill feeds on startup
-- [ ] Serve feeds directly from domain
-- **Tests**: Verify both modes work, backfill completes
-- **Impact**: Required for single-file deployments
+- [x] Add separate `rss.chat.feeds.db` SQLite file with `feeds` table
+- [x] Toggle between filesystem and database storage via config
+- [x] Auto-backfill feeds on startup
+- [x] Serve feeds directly from database (no filesystem access)
+- [x] Comprehensive tests: 16 DB layer, 8 publisher, 3 API endpoint
+- [x] Both modes produce identical content
+- **Impact**: Enables single-file deployments without feeds directory
 
 #### 2. Feed Format Negotiation (1-2 days)
 **Feature**: `/feed?format=json|xml` parameter

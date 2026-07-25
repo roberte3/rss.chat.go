@@ -72,21 +72,42 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 		RSSCloudEnabled: false, // TODO: enable if rssCloud ping is implemented
 	}
 
-	// Initialize publisher
-	if err := os.MkdirAll(cfg.FeedsPath, 0755); err != nil {
-		log.Fatalf("failed to create feeds directory: %v", err)
-	}
-	pub := publish.NewPublisher(cfg.FeedsPath, feedConfig)
-	if err := pub.EnsureDir(); err != nil {
-		log.Fatalf("failed to ensure feed directories: %v", err)
-	}
-
 	// Initialize media database
 	mediaDB, err := db.OpenMediaDB(cfg.MediaDBPath)
 	if err != nil {
 		log.Fatalf("failed to open media database: %v", err)
 	}
 	defer mediaDB.Close()
+
+	// Initialize feeds database (if database-driven feeds are enabled)
+	var feedsDB *sql.DB
+	if cfg.FeedsInDatabase {
+		feedsDB, err = db.OpenFeedsDB(cfg.FeedsDBPath)
+		if err != nil {
+			log.Fatalf("failed to open feeds database: %v", err)
+		}
+		defer feedsDB.Close()
+	}
+
+	// Initialize publisher
+	if !cfg.FeedsInDatabase {
+		if err := os.MkdirAll(cfg.FeedsPath, 0755); err != nil {
+			log.Fatalf("failed to create feeds directory: %v", err)
+		}
+	}
+	pub := publish.NewPublisher(cfg.FeedsPath, feedConfig)
+	if cfg.FeedsInDatabase && feedsDB != nil {
+		pub.SetDatabaseMode(feedsDB)
+		if count, err := pub.BackfillMissingFeeds(conn); err != nil {
+			log.Fatalf("failed to backfill feeds: %v", err)
+		} else {
+			log.Printf("backfilled %d feeds in database", count)
+		}
+	} else if !cfg.FeedsInDatabase {
+		if err := pub.EnsureDir(); err != nil {
+			log.Fatalf("failed to ensure feed directories: %v", err)
+		}
+	}
 
 	// Create temporary media directory
 	if err := os.MkdirAll(cfg.TempMediaPath, 0755); err != nil {
@@ -113,6 +134,7 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	handler := api.NewHandler(conn, pub, feedConfig)
 	handler.SetWebsocketHub(wsHub)
 	handler.MediaDB = mediaDB
+	handler.FeedsDB = feedsDB // Set feeds database if available
 	handler.MaxMediaUploadBytes = cfg.MaxMediaUploadBytes
 	handler.TempMediaPath = cfg.TempMediaPath
 	handler.RobotsContent = cfg.RobotsTxt

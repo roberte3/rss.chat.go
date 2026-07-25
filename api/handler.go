@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"rss.chat.go/db"
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
 	"rss.chat.go/websocket"
@@ -16,6 +17,7 @@ type Handler struct {
 	FeedConfig feed.BuilderConfig
 	WebsocketHub *websocket.Hub
 	MediaDB *sql.DB
+	FeedsDB *sql.DB // Nil if feeds are served from filesystem
 	MaxMediaUploadBytes int
 	TempMediaPath string
 	RobotsContent string
@@ -97,6 +99,24 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 	screenname := r.URL.Query().Get("screenname")
 
+	// If feeds are stored in database, serve from there
+	if h.FeedsDB != nil {
+		var feedType string
+		if screenname == "" {
+			feedType = "global"
+		} else {
+			feedType = "user"
+		}
+
+		content, err := db.GetFeed(h.FeedsDB, feedType, screenname)
+		if err == nil && content != nil {
+			w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+			w.Write(content)
+			return
+		}
+	}
+
+	// Fallback to filesystem mode
 	if screenname == "" {
 		// Serve everyone feed
 		h.Publisher.ServeEveryoneFeed(w, r)
@@ -266,6 +286,17 @@ func (h *Handler) GetMostActiveToday(w http.ResponseWriter, r *http.Request) {
 // GetSubscriptionList returns the OPML subscription list.
 // No query params.
 func (h *Handler) GetSubscriptionList(w http.ResponseWriter, r *http.Request) {
+	// If feeds are stored in database, serve OPML from there
+	if h.FeedsDB != nil {
+		content, err := db.GetFeed(h.FeedsDB, "opml", "")
+		if err == nil && content != nil {
+			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+			w.Write(content)
+			return
+		}
+	}
+
+	// Fallback to filesystem mode
 	h.Publisher.ServeOPML(w, r)
 }
 

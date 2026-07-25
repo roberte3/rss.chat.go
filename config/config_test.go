@@ -286,6 +286,70 @@ Disallow: /getiteminfo
 	}
 }
 
+func TestFeedsConfig(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "config_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	tests := []struct {
+		name              string
+		configJSON        string
+		wantFeedsInDB     bool
+		wantFeedsDBPath   string
+	}{
+		{
+			name: "default feeds config (filesystem mode)",
+			configJSON: `{
+				"productNameForDisplay": "Test",
+				"myDomain": "test",
+				"urlServerForClient": "http://test",
+				"urlServerForEmail": "http://test",
+				"mailSender": "test@test"
+			}`,
+			wantFeedsInDB:   false,
+			wantFeedsDBPath: "rss.chat.feeds.db",
+		},
+		{
+			name: "database mode enabled",
+			configJSON: `{
+				"productNameForDisplay": "Test",
+				"myDomain": "test",
+				"urlServerForClient": "http://test",
+				"urlServerForEmail": "http://test",
+				"mailSender": "test@test",
+				"flFeedsInDatabase": true,
+				"feedsDBPath": "custom_feeds.db"
+			}`,
+			wantFeedsInDB:   true,
+			wantFeedsDBPath: "custom_feeds.db",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configPath := filepath.Join(tmpDir, "config.json")
+			if err := os.WriteFile(configPath, []byte(tt.configJSON), 0644); err != nil {
+				t.Fatalf("failed to write config: %v", err)
+			}
+
+			cfg, err := Load(configPath)
+			if err != nil {
+				t.Fatalf("failed to load config: %v", err)
+			}
+
+			if cfg.FeedsInDatabase != tt.wantFeedsInDB {
+				t.Errorf("FeedsInDatabase = %v, want %v", cfg.FeedsInDatabase, tt.wantFeedsInDB)
+			}
+
+			if cfg.FeedsDBPath != tt.wantFeedsDBPath {
+				t.Errorf("FeedsDBPath = %q, want %q", cfg.FeedsDBPath, tt.wantFeedsDBPath)
+			}
+		})
+	}
+}
+
 func hasSuffix(s, suffix string) bool {
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
 }

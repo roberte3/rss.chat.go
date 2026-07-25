@@ -15,6 +15,7 @@ import (
 	"rss.chat.go/db"
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
+	_ "modernc.org/sqlite"
 )
 
 // setupTestServer creates a test HTTP server with handler
@@ -70,6 +71,36 @@ Disallow: /getiteminfo
 	handler.RegisterRoutes(mux)
 
 	return mux, conn, handler
+}
+
+// setupTestServerWithFeedsDB creates a test server with feeds database enabled
+func setupTestServerWithFeedsDB(t *testing.T) (*http.ServeMux, *sql.DB, *sql.DB, *Handler) {
+	mux, conn, handler := setupTestServer(t)
+
+	// Create feeds database
+	tmpDir, err := os.MkdirTemp("", "feeds_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+
+	feedsDBPath := filepath.Join(tmpDir, "test_feeds.db")
+	feedsDB, err := db.OpenFeedsDB(feedsDBPath)
+	if err != nil {
+		t.Fatalf("failed to open feeds database: %v", err)
+	}
+
+	t.Cleanup(func() {
+		feedsDB.Close()
+		os.RemoveAll(tmpDir)
+	})
+
+	// Enable database mode on handler
+	handler.FeedsDB = feedsDB
+
+	// Enable database mode on publisher
+	handler.Publisher.SetDatabaseMode(feedsDB)
+
+	return mux, conn, feedsDB, handler
 }
 
 // createTestSchema creates the database schema for testing
@@ -431,5 +462,124 @@ func TestGetLikersList(t *testing.T) {
 
 	if len(likers) != 2 {
 		t.Errorf("liker count = %d, want 2", len(likers))
+	}
+}
+
+// Database mode endpoint tests
+
+func TestFeedEndpointDatabase(t *testing.T) {
+	mux, conn, _, handler := setupTestServerWithFeedsDB(t)
+
+	// Create test user and item
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"alice", "alice@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=alice"
+	_, err = conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "alice", "DB Test Post", "Testing database mode", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Publish feed to database
+	if err := handler.Publisher.PublishUserFeed(conn, "alice"); err != nil {
+		t.Fatalf("failed to publish feed: %v", err)
+	}
+
+	// Test user feed from database
+	req := httptest.NewRequest("GET", "/feed?screenname=alice", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+
+	if w.Header().Get("Content-Type") != "application/rss+xml; charset=utf-8" {
+		t.Errorf("content type = %q, want application/rss+xml; charset=utf-8", w.Header().Get("Content-Type"))
+	}
+
+	if !strings.Contains(w.Body.String(), "DB Test Post") {
+		t.Errorf("feed does not contain test post")
+	}
+}
+
+func TestGlobalFeedDatabaseMode(t *testing.T) {
+	mux, conn, _, handler := setupTestServerWithFeedsDB(t)
+
+	// Create test user and item
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bob", "bob@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=bob"
+	_, err = conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "bob", "Global Test Post", "Testing database mode", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Publish global feed to database
+	if err := handler.Publisher.PublishEveryoneFeed(conn); err != nil {
+		t.Fatalf("failed to publish everyone feed: %v", err)
+	}
+
+	// Test global feed from database
+	req := httptest.NewRequest("GET", "/feed", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+
+	if !strings.Contains(w.Body.String(), "Global Test Post") {
+		t.Errorf("global feed does not contain test post")
+	}
+}
+
+func TestSubscriptionListDatabaseMode(t *testing.T) {
+	mux, conn, _, handler := setupTestServerWithFeedsDB(t)
+
+	// Create test user
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"charlie", "charlie@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	// Publish subscription list to database
+	if err := handler.Publisher.PublishSubscriptionList(conn); err != nil {
+		t.Fatalf("failed to publish subscription list: %v", err)
+	}
+
+	// Test subscription list from database
+	req := httptest.NewRequest("GET", "/getsubscriptionlist", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+
+	if w.Header().Get("Content-Type") != "application/xml; charset=utf-8" {
+		t.Errorf("content type = %q, want application/xml; charset=utf-8", w.Header().Get("Content-Type"))
+	}
+
+	if !strings.Contains(w.Body.String(), "charlie") {
+		t.Errorf("subscription list does not contain user")
 	}
 }
