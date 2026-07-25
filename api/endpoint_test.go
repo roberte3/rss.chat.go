@@ -155,6 +155,10 @@ func createTestSchema(conn *sql.DB) error {
 			FOREIGN KEY (itemId) REFERENCES items(id)
 		)`,
 		`CREATE INDEX idx_likes_itemId ON likes(itemId)`,
+		`CREATE TABLE blocklist (
+			email TEXT PRIMARY KEY,
+			whenAdded DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 
 	for _, query := range queries {
@@ -785,11 +789,31 @@ func TestGlobalFeedJSON(t *testing.T) {
 // Blocklist enforcement tests
 
 func TestBlockedUserCannotSignIn(t *testing.T) {
-	mux, _, handler := setupTestServer(t)
+	mux, conn, handler := setupTestServer(t)
 
-	// Create a config with a blocked email
+	// Create a temporary blocklist.json file
+	tmpDir := t.TempDir()
+	blocklistPath := filepath.Join(tmpDir, "blocklist.json")
+	blocklistContent := []byte(`{
+		"note": "Test blocklist",
+		"blockedEmails": ["blocked@example.com"]
+	}`)
+	if err := os.WriteFile(blocklistPath, blocklistContent, 0644); err != nil {
+		t.Fatalf("failed to create blocklist file: %v", err)
+	}
+
+	// Set handler config to use the blocklist file
 	handler.Config = &config.Config{
-		BlockedUsersList: []string{"blocked@example.com"},
+		BlocklistPath: blocklistPath,
+	}
+
+	// Sync blocklist to database
+	emails, err := config.LoadBlocklist(blocklistPath)
+	if err != nil {
+		t.Fatalf("failed to load blocklist: %v", err)
+	}
+	if err := db.SyncBlocklistToDB(conn, emails); err != nil {
+		t.Fatalf("failed to sync blocklist to database: %v", err)
 	}
 
 	// Try to send confirmation email to blocked address
@@ -803,11 +827,31 @@ func TestBlockedUserCannotSignIn(t *testing.T) {
 }
 
 func TestBlockedUserCannotSignUp(t *testing.T) {
-	mux, _, handler := setupTestServer(t)
+	mux, conn, handler := setupTestServer(t)
 
-	// Create a config with a blocked email
+	// Create a temporary blocklist.json file
+	tmpDir := t.TempDir()
+	blocklistPath := filepath.Join(tmpDir, "blocklist.json")
+	blocklistContent := []byte(`{
+		"note": "Test blocklist",
+		"blockedEmails": ["blocked@example.com"]
+	}`)
+	if err := os.WriteFile(blocklistPath, blocklistContent, 0644); err != nil {
+		t.Fatalf("failed to create blocklist file: %v", err)
+	}
+
+	// Set handler config to use the blocklist file
 	handler.Config = &config.Config{
-		BlockedUsersList: []string{"blocked@example.com"},
+		BlocklistPath: blocklistPath,
+	}
+
+	// Sync blocklist to database
+	emails, err := config.LoadBlocklist(blocklistPath)
+	if err != nil {
+		t.Fatalf("failed to load blocklist: %v", err)
+	}
+	if err := db.SyncBlocklistToDB(conn, emails); err != nil {
+		t.Fatalf("failed to sync blocklist to database: %v", err)
 	}
 
 	// Try to create new user with blocked email
@@ -821,11 +865,31 @@ func TestBlockedUserCannotSignUp(t *testing.T) {
 }
 
 func TestAllowedUserCanSignUp(t *testing.T) {
-	mux, _, handler := setupTestServer(t)
+	mux, conn, handler := setupTestServer(t)
 
-	// Create a config with no blocklist (allow all)
+	// Create a temporary blocklist.json file (empty, allow all)
+	tmpDir := t.TempDir()
+	blocklistPath := filepath.Join(tmpDir, "blocklist.json")
+	blocklistContent := []byte(`{
+		"note": "Test blocklist",
+		"blockedEmails": []
+	}`)
+	if err := os.WriteFile(blocklistPath, blocklistContent, 0644); err != nil {
+		t.Fatalf("failed to create blocklist file: %v", err)
+	}
+
+	// Set handler config to use the blocklist file
 	handler.Config = &config.Config{
-		BlockedUsersList: []string{},
+		BlocklistPath: blocklistPath,
+	}
+
+	// Sync blocklist to database (empty list, allow all)
+	emails, err := config.LoadBlocklist(blocklistPath)
+	if err != nil {
+		t.Fatalf("failed to load blocklist: %v", err)
+	}
+	if err := db.SyncBlocklistToDB(conn, emails); err != nil {
+		t.Fatalf("failed to sync blocklist to database: %v", err)
 	}
 
 	// Try to send confirmation email to allowed address
@@ -840,11 +904,31 @@ func TestAllowedUserCanSignUp(t *testing.T) {
 }
 
 func TestBlocklistCaseInsensitive(t *testing.T) {
-	mux, _, handler := setupTestServer(t)
+	mux, conn, handler := setupTestServer(t)
 
-	// Create a config with a blocked email in lowercase
+	// Create a temporary blocklist.json file
+	tmpDir := t.TempDir()
+	blocklistPath := filepath.Join(tmpDir, "blocklist.json")
+	blocklistContent := []byte(`{
+		"note": "Test blocklist",
+		"blockedEmails": ["blocked@example.com"]
+	}`)
+	if err := os.WriteFile(blocklistPath, blocklistContent, 0644); err != nil {
+		t.Fatalf("failed to create blocklist file: %v", err)
+	}
+
+	// Set handler config to use the blocklist file
 	handler.Config = &config.Config{
-		BlockedUsersList: []string{"blocked@example.com"},
+		BlocklistPath: blocklistPath,
+	}
+
+	// Sync blocklist to database
+	emails, err := config.LoadBlocklist(blocklistPath)
+	if err != nil {
+		t.Fatalf("failed to load blocklist: %v", err)
+	}
+	if err := db.SyncBlocklistToDB(conn, emails); err != nil {
+		t.Fatalf("failed to sync blocklist to database: %v", err)
 	}
 
 	// Try to sign up with uppercase version

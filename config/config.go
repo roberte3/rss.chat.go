@@ -207,6 +207,40 @@ func ensureTrailingSlash(url string) string {
 	return url
 }
 
+// Blocklist represents the structure of blocklist.json
+type Blocklist struct {
+	Note          string   `json:"note"`
+	BlockedEmails []string `json:"blockedEmails"`
+}
+
+// LoadBlocklist reads the blocklist from a JSON file.
+// Returns an empty list if file doesn't exist.
+func LoadBlocklist(path string) ([]string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return []string{}, nil
+		}
+		return nil, fmt.Errorf("read blocklist file: %w", err)
+	}
+
+	var bl Blocklist
+	if err := json.Unmarshal(data, &bl); err != nil {
+		return nil, fmt.Errorf("parse blocklist file: %w", err)
+	}
+
+	// Normalize emails to lowercase
+	normalized := make([]string, 0, len(bl.BlockedEmails))
+	for _, email := range bl.BlockedEmails {
+		email = strings.ToLower(strings.TrimSpace(email))
+		if email != "" {
+			normalized = append(normalized, email)
+		}
+	}
+
+	return normalized, nil
+}
+
 // IsEmailWhitelisted checks if an email is on the whitelist.
 // Returns true if no whitelist is configured (allow all).
 func (c *Config) IsEmailWhitelisted(email string) bool {

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
+	"rss.chat.go/config"
 	"rss.chat.go/db"
 	"strings"
 )
@@ -217,11 +218,35 @@ func (h *Handler) checkWhitelist(email string) bool {
 
 // checkBlocklist checks if an email is NOT blocked.
 // Returns true if email is allowed, false if blocked.
+// Reloads blocklist from JSON file on each call for hot-reload capability.
 func (h *Handler) checkBlocklist(email string) bool {
-	if h.Config == nil {
+	if h.Config == nil || h.DB == nil {
 		return true // No config, allow all
 	}
-	return !h.Config.IsEmailBlocked(email)
+
+	// Reload blocklist from JSON file
+	emails, err := config.LoadBlocklist(h.Config.BlocklistPath)
+	if err != nil {
+		// Log error but allow access if file can't be read
+		fmt.Printf("Warning: failed to load blocklist: %v\n", err)
+		return true
+	}
+
+	// Sync to database for backup
+	if err := db.SyncBlocklistToDB(h.DB, emails); err != nil {
+		fmt.Printf("Warning: failed to sync blocklist to database: %v\n", err)
+		// Continue even if sync fails
+	}
+
+	// Check if email is blocked
+	blocked, err := db.IsEmailBlocked(h.DB, email)
+	if err != nil {
+		// Log error but allow access if database check fails
+		fmt.Printf("Warning: failed to check blocklist: %v\n", err)
+		return true
+	}
+
+	return !blocked
 }
 
 // generateEmailSecret generates a random email confirmation code.

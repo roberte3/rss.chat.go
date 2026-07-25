@@ -91,6 +91,11 @@ func CreateTables(db *sql.DB) error {
 			PRIMARY KEY (screenname, itemId)
 		);
 		CREATE INDEX IF NOT EXISTS idx_likes_itemId ON likes (itemId);
+
+		CREATE TABLE IF NOT EXISTS blocklist (
+			email TEXT PRIMARY KEY,
+			whenAdded DATETIME DEFAULT CURRENT_TIMESTAMP
+		);
 	`)
 	if err != nil {
 		return fmt.Errorf("create tables: %w", err)

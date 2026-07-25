@@ -89,6 +89,10 @@ func createSchema(conn *sql.DB) error {
 			FOREIGN KEY (itemId) REFERENCES items(id)
 		)`,
 		`CREATE INDEX idx_likes_itemId ON likes(itemId)`,
+		`CREATE TABLE blocklist (
+			email TEXT PRIMARY KEY,
+			whenAdded DATETIME DEFAULT CURRENT_TIMESTAMP
+		)`,
 	}
 
 	for _, query := range queries {
