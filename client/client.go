@@ -17,6 +17,7 @@ type Config struct {
 	URLServerForClient       string // "http://localhost:8081"
 	URLWebsocketServerForClient string // "ws://localhost:8081"
 	WebsocketEnabled         bool
+	FeedURLEveryone          string // Feed URL for autodiscovery
 }
 
 // Server serves static client assets.
@@ -98,6 +99,7 @@ func (s *Server) substituteConfig(html string) string {
 		"[%urlSocketServer%]":              s.config.URLWebsocketServerForClient,
 		"[%urlWebsocketServerForClient%]": s.config.URLWebsocketServerForClient,
 		"[%flWebsocketEnabled%]":           boolToString(s.config.WebsocketEnabled),
+		"[%feedUrlEveryone%]":              s.config.FeedURLEveryone,
 	}
 
 	result := html

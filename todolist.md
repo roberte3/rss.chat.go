@@ -3,7 +3,7 @@
 A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.6.3.
 
 **Reference**: Original RSS.Chat on GitHub: https://github.com/scripting/rss.chat  
-**Current Build**: Passing all tests (99 tests across 9 packages)
+**Current Build**: Passing all tests (100 tests across 9 packages)
 
 ---
 
@@ -135,13 +135,20 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - 4 new endpoint tests verify blocked users rejected
   - Allowed users continue to work properly
 
-- [x] **Post Cleanup Options** (JUST COMPLETED)
+- [x] **Post Cleanup Options** (COMPLETED)
   - `flRemoveBlanksAtEnd` - Strip trailing empty paragraphs from posts
   - `titleForSubscriptionList` - Custom OPML title configuration
   - Cleanup applied during post creation when enabled
   - OPML title automatically generated or custom
   - 9 unit tests for paragraph trimming
   - 2 integration tests for OPML title customization
+
+- [x] **Feed Autodiscovery** (JUST COMPLETED)
+  - Added `FeedURLEveryone` field to client Config struct
+  - Wired feed URL through main.go: `fmt.Sprintf("http://%s/feed", cfg.MyDomain)`
+  - Added `[%feedUrlEveryone%]` macro substitution in client server
+  - HTML updated with `<link rel="alternate" type="application/rss+xml">` tag
+  - 2 new tests verify link tag present and URL properly substituted
 
 ---
 
@@ -193,11 +200,11 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 
 ### Tier 2: Important Enhancements
 
-#### 5. Feed Autodiscovery (1 day)
+#### 5. Feed Autodiscovery (1 day) ✅ COMPLETED
 **Feature**: HTML `<link rel="alternate">` tag
-- [ ] Add feed discovery link to home page template
-- [ ] Use `[%feedUrlEveryone%]` macro
-- **Tests**: Verify link tag present and correct
+- [x] Add feed discovery link to home page template
+- [x] Use `[%feedUrlEveryone%]` macro
+- [x] **Tests**: Verify link tag present and correct
 - **Impact**: Browsers can auto-discover feed
 
 #### 6. Blocklist Persistence (1 day)
@@ -285,7 +292,7 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 ## 📊 Project Statistics
 
 **Codebase**:
-- 8 test packages (168 total tests passing)
+- 9 test packages (100 total tests passing)
 - ~10 API endpoints
 - ~15 data layer functions
 - ~2000 lines of Go code (core logic)
@@ -385,4 +392,4 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 ---
 
 **Last Updated**: 2026-07-24  
-**Project Status**: In active development, v1.0 feature complete, targeting v0.6.3 feature parity in v1.1
+**Project Status**: In active development, v1.0 feature complete, 5/10 Tier 1 features implemented, targeting v0.6.3 feature parity

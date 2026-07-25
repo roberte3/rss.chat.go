@@ -215,3 +215,90 @@ func TestSubstituteConfig(t *testing.T) {
 		t.Errorf("template variables remain in output")
 	}
 }
+
+func TestFeedAutodiscoveryLink(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "feed_autodiscovery_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create index.html with feed autodiscovery link
+	indexHTML := `<!DOCTYPE html>
+<html>
+<head>
+	<title>rss.chat</title>
+	<link rel="alternate" type="application/rss+xml" href="[%feedUrlEveryone%]">
+	<script>
+		const config = {
+			urlServer: "[%urlServerForClient%]"
+		};
+	</script>
+</head>
+<body>
+	<h1>Welcome</h1>
+</body>
+</html>`
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "index.html"), []byte(indexHTML), 0644); err != nil {
+		t.Fatalf("failed to write index.html: %v", err)
+	}
+
+	feedURL := "http://example.com/feed"
+	config := Config{
+		ProductName:             "rss.chat",
+		ProductNameForDisplay:   "rss.chat",
+		Version:                 "1.0",
+		EnableLogin:             true,
+		URLServerForClient:      "http://api.example.com",
+		URLWebsocketServerForClient: "ws://api.example.com",
+		WebsocketEnabled:        true,
+		FeedURLEveryone:         feedURL,
+	}
+
+	server := NewServer(tmpDir, config)
+
+	t.Run("feed autodiscovery link present", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/", nil)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", w.Code)
+		}
+
+		body := w.Body.String()
+
+		// Verify link tag is present
+		if !strings.Contains(body, `<link rel="alternate" type="application/rss+xml"`) {
+			t.Errorf("feed autodiscovery link tag not found")
+		}
+
+		// Verify feed URL is substituted correctly
+		if !strings.Contains(body, feedURL) {
+			t.Errorf("feed URL not substituted, expected %q in body", feedURL)
+		}
+
+		// Verify macro is not in output
+		if strings.Contains(body, "[%feedUrlEveryone%]") {
+			t.Errorf("feed URL macro not substituted")
+		}
+	})
+
+	t.Run("feed URL macro substitution", func(t *testing.T) {
+		html := `<link rel="alternate" type="application/rss+xml" href="[%feedUrlEveryone%]">`
+		result := server.substituteConfig(html)
+
+		if !strings.Contains(result, feedURL) {
+			t.Errorf("feed URL not substituted, got: %s", result)
+		}
+
+		if strings.Contains(result, "[%feedUrlEveryone%]") {
+			t.Errorf("macro not substituted")
+		}
+	})
+}
