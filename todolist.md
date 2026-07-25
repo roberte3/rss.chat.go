@@ -3,7 +3,7 @@
 A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.6.3.
 
 **Reference**: Original RSS.Chat on GitHub: https://github.com/scripting/rss.chat  
-**Current Build**: Passing all tests (100 tests across 9 packages)
+**Current Build**: Passing all tests (107 tests across 10 packages)
 
 ---
 
@@ -143,12 +143,21 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - 9 unit tests for paragraph trimming
   - 2 integration tests for OPML title customization
 
-- [x] **Feed Autodiscovery** (JUST COMPLETED)
+- [x] **Feed Autodiscovery** (COMPLETED)
   - Added `FeedURLEveryone` field to client Config struct
   - Wired feed URL through main.go: `fmt.Sprintf("http://%s/feed", cfg.MyDomain)`
   - Added `[%feedUrlEveryone%]` macro substitution in client server
   - HTML updated with `<link rel="alternate" type="application/rss+xml">` tag
   - 2 new tests verify link tag present and URL properly substituted
+
+- [x] **Blocklist Persistence** (JUST COMPLETED)
+  - Created separate `blocklist.json` file with LoadBlocklist() function
+  - Added blocklist table to SQLite for backup/restore
+  - Added CheckBlocklist database functions (SyncBlocklistToDB, GetBlocklistEmails, IsEmailBlocked, ClearBlocklist)
+  - Updated checkBlocklist() handler to reload from JSON on each auth check
+  - Automatically syncs to database after loading
+  - 5 new database tests + 4 updated auth endpoint tests
+  - Hot-reload capability: changes take effect immediately without restart
 
 ---
 
@@ -207,12 +216,16 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 - [x] **Tests**: Verify link tag present and correct
 - **Impact**: Browsers can auto-discover feed
 
-#### 6. Blocklist Persistence (1 day)
-**Feature**: Reload blocklist from config on every use
-- [ ] Re-read `config.json` for each auth check
-- [ ] Avoids restart requirement for hotfixes
-- **Tests**: Blocklist changes reflected immediately
-- **Impact**: Operational flexibility
+#### 6. Blocklist Persistence (1 day) ✅ COMPLETED
+**Feature**: Reload blocklist from dedicated JSON file
+- [x] Create separate `blocklist.json` file (not in config)
+- [x] Add blocklist table to SQLite for backup
+- [x] Reload from JSON on every auth check (hot-reload)
+- [x] Sync to database automatically
+- [x] Case-insensitive email matching
+- [x] 5 new database tests for blocklist operations
+- [x] Updated auth tests to use new mechanism
+- **Impact**: Operational flexibility - no restart needed for hotfixes
 
 #### 7. Autolinker Refinements (1 day)
 **Feature**: Smarter URL detection
@@ -292,10 +305,10 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 ## 📊 Project Statistics
 
 **Codebase**:
-- 9 test packages (100 total tests passing)
+- 10 test packages (107 total tests passing)
 - ~10 API endpoints
-- ~15 data layer functions
-- ~2000 lines of Go code (core logic)
+- ~20 data layer functions
+- ~2200 lines of Go code (core logic)
 
 **Documentation**:
 - README.md - Comprehensive project guide
@@ -392,4 +405,4 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 ---
 
 **Last Updated**: 2026-07-24  
-**Project Status**: In active development, v1.0 feature complete, 5/10 Tier 1 features implemented, targeting v0.6.3 feature parity
+**Project Status**: In active development, v1.0 feature complete, Tier 1 complete (5/5), Tier 2 feature 2/3 complete, targeting v0.6.3 feature parity
