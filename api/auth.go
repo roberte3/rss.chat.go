@@ -29,13 +29,6 @@ func AuthenticateUser(conn *sql.DB, email, code string) (*db.User, error) {
 	return user, nil
 }
 
-// IsEmailBlocked checks if an email is on the blocklist.
-// TODO: Load from config instead of hardcoding
-func IsEmailBlocked(email string) bool {
-	// For now, allow all emails (no blocklist)
-	return false
-}
-
 // IsUserAdmin checks if a user is an admin.
 // Currently a stub—the JS original also returns false.
 // TODO: Implement admin logic if needed
