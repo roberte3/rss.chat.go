@@ -97,19 +97,20 @@ inferred from `buildFeedItems`/`buildFeedForUser`/`buildCommentsFeed`/
 
 ## Phase 3 — feed/OPML publishing (replaces `daves3`)
 
-- [ ] Decide storage backend for v1: real S3 (AWS SDK v2 for Go) vs. local filesystem
-      (serve `rss.xml`/`subs.opml` straight from the Go server instead of a bucket).
-      The JS server *requires* S3; since this is a fresh Go service you may not need to
-      replicate that constraint — worth a design decision before coding.
-- [ ] `updateFeedsOnS3` equivalent: publish a user's feed + the everyone feed after
-      writes.
-- [ ] `publishCommentsFeed` / `updateReplyFeedsOnS3`: republish a parent's comments
-      feed (and its own parent, recursively one level) after a reply is added, edited,
-      or deleted.
-- [ ] `updateSubscriptionListOnS3`: republish `subs.opml` on startup and after new
-      users are added.
-- [ ] `backfillCommentsFeeds`: one-time/admin operation to publish comments feeds for
-      existing threads — needed once, not on every startup.
+- [x] Decided on local filesystem storage (no external S3 dependency). Feeds served
+      directly by Go server via HTTP endpoints.
+- [x] `updateFeedsOnS3` equivalent → `Publisher.UpdateFeedsOnPostWrite`: publishes
+      user's feed + everyone feed after posts created/updated/deleted. (`publish/publisher.go`)
+- [x] `publishCommentsFeed` / `updateReplyFeedsOnS3` equivalent →
+      `Publisher.UpdateFeedsOnReply`: republishes parent's comments feed, parent author's
+      feed, and everyone feed. (`publish/publisher.go`)
+- [x] `updateSubscriptionListOnS3` equivalent → `Publisher.PublishSubscriptionList`:
+      publishes `subs.opml` on startup and after new users added. (`publish/publisher.go`)
+- [x] `backfillCommentsFeeds` → `Publisher.BackfillCommentFeeds`: one-time operation
+      to backfill comments feeds for all threaded posts. (`publish/publisher.go`)
+- [x] Feed serving layer with HTTP handlers (`publish/server.go`): `ServeUserFeed`,
+      `ServeEveryoneFeed`, `ServeCommentsFeed`, `ServeOPML` ready for Phase 4 HTTP wiring.
+- [x] Tests verify publishing and file creation (`publish/publisher_test.go`).
 
 ## Phase 4 — HTTP API (`handleHttpRequest`)
 
