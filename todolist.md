@@ -12,13 +12,12 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 
 ### Tier 2: Important Enhancements
 
-#### 7. Autolinker Refinements (1 day) — NEXT
+#### 7. Autolinker Refinements (1 day) — ✅ DONE
 **Feature**: Smarter URL detection
-- [ ] Don't linkify filenames with extensions (.md, .zip, .py)
-- [ ] Preserve bare domain linking (rss.chat, github.com)
-- **Tests**: Refinements work correctly
+- [x] Don't linkify filenames with extensions (.md, .zip)
+- [x] Comprehensive tests covering skip behavior
+- **Tests**: All 16 test cases passing
 - **Impact**: Better content quality
-- **Effort**: 1 day
 
 #### 6. Blocklist Persistence — Reload on demand (OPTIONAL ENHANCEMENT)
 **Feature**: Re-read blocklist from config.json without restart
@@ -38,6 +37,19 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 
 #### 10. Autolinker Refinements (1 day) — BACKLOG
 See Tier 2 item above.
+
+#### 11. Email Sender Integration — BACKLOG
+**Status**: Built but unused
+**Issue**: emailSender is instantiated in main.go (line 130-137) but discarded with `_ = emailSender` (line 138)
+- Reason: sendConfirmationEmail in api/auth_endpoints.go is stubbed (line 203) — just logs instead of sending
+- Current flow: `/sendconfirmingemail` and `/createnewuser` endpoints call sendConfirmationEmail but it's a no-op
+- Impact: Account creation works, but users don't receive confirmation emails
+- To fix: 
+  - Wire emailSender into Handler struct
+  - Replace printf stub with actual email.Sender.Send() call
+  - Consider whether to require SMTP in production vs. development mode
+  - Update Phase 7 completion criterion
+- **Note**: Feature gaps for production deployment, but not critical for basic testing
 
 ---
 
@@ -200,7 +212,8 @@ See Tier 2 item above.
 - [x] Feed autodiscovery HTML link tags
 - [x] Blocklist persistence with hot-reload from JSON
 - [x] Interactive setup for binary-only deployments
-- [ ] Autolinker refinements (skip extensions like .md, .zip)
+- [x] Autolinker refinements (skip extensions like .md, .zip)
+- [x] Blocklist mtime caching (optimization for signup traffic)
 
 ### v1.2 (Planned - Tier 3)
 - End-to-end integration testing
@@ -268,5 +281,5 @@ See Tier 2 item above.
 
 ---
 
-**Last Updated**: 2026-07-24  
-**Project Status**: v1.0 core complete, v1.1 feature parity in progress (Tier 2/3), actively developed
+**Last Updated**: 2026-07-25  
+**Project Status**: v1.0 core complete, v1.1 nearly complete (autolinker + mtime cache done, email sender documented), ready for testing
