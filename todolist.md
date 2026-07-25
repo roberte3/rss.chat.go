@@ -3,7 +3,7 @@
 A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.6.3.
 
 **Reference**: Original RSS.Chat on GitHub: https://github.com/scripting/rss.chat  
-**Current Build**: Passing all tests (107 tests across 10 packages)
+**Current Build**: Passing all tests (110 tests across 10 packages)
 
 ---
 
@@ -91,7 +91,21 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 
 ---
 
-## 🔄 In Progress / Recently Completed
+## 🔄 Recently Completed
+
+- [x] **Setup: Interactive Config Generation** (JUST COMPLETED)
+  - Fixed chicken-and-egg bug: `-setup` now creates config.json before config.Load()
+  - Interactive prompts for 8 fields (productNameForDisplay, domain, mail sender, SMTP, websocket enable)
+  - Auto-derives URLServerForClient, URLServerForEmail, URLWebsocketServerForClient
+  - Idempotent: re-running `-setup` never overwrites existing config.json
+  - Updated CreateSettings to accept productName parameter (was hardcoded)
+  - Exposed ApplyDefaults() and Validate() as public methods on Config
+  - Added deriveWebsocketURL() helper for https ↔ wss conversion
+  - 4 new tests: TestCreateConfig, TestCreateConfigDefaults, TestCreateConfigSkipsExisting, updated TestCreateSettings
+  - Full workflow: binary-only user can bootstrap with `binary -setup` + prompts, all files auto-generated
+  - Verified: fresh bootstrap → re-run safe → normal boot works
+
+## 🔄 In Progress / Earlier Completed
 
 - [x] **Configurable ports** (JUST COMPLETED)
   - Added `httpPort` config field (default 8081)
@@ -305,10 +319,10 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 ## 📊 Project Statistics
 
 **Codebase**:
-- 10 test packages (107 total tests passing)
+- 10 test packages (110 total tests passing)
 - ~10 API endpoints
-- ~20 data layer functions
-- ~2200 lines of Go code (core logic)
+- ~25 data layer functions
+- ~2500 lines of Go code (core logic)
 
 **Documentation**:
 - README.md - Comprehensive project guide
