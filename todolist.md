@@ -3,7 +3,7 @@
 A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.6.3.
 
 **Reference**: Original RSS.Chat on GitHub: https://github.com/scripting/rss.chat  
-**Current Build**: Passing all tests (84 tests across 9 packages)
+**Current Build**: Passing all tests (93 tests across 9 packages)
 
 ---
 
@@ -105,7 +105,7 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - API handler serving configured content
   - Tests added and passing (custom + default values)
 
-- [x] **Database-Driven Feeds Option** (JUST COMPLETED)
+- [x] **Database-Driven Feeds Option** (COMPLETED)
   - Separate `rss.chat.feeds.db` SQLite file for feeds storage
   - Dual-mode support: filesystem (default) and database
   - Config fields: `flFeedsInDatabase` (bool), `feedsDBPath` (string)
@@ -115,6 +115,16 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - API layer reads from database when configured
   - 27 total new tests (db + publisher + API endpoint tests)
   - All tests passing, no regressions
+
+- [x] **Feed Format Negotiation** (JUST COMPLETED)
+  - JSON output support alongside RSS XML
+  - Query parameter: `?format=json|xml` (default: xml)
+  - JSON structure mirrors RSS 2.0 for consistency
+  - 4 new feed builder tests for JSON generation and conversion
+  - 5 new API endpoint tests for format negotiation
+  - Content parity verified between JSON and XML formats
+  - Invalid formats return proper error response
+  - Backward compatible (XML is default)
 
 ---
 
@@ -132,13 +142,15 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 - [x] Both modes produce identical content
 - **Impact**: Enables single-file deployments without feeds directory
 
-#### 2. Feed Format Negotiation (1-2 days)
+#### 2. Feed Format Negotiation (1-2 days) ✅ COMPLETED
 **Feature**: `/feed?format=json|xml` parameter
-- [ ] Extend feed builder for JSON output
-- [ ] Keep RSS 2.0 structure in JSON format
-- [ ] Default to XML for backward compatibility
-- **Tests**: Both formats work, unsupported returns error
-- **Impact**: Enables API clients that prefer JSON
+- [x] Extend feed builder for JSON output with `BuildFeedForUserJSON()`, `BuildFeedForEveryoneJSON()`
+- [x] Convert RSS XML to JSON structure (mirrors RSS 2.0)
+- [x] Default to XML for backward compatibility
+- [x] JSON and XML formats produce identical content
+- [x] Invalid format parameter returns error
+- **Tests**: 9 new tests (4 builder + 5 endpoint), all passing
+- **Impact**: Enables API clients that prefer JSON format
 
 #### 3. Blocklist Enforcement in Auth (1 day)
 **Feature**: Wire existing blocklist into signup/signin

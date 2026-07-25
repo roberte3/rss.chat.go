@@ -353,3 +353,108 @@ type Link struct {
 	Type string `xml:"type,attr,omitempty"`
 	Href string `xml:"href,attr"`
 }
+
+// JSONFeed represents an RSS feed in JSON format (mirrors RSS 2.0 structure).
+type JSONFeed struct {
+	Version string     `json:"version"`
+	Channel JSONChannel `json:"channel"`
+}
+
+// JSONChannel represents the channel element in JSON format.
+type JSONChannel struct {
+	Title       string       `json:"title"`
+	Link        string       `json:"link"`
+	Description string       `json:"description"`
+	Language    string       `json:"language,omitempty"`
+	LastBuildDate string     `json:"lastBuildDate,omitempty"`
+	Items       []JSONItem   `json:"item,omitempty"`
+}
+
+// JSONItem represents an item element in JSON format.
+type JSONItem struct {
+	Title       string `json:"title,omitempty"`
+	Link        string `json:"link,omitempty"`
+	Description string `json:"description,omitempty"`
+	GUID        string `json:"guid,omitempty"`
+	PubDate     string `json:"pubDate,omitempty"`
+	Author      string `json:"author,omitempty"`
+}
+
+// BuildFeedForUserJSON generates a JSON feed for a user's posts.
+func BuildFeedForUserJSON(conn *sql.DB, userScreenname string, baseURL string, config BuilderConfig) (string, error) {
+	rssXML, err := BuildFeedForUser(conn, userScreenname, baseURL, config)
+	if err != nil {
+		return "", err
+	}
+	return convertRSSToJSON(rssXML)
+}
+
+// BuildFeedForEveryoneJSON generates a JSON feed of all posts on the network.
+func BuildFeedForEveryoneJSON(conn *sql.DB, baseURL string, config BuilderConfig) (string, error) {
+	rssXML, err := BuildFeedForEveryone(conn, baseURL, config)
+	if err != nil {
+		return "", err
+	}
+	return convertRSSToJSON(rssXML)
+}
+
+// BuildCommentsFeedJSON generates a JSON feed of replies to a post.
+func BuildCommentsFeedJSON(conn *sql.DB, itemID int64, baseURL string, config BuilderConfig) (string, error) {
+	rssXML, err := BuildCommentsFeed(conn, itemID, baseURL, config)
+	if err != nil {
+		return "", err
+	}
+	return convertRSSToJSON(rssXML)
+}
+
+// convertRSSToJSON converts an RSS XML string to JSON format.
+func convertRSSToJSON(rssXML string) (string, error) {
+	// Parse the RSS XML
+	var rssFeed RSSFeed
+	if err := xml.Unmarshal([]byte(rssXML), &rssFeed); err != nil {
+		return "", fmt.Errorf("failed to parse RSS XML: %w", err)
+	}
+
+	if rssFeed.Channel == nil {
+		return "", fmt.Errorf("RSS feed has no channel")
+	}
+
+	// Convert to JSON structure
+	jsonFeed := JSONFeed{
+		Version: rssFeed.Version,
+		Channel: JSONChannel{
+			Title:         rssFeed.Channel.Title,
+			Link:          rssFeed.Channel.Link,
+			Description:   rssFeed.Channel.Description,
+			Language:      rssFeed.Channel.Language,
+		},
+	}
+
+	// Convert items
+	if len(rssFeed.Channel.Items) > 0 {
+		jsonFeed.Channel.Items = make([]JSONItem, len(rssFeed.Channel.Items))
+		for i, item := range rssFeed.Channel.Items {
+			if item != nil {
+				guid := ""
+				if item.Guid != nil {
+					guid = item.Guid.Value
+				}
+				jsonFeed.Channel.Items[i] = JSONItem{
+					Title:       item.Title,
+					Link:        item.Link,
+					Description: item.Description,
+					GUID:        guid,
+					PubDate:     item.PubDate,
+				}
+			}
+		}
+	}
+
+	// Marshal to JSON with indentation
+	jsonBytes, err := json.MarshalIndent(jsonFeed, "", "  ")
+	if err != nil {
+		return "", fmt.Errorf("failed to marshal JSON: %w", err)
+	}
+
+	return string(jsonBytes), nil
+}

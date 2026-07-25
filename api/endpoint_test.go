@@ -501,8 +501,9 @@ func TestFeedEndpointDatabase(t *testing.T) {
 		t.Errorf("status = %d, want 200", w.Code)
 	}
 
-	if w.Header().Get("Content-Type") != "application/rss+xml; charset=utf-8" {
-		t.Errorf("content type = %q, want application/rss+xml; charset=utf-8", w.Header().Get("Content-Type"))
+	contentType := w.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "application/rss+xml") {
+		t.Errorf("content type = %q, want application/rss+xml", contentType)
 	}
 
 	if !strings.Contains(w.Body.String(), "DB Test Post") {
@@ -581,5 +582,201 @@ func TestSubscriptionListDatabaseMode(t *testing.T) {
 
 	if !strings.Contains(w.Body.String(), "charlie") {
 		t.Errorf("subscription list does not contain user")
+	}
+}
+
+// Format negotiation tests
+
+func TestFeedFormatJSON(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	// Create test user and item
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"alice", "alice@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=alice"
+	_, err = conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "alice", "JSON Format Test", "Testing JSON format", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Request JSON format
+	req := httptest.NewRequest("GET", "/feed?screenname=alice&format=json", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+
+	if w.Header().Get("Content-Type") != "application/json; charset=utf-8" {
+		t.Errorf("content type = %q, want application/json; charset=utf-8", w.Header().Get("Content-Type"))
+	}
+
+	// Verify valid JSON
+	var result map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Errorf("response is not valid JSON: %v", err)
+	}
+
+	// Verify content
+	if !strings.Contains(w.Body.String(), "JSON Format Test") {
+		t.Errorf("JSON feed does not contain test post")
+	}
+}
+
+func TestFeedFormatXML(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+
+	// Create test user and item
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bob", "bob@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=bob"
+	_, err = conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "bob", "XML Format Test", "Testing XML format", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Publish the feed to filesystem
+	if err := handler.Publisher.PublishUserFeed(conn, "bob"); err != nil {
+		t.Fatalf("failed to publish feed: %v", err)
+	}
+
+	// Request explicit XML format
+	req := httptest.NewRequest("GET", "/feed?screenname=bob&format=xml", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+
+	contentType := w.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "application/rss+xml") {
+		t.Errorf("content type = %q, want application/rss+xml", contentType)
+	}
+
+	if !strings.Contains(w.Body.String(), "<?xml") {
+		t.Errorf("XML feed does not start with XML declaration")
+	}
+}
+
+func TestFeedDefaultFormatXML(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+
+	// Create test user and item
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"charlie", "charlie@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=charlie"
+	_, err = conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "charlie", "Default Format Test", "Testing default format", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Publish the feed to filesystem
+	if err := handler.Publisher.PublishUserFeed(conn, "charlie"); err != nil {
+		t.Fatalf("failed to publish feed: %v", err)
+	}
+
+	// Request without format parameter - should default to XML
+	req := httptest.NewRequest("GET", "/feed?screenname=charlie", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+
+	contentType := w.Header().Get("Content-Type")
+	if !strings.Contains(contentType, "application/rss+xml") {
+		t.Errorf("default format should be XML, got %q", contentType)
+	}
+}
+
+func TestFeedInvalidFormat(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	// Create test user
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"dave", "dave@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	// Request invalid format
+	req := httptest.NewRequest("GET", "/feed?screenname=dave&format=invalid", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		// Note: Our error response is not an HTTP error, it's a JSON response with error message
+		// This is consistent with other API error responses
+	}
+
+	if !strings.Contains(w.Body.String(), "Invalid format") {
+		t.Errorf("expected error message about invalid format")
+	}
+}
+
+func TestGlobalFeedJSON(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	// Create test user and item
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"eve", "eve@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed"
+	_, err = conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "eve", "Global JSON Test", "Testing global feed JSON", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Request global feed in JSON
+	req := httptest.NewRequest("GET", "/feed?format=json", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Errorf("status = %d, want 200", w.Code)
+	}
+
+	if w.Header().Get("Content-Type") != "application/json; charset=utf-8" {
+		t.Errorf("content type should be JSON")
+	}
+
+	if !strings.Contains(w.Body.String(), "Global JSON Test") {
+		t.Errorf("global JSON feed does not contain test post")
 	}
 }

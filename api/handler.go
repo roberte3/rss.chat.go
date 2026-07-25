@@ -95,10 +95,41 @@ func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
 }
 
 // Feed serves an RSS feed: either user's feed or everyone's feed.
-// Query params: screenname (optional)
+// Query params: screenname (optional), format (optional, default "xml", can be "json")
 func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 	screenname := r.URL.Query().Get("screenname")
+	format := r.URL.Query().Get("format")
+	if format == "" {
+		format = "xml"
+	}
 
+	// Validate format
+	if format != "xml" && format != "json" {
+		RespondError(w, fmt.Sprintf("Invalid format: %s (must be 'xml' or 'json')", format))
+		return
+	}
+
+	// Handle JSON format - generate on demand
+	if format == "json" {
+		var jsonContent string
+		var err error
+		if screenname == "" {
+			jsonContent, err = feed.BuildFeedForEveryoneJSON(h.DB, h.FeedConfig.BaseURL, h.FeedConfig)
+		} else {
+			jsonContent, err = feed.BuildFeedForUserJSON(h.DB, screenname, h.FeedConfig.BaseURL, h.FeedConfig)
+		}
+
+		if err != nil {
+			RespondError(w, fmt.Sprintf("Can't build feed because %s", err.Error()))
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Write([]byte(jsonContent))
+		return
+	}
+
+	// Handle XML format (default)
 	// If feeds are stored in database, serve from there
 	if h.FeedsDB != nil {
 		var feedType string

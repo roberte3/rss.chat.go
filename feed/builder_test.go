@@ -2,6 +2,7 @@ package feed
 
 import (
 	"database/sql"
+	"encoding/json"
 	"testing"
 	"time"
 
@@ -116,6 +117,269 @@ func TestBuildFeedForUser(t *testing.T) {
 
 	if !contains(rss, "Test Post") {
 		t.Errorf("expected RSS to contain item title")
+	}
+}
+
+func TestBuildFeedForUserJSON(t *testing.T) {
+	config := BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+
+	testDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create test db: %v", err)
+	}
+	defer testDB.Close()
+
+	if err := initTestDB(testDB); err != nil {
+		t.Fatalf("failed to init test db: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=alice"
+	now := time.Now()
+
+	_, err = testDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"alice", "alice@example.com", "secret", "", `{"myFeedTitle":"Alice's Feed"}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	_, err = testDB.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "alice", "JSON Test Post", "Testing JSON feed format", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Build JSON feed
+	jsonStr, err := BuildFeedForUserJSON(testDB, "alice", config.BaseURL, config)
+	if err != nil {
+		t.Fatalf("failed to build JSON feed: %v", err)
+	}
+
+	if jsonStr == "" {
+		t.Errorf("expected non-empty JSON, got empty string")
+	}
+
+	// Verify it's valid JSON
+	var jsonFeed JSONFeed
+	if err := json.Unmarshal([]byte(jsonStr), &jsonFeed); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	// Verify structure
+	if jsonFeed.Version != "2.0" {
+		t.Errorf("version = %q, want 2.0", jsonFeed.Version)
+	}
+
+	if jsonFeed.Channel.Title == "" {
+		t.Errorf("expected non-empty channel title")
+	}
+
+	if len(jsonFeed.Channel.Items) == 0 {
+		t.Errorf("expected at least one item in feed")
+	}
+
+	if !contains(jsonFeed.Channel.Items[0].Title, "JSON Test Post") {
+		t.Errorf("expected item title to contain 'JSON Test Post'")
+	}
+}
+
+func TestBuildFeedForEveryoneJSON(t *testing.T) {
+	config := BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+
+	testDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create test db: %v", err)
+	}
+	defer testDB.Close()
+
+	if err := initTestDB(testDB); err != nil {
+		t.Fatalf("failed to init test db: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=bob"
+	now := time.Now()
+
+	_, err = testDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"bob", "bob@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	_, err = testDB.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "bob", "Global JSON Post", "Testing global feed JSON", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Build JSON feed for everyone
+	jsonStr, err := BuildFeedForEveryoneJSON(testDB, config.BaseURL, config)
+	if err != nil {
+		t.Fatalf("failed to build JSON feed: %v", err)
+	}
+
+	if jsonStr == "" {
+		t.Errorf("expected non-empty JSON, got empty string")
+	}
+
+	// Verify it's valid JSON
+	var jsonFeed JSONFeed
+	if err := json.Unmarshal([]byte(jsonStr), &jsonFeed); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	if len(jsonFeed.Channel.Items) == 0 {
+		t.Errorf("expected at least one item in global feed")
+	}
+}
+
+func TestRSSToJSONConversion(t *testing.T) {
+	config := BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+
+	testDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create test db: %v", err)
+	}
+	defer testDB.Close()
+
+	if err := initTestDB(testDB); err != nil {
+		t.Fatalf("failed to init test db: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=charlie"
+	now := time.Now()
+
+	_, err = testDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"charlie", "charlie@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	_, err = testDB.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "charlie", "Conversion Test", "Testing RSS to JSON", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Get XML version
+	rssXML, err := BuildFeedForUser(testDB, "charlie", config.BaseURL, config)
+	if err != nil {
+		t.Fatalf("failed to build RSS: %v", err)
+	}
+
+	// Convert to JSON
+	jsonStr, err := convertRSSToJSON(rssXML)
+	if err != nil {
+		t.Fatalf("failed to convert RSS to JSON: %v", err)
+	}
+
+	// Parse JSON
+	var jsonFeed JSONFeed
+	if err := json.Unmarshal([]byte(jsonStr), &jsonFeed); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	// Verify content is present
+	if jsonFeed.Channel.Title == "" {
+		t.Errorf("expected title in JSON feed")
+	}
+
+	if len(jsonFeed.Channel.Items) == 0 {
+		t.Errorf("expected items in JSON feed")
+	}
+
+	if !contains(jsonFeed.Channel.Items[0].Title, "Conversion Test") {
+		t.Errorf("expected item title in JSON feed")
+	}
+}
+
+func TestJSONVsXMLContentParity(t *testing.T) {
+	config := BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+
+	testDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create test db: %v", err)
+	}
+	defer testDB.Close()
+
+	if err := initTestDB(testDB); err != nil {
+		t.Fatalf("failed to init test db: %v", err)
+	}
+
+	feedURL := "http://localhost:8081/feed?screenname=dave"
+	now := time.Now()
+
+	_, err = testDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"dave", "dave@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	_, err = testDB.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		feedURL, "dave", "Parity Test", "Content should be identical", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+
+	// Build both formats
+	rssXML, err := BuildFeedForUser(testDB, "dave", config.BaseURL, config)
+	if err != nil {
+		t.Fatalf("failed to build RSS: %v", err)
+	}
+
+	jsonStr, err := BuildFeedForUserJSON(testDB, "dave", config.BaseURL, config)
+	if err != nil {
+		t.Fatalf("failed to build JSON: %v", err)
+	}
+
+	// Parse JSON
+	var jsonFeed JSONFeed
+	if err := json.Unmarshal([]byte(jsonStr), &jsonFeed); err != nil {
+		t.Fatalf("failed to unmarshal JSON: %v", err)
+	}
+
+	// Both should have the title and items
+	if !contains(rssXML, "Parity Test") {
+		t.Errorf("XML doesn't contain test post")
+	}
+
+	if !contains(jsonStr, "Parity Test") {
+		t.Errorf("JSON doesn't contain test post")
+	}
+
+	// Both should have same number of items
+	if len(jsonFeed.Channel.Items) != 1 {
+		t.Errorf("expected 1 item in JSON feed, got %d", len(jsonFeed.Channel.Items))
 	}
 }
 
