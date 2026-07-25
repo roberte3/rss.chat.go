@@ -45,8 +45,9 @@ type Config struct {
 	URLWebsocketServerForClient string `json:"urlWebsocketServerForClient"`
 
 	// Whitelist/blocklist
-	Whitelist       []string `json:"whitelist"`
+	Whitelist        []string `json:"whitelist"`
 	BlockedUsersList []string `json:"blockedUsersList"`
+	BlocklistPath    string   `json:"blocklistPath"` // Path to separate blocklist.json file
 
 	// Media handling
 	MediaDBPath       string `json:"mediaDBPath"`       // Path to separate media database
@@ -147,6 +148,10 @@ func (c *Config) applyDefaults() {
 
 	if c.FeedsDBPath == "" {
 		c.FeedsDBPath = "rss.chat.feeds.db"
+	}
+
+	if c.BlocklistPath == "" {
+		c.BlocklistPath = "blocklist.json"
 	}
 
 	if c.TitleForSubscriptionList == "" {

@@ -46,6 +46,9 @@ func main() {
 		if err := setup.CreateSettings("settings.json"); err != nil {
 			log.Fatalf("setup failed: %v", err)
 		}
+		if err := setup.CreateBlocklist(cfg.BlocklistPath); err != nil {
+			log.Fatalf("setup failed: %v", err)
+		}
 
 		log.Println("setup complete")
 		return
