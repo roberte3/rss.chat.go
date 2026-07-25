@@ -64,12 +64,13 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 
 	// Create feed configuration from app config
 	feedConfig := feed.BuilderConfig{
-		BaseURL:         cfg.MyDomain,
-		ProductName:     cfg.ProductName,
-		MaxFeedItems:    100,
-		Language:        "en",
-		DocsURL:         "http://www.rssboard.org/rss-specification",
-		RSSCloudEnabled: false, // TODO: enable if rssCloud ping is implemented
+		BaseURL:                  cfg.MyDomain,
+		ProductName:              cfg.ProductName,
+		MaxFeedItems:             100,
+		Language:                 "en",
+		DocsURL:                  "http://www.rssboard.org/rss-specification",
+		RSSCloudEnabled:          false, // TODO: enable if rssCloud ping is implemented
+		TitleForSubscriptionList: cfg.TitleForSubscriptionList,
 	}
 
 	// Initialize media database

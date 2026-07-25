@@ -57,6 +57,10 @@ type Config struct {
 	FeedsInDatabase bool   `json:"flFeedsInDatabase"`  // Store feeds in database (default: false)
 	FeedsDBPath     string `json:"feedsDBPath"`        // Path to feeds database
 
+	// Post cleanup
+	RemoveBlanksAtEnd bool   `json:"flRemoveBlanksAtEnd"` // Strip trailing empty paragraphs (default: false)
+	TitleForSubscriptionList string `json:"titleForSubscriptionList"` // Custom OPML title
+
 	// SEO and robots
 	RobotsTxt string `json:"robotsTxt"` // Content for robots.txt file
 
@@ -143,6 +147,10 @@ func (c *Config) applyDefaults() {
 
 	if c.FeedsDBPath == "" {
 		c.FeedsDBPath = "rss.chat.feeds.db"
+	}
+
+	if c.TitleForSubscriptionList == "" {
+		c.TitleForSubscriptionList = fmt.Sprintf("Subscription list for %s running on %s", c.ProductName, c.MyDomain)
 	}
 
 	if c.RobotsTxt == "" {

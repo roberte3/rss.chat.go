@@ -3,7 +3,7 @@
 A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.6.3.
 
 **Reference**: Original RSS.Chat on GitHub: https://github.com/scripting/rss.chat  
-**Current Build**: Passing all tests (97 tests across 9 packages)
+**Current Build**: Passing all tests (99 tests across 9 packages)
 
 ---
 
@@ -126,7 +126,7 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - Invalid formats return proper error response
   - Backward compatible (XML is default)
 
-- [x] **Blocklist Enforcement in Auth** (JUST COMPLETED)
+- [x] **Blocklist Enforcement in Auth** (COMPLETED)
   - Config blocklist wired into signup/signin endpoints
   - `/sendconfirmingemail` checks config blocklist
   - `/createnewuser` checks config blocklist
@@ -134,6 +134,14 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - Case-insensitive email matching
   - 4 new endpoint tests verify blocked users rejected
   - Allowed users continue to work properly
+
+- [x] **Post Cleanup Options** (JUST COMPLETED)
+  - `flRemoveBlanksAtEnd` - Strip trailing empty paragraphs from posts
+  - `titleForSubscriptionList` - Custom OPML title configuration
+  - Cleanup applied during post creation when enabled
+  - OPML title automatically generated or custom
+  - 9 unit tests for paragraph trimming
+  - 2 integration tests for OPML title customization
 
 ---
 
@@ -172,11 +180,15 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 - **Tests**: 4 new endpoint tests, all passing
 - **Impact**: Completes security model - fully operational blocklist
 
-#### 4. Post Cleanup Options (1 day)
+#### 4. Post Cleanup Options (1 day) ✅ COMPLETED
 **Features**: 
-- [ ] `flRemoveBlanksAtEnd` - Strip trailing empty paragraphs
-- [ ] `titleForSubscriptionList` - Custom OPML title
-- **Tests**: Trimming works, title appears in OPML
+- [x] `flRemoveBlanksAtEnd` - Strip trailing empty paragraphs (Boolean config)
+- [x] `titleForSubscriptionList` - Custom OPML title (String config)
+- [x] Cleanup applied during post creation (`HandleNewPost`)
+- [x] OPML title uses custom value or generates default
+- [x] Added to feed BuilderConfig for flexible title handling
+- [x] Comprehensive tests: 9 paragraph trimming + 2 OPML title tests
+- **Tests**: 11 new tests, all passing
 - **Impact**: Polish & configuration flexibility
 
 ### Tier 2: Important Enhancements

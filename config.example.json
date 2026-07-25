@@ -21,6 +21,9 @@
   "flFeedsInDatabase": false,
   "feedsDBPath": "rss.chat.feeds.db",
 
+  "flRemoveBlanksAtEnd": false,
+  "titleForSubscriptionList": "My News Subscriptions",
+
   "mailSender": "admin@localhost",
   "smtpHost": "smtp.gmail.com",
   "smtpPort": 587,

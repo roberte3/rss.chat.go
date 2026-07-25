@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"rss.chat.go/db"
@@ -52,6 +53,11 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 
 	// Sanitize HTML to prevent XSS attacks
 	sanitized := SanitizePostHTML(linkified)
+
+	// Remove trailing empty paragraphs if configured
+	if h.Config != nil && h.Config.RemoveBlanksAtEnd {
+		sanitized = removeTrailingEmptyParagraphs(sanitized)
+	}
 
 	// Generate markdown from HTML if not provided
 	markdownText := req.MarkdownText
@@ -373,4 +379,48 @@ func strPtr(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// removeTrailingEmptyParagraphs strips trailing empty <p></p> tags from HTML.
+// This helps clean up post content when posts end with empty paragraphs.
+func removeTrailingEmptyParagraphs(html string) string {
+	if html == "" {
+		return html
+	}
+
+	// Repeatedly remove trailing empty paragraphs until none remain
+	for {
+		trimmed := strings.TrimSpace(html)
+		// Check if it ends with </p>
+		if !strings.HasSuffix(trimmed, "</p>") {
+			return trimmed
+		}
+
+		// Find the last <p> tag
+		lastOpenTag := strings.LastIndex(trimmed, "<p")
+		if lastOpenTag == -1 {
+			return trimmed
+		}
+
+		// Extract the paragraph
+		para := trimmed[lastOpenTag:]
+		// Remove any attributes from the opening tag
+		endOfTag := strings.Index(para, ">")
+		if endOfTag == -1 {
+			return trimmed
+		}
+
+		// Get the content between tags
+		content := para[endOfTag+1 : len(para)-4] // -4 for "</p>"
+		content = strings.TrimSpace(content)
+
+		// If paragraph is empty, remove it and continue
+		if content == "" {
+			html = strings.TrimSpace(trimmed[:lastOpenTag])
+			continue
+		}
+
+		// Otherwise we're done
+		return trimmed
+	}
 }

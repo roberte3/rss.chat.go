@@ -24,6 +24,7 @@ type BuilderConfig struct {
 	RSSCloudPath    string
 	RSSCloudReg     string
 	RSSCloudProto   string
+	TitleForSubscriptionList string // Custom OPML title (optional)
 }
 
 // BuildFeedForUser generates an RSS feed for a user's posts.
@@ -92,10 +93,16 @@ func BuildSubscriptionList(conn *sql.DB, baseURL string, config BuilderConfig) (
 		return "", fmt.Errorf("failed to fetch screennames: %w", err)
 	}
 
+	// Use custom title if provided, otherwise use default
+	title := config.TitleForSubscriptionList
+	if title == "" {
+		title = fmt.Sprintf("Subscription list for %s running on %s", config.ProductName, baseURL)
+	}
+
 	opml := &OPMLFeed{
 		Version: "2.0",
 		Head: &Head{
-			Title:        fmt.Sprintf("Subscription list for %s running on %s", config.ProductName, baseURL),
+			Title:        title,
 			DateModified: time.Now().UTC().Format("Mon, 02 Jan 2006 15:04:05 GMT"),
 		},
 		Body: &Body{

@@ -857,3 +857,123 @@ func TestBlocklistCaseInsensitive(t *testing.T) {
 		t.Errorf("blocklist check should be case-insensitive, but uppercase wasn't blocked")
 	}
 }
+
+// Post cleanup tests
+
+func TestRemoveTrailingEmptyParagraphs(t *testing.T) {
+	tests := []struct {
+		name     string
+		input    string
+		expected string
+	}{
+		{
+			name:     "no trailing paragraphs",
+			input:    "<p>Hello</p>",
+			expected: "<p>Hello</p>",
+		},
+		{
+			name:     "single trailing empty paragraph",
+			input:    "<p>Hello</p><p></p>",
+			expected: "<p>Hello</p>",
+		},
+		{
+			name:     "multiple trailing empty paragraphs",
+			input:    "<p>Hello</p><p></p><p></p>",
+			expected: "<p>Hello</p>",
+		},
+		{
+			name:     "empty paragraph with whitespace",
+			input:    "<p>Hello</p><p>   </p>",
+			expected: "<p>Hello</p>",
+		},
+		{
+			name:     "all empty paragraphs",
+			input:    "<p></p><p></p>",
+			expected: "",
+		},
+		{
+			name:     "empty string",
+			input:    "",
+			expected: "",
+		},
+		{
+			name:     "paragraph with attributes",
+			input:    "<p>Hello</p><p class=\"empty\"></p>",
+			expected: "<p>Hello</p>",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result := removeTrailingEmptyParagraphs(tt.input)
+			if result != tt.expected {
+				t.Errorf("removeTrailingEmptyParagraphs(%q) = %q, want %q", tt.input, result, tt.expected)
+			}
+		})
+	}
+}
+
+func TestCustomOPMLTitle(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "opml_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	testDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create test db: %v", err)
+	}
+	defer testDB.Close()
+
+	if err := createTestSchema(testDB); err != nil {
+		t.Fatalf("failed to init test db: %v", err)
+	}
+
+	now := time.Now()
+	_, err = testDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"alice", "alice@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user: %v", err)
+	}
+
+	tests := []struct {
+		name         string
+		customTitle  string
+		shouldContain string
+	}{
+		{
+			name:         "default title",
+			customTitle:  "",
+			shouldContain: "Subscription list",
+		},
+		{
+			name:         "custom title",
+			customTitle:  "My News Subscriptions",
+			shouldContain: "My News Subscriptions",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cfg := feed.BuilderConfig{
+				BaseURL:                  "localhost:8081",
+				ProductName:              "rss.chat",
+				MaxFeedItems:             100,
+				Language:                 "en",
+				DocsURL:                  "http://www.rssboard.org/rss-specification",
+				TitleForSubscriptionList: tt.customTitle,
+			}
+
+			opml, err := feed.BuildSubscriptionList(testDB, "localhost:8081", cfg)
+			if err != nil {
+				t.Fatalf("failed to build subscription list: %v", err)
+			}
+
+			if !strings.Contains(opml, tt.shouldContain) {
+				t.Errorf("OPML should contain %q, got: %s", tt.shouldContain, opml)
+			}
+		})
+	}
+}
