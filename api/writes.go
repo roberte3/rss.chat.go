@@ -50,10 +50,13 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		return
 	}
 
+	// Sanitize HTML to prevent XSS attacks
+	sanitized := SanitizePostHTML(linkified)
+
 	// Generate markdown from HTML if not provided
 	markdownText := req.MarkdownText
 	if markdownText == "" {
-		markdownText, err = HtmlToMarkdown(linkified)
+		markdownText, err = HtmlToMarkdown(sanitized)
 		if err != nil {
 			// If markdown conversion fails, just use empty (not critical)
 			markdownText = ""
@@ -67,7 +70,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		FeedURL:      feedURL,
 		Title:        req.Title,
 		Link:         "",
-		Description:  linkified,
+		Description:  sanitized,
 		InReplyTo:    req.InReplyTo,
 		PubDate:      now,
 		MarkdownText: markdownText,
@@ -167,11 +170,13 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 			RespondError(w, "Can't update post because "+err.Error())
 			return
 		}
-		description = linkified
+
+		// Sanitize HTML to prevent XSS attacks
+		description = SanitizePostHTML(linkified)
 
 		// Generate markdown if not provided
 		if markdownText == "" {
-			markdownText, err = HtmlToMarkdown(linkified)
+			markdownText, err = HtmlToMarkdown(description)
 			if err != nil {
 				// If markdown conversion fails, just use empty (not critical)
 				markdownText = ""
