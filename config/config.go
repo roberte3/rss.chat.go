@@ -35,6 +35,9 @@ type Config struct {
 	// Optional settings with defaults
 	// (ProductName above is already set with sensible default)
 
+	// Server ports
+	HTTPPort int `json:"httpPort"` // HTTP server port (default: 8081)
+
 	// WebSocket configuration
 	WebsocketEnabled            bool   `json:"flWebsocketEnabled"`
 	WebsocketPort               int    `json:"websocketPort"`
@@ -109,6 +112,10 @@ func (c *Config) applyDefaults() {
 
 	if c.OperationToConfirm == "" {
 		c.OperationToConfirm = "sign in to " + c.ProductNameForDisplay
+	}
+
+	if c.HTTPPort == 0 {
+		c.HTTPPort = 8081
 	}
 
 	if c.WebsocketPort == 0 {

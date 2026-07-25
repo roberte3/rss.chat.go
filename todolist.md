@@ -550,7 +550,7 @@ These are ideas for extending the platform beyond the core v1 implementation:
 - [ ] Export/import functionality
 
 **Tier 2 (High)** - User experience and configuration
-- [ ] Configurable server ports (HTTP and WebSocket)
+- [x] Configurable server ports (HTTP and WebSocket)
 - [ ] Database-driven feeds option (`flFeedsInDatabase`)
 - [ ] Feed format parameter (JSON/XML)
 - [ ] Feed autodiscovery link in HTML

@@ -46,6 +46,14 @@ Located in `tools/`:
 
 See `tools/TOOLS.md` for detailed usage instructions.
 
+## Server Configuration
+
+- **HTTP Port**: Configurable via `httpPort` in config.json (default: 8081)
+- **WebSocket Port**: Configurable via `websocketPort` in config.json (default: 1462)
+- **Email/SMTP**: Configurable host and port for email sending
+- All ports support environment-variable or config-file overrides
+- Backward compatible with hardcoded defaults
+
 ## Media Handling
 
 - Uploaded media stored in separate SQLite database for scalability

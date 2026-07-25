@@ -4,11 +4,16 @@
   "productName": "rssChat",
   "productNameForDisplay": "rss.chat",
 
-  "myDomain": "localhost:8081",
-  "urlServerForClient": "http://localhost:8081",
+  "myDomain": "http://localhost:8081",
+  "urlServerForClient": "http://localhost:8081/api",
   "urlServerForEmail": "http://localhost:8081",
 
+  "httpPort": 8081,
+
   "databasePath": "rss.chat.db",
+  "mediaDBPath": "rss.chat.media.db",
+  "tempMediaPath": "temp_media",
+  "maxMediaUploadBytes": 2097152,
 
   "feedsPath": "feeds",
   "subscriptionListPath": "feeds/subs.opml",
@@ -21,10 +26,10 @@
   "confirmEmailSubject": "Confirm your email for rss.chat",
   "operationToConfirm": "sign in to rss.chat",
 
-  "flWebsocketEnabled": false,
+  "flWebsocketEnabled": true,
   "websocketPort": 1462,
   "flSecureWebsocket": false,
-  "urlWebsocketServerForClient": "",
+  "urlWebsocketServerForClient": "ws://localhost:1462",
 
   "whitelist": [],
   "blockedUsersList": []

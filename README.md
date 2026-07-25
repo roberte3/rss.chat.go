@@ -95,6 +95,8 @@ Configuration is stored in `config.json`. Create or modify this file to customiz
   "myDomain": "http://localhost:8081",
   "productName": "RSS Chat",
   "productNameForDisplay": "RSS Chat",
+  "httpPort": 8081,
+  "websocketPort": 1462,
   "databasePath": "rss.chat.db",
   "mediaDBPath": "rss.chat.media.db",
   "tempMediaPath": "temp_media",
@@ -107,9 +109,9 @@ Configuration is stored in `config.json`. Create or modify this file to customiz
   "mailSender": "noreply@localhost",
   "urlServerForClient": "http://localhost:8081/api",
   "urlWebsocketServerForClient": "ws://localhost:8081",
-  "websocketEnabled": true,
+  "flWebsocketEnabled": true,
   "whitelist": [],
-  "blocklist": []
+  "blockedUsersList": []
 }
 ```
 
@@ -119,13 +121,15 @@ Configuration is stored in `config.json`. Create or modify this file to customiz
 |--------|-------------|---------|
 | `myDomain` | Public domain for RSS generation | `http://localhost:8081` |
 | `productName` | Internal product name | `RSS Chat` |
+| `httpPort` | HTTP server port | `8081` |
+| `websocketPort` | WebSocket server port | `1462` |
 | `databasePath` | Main SQLite database file | `rss.chat.db` |
 | `mediaDBPath` | Media SQLite database file | `rss.chat.media.db` |
 | `tempMediaPath` | Temporary storage directory for uploads | `temp_media` |
 | `maxMediaUploadBytes` | Maximum file size for uploads (bytes) | `2097152` (2MB) |
 | `smtpHost` | SMTP server for email | `localhost` |
 | `smtpPort` | SMTP server port | `25` |
-| `websocketEnabled` | Enable real-time WebSocket updates | `true` |
+| `flWebsocketEnabled` | Enable real-time WebSocket updates | `true` |
 
 ## API Endpoints
 

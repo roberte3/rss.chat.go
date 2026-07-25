@@ -51,6 +51,14 @@ func TestConfigLoad(t *testing.T) {
 		t.Errorf("DatabasePath = %q, want %q (default)", cfg.DatabasePath, "rss.chat.db")
 	}
 
+	if cfg.HTTPPort != 8081 {
+		t.Errorf("HTTPPort = %d, want %d (default)", cfg.HTTPPort, 8081)
+	}
+
+	if cfg.WebsocketPort != 1462 {
+		t.Errorf("WebsocketPort = %d, want %d (default)", cfg.WebsocketPort, 1462)
+	}
+
 	// Verify trailing slashes on URLs
 	if !hasSuffix(cfg.URLServerForClient, "/") {
 		t.Errorf("URLServerForClient should have trailing slash")
@@ -180,6 +188,42 @@ func TestIsEmailBlocked(t *testing.T) {
 	// Test case insensitivity
 	if cfg.IsEmailBlocked("SPAM@EXAMPLE.COM") != true {
 		t.Errorf("IsEmailBlocked should be case insensitive")
+	}
+}
+
+func TestConfigurablePorts(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "config_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configPath := filepath.Join(tmpDir, "config.json")
+	configContent := `{
+		"productNameForDisplay": "Test Server",
+		"myDomain": "localhost",
+		"urlServerForClient": "http://localhost:9000",
+		"urlServerForEmail": "http://localhost:9000",
+		"mailSender": "test@localhost",
+		"httpPort": 9000,
+		"websocketPort": 9001
+	}`
+
+	if err := os.WriteFile(configPath, []byte(configContent), 0644); err != nil {
+		t.Fatalf("failed to write config: %v", err)
+	}
+
+	cfg, err := Load(configPath)
+	if err != nil {
+		t.Fatalf("failed to load config: %v", err)
+	}
+
+	if cfg.HTTPPort != 9000 {
+		t.Errorf("HTTPPort = %d, want 9000", cfg.HTTPPort)
+	}
+
+	if cfg.WebsocketPort != 9001 {
+		t.Errorf("WebsocketPort = %d, want 9001", cfg.WebsocketPort)
 	}
 }
 

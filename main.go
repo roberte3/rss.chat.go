@@ -135,12 +135,13 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	clientServer := client.NewServer("archive/rss.chat/client/code", clientConfig)
 	mux.Handle("/", clientServer)
 
-	fmt.Println("Server is running on :" + cfg.MyDomain)
+	fmt.Printf("Server is running on http://localhost:%d\n", cfg.HTTPPort)
 	fmt.Println("API Base:", cfg.URLServerForClient)
 	if cfg.WebsocketEnabled {
 		fmt.Println("WebSocket enabled at:", cfg.URLWebsocketServerForClient)
 	}
-	if err := http.ListenAndServe(":8081", mux); err != nil {
+	addr := fmt.Sprintf(":%d", cfg.HTTPPort)
+	if err := http.ListenAndServe(addr, mux); err != nil {
 		panic(err)
 	}
 }
