@@ -82,18 +82,18 @@ Replaces `daverss` and `opml` node packages. No source to port from, just behavi
 inferred from `buildFeedItems`/`buildFeedForUser`/`buildCommentsFeed`/
 `buildFeedForEveryone` and the subscription-list functions.
 
-- [ ] RSS 2.0 feed builder: head elements (title, link, description, language, docs,
+- [x] RSS 2.0 feed builder: head elements (title, link, description, language, docs,
       image, rssCloud fields, `source:self`) + items (guid as permalink, `source:markdown`,
       enclosure, `source:comments`, `source:inReplyTo`, `<source>` attribution when
-      `flSourceAttribution`). Use `encoding/xml` with a struct tree rather than
-      hand-built strings.
-- [ ] `buildFeedForUser`, `buildFeedForEveryone`, `buildCommentsFeed` — same shape,
-      reading from the Phase 1 data layer.
-- [ ] OPML subscription list: build (`getSubscriptionList`) and, if the extras-list
-      feature is kept, parse (`getExtrasList` reads an external OPML URL — this may be
-      out of scope for v1, flag it as optional).
+      `flSourceAttribution`). Use `encoding/xml` with a struct tree. (`feed/models.go`
+      for XML structures, `feed/builder.go` for generation logic.)
+- [x] `buildFeedForUser`, `buildFeedForEveryone`, `buildCommentsFeed` — same shape,
+      reading from the Phase 1 data layer. (`BuildFeedForUser`, `BuildFeedForEveryone`,
+      `BuildCommentsFeed` in `feed/builder.go`.)
+- [x] OPML subscription list: build (`getSubscriptionList` → `BuildSubscriptionList`).
+      Parsing external OPML (`getExtrasList`) is out of scope for v1.
 - [ ] rssCloud ping (`rss.cloudPing`) — low priority; only fires after S3 publish.
-      Consider deferring/stubbing until S3 publishing exists.
+      Defer until Phase 3 wires up feed publishing.
 
 ## Phase 3 — feed/OPML publishing (replaces `daves3`)
 
