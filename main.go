@@ -2,7 +2,6 @@ package main
 
 import (
 	"database/sql"
-	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
@@ -11,34 +10,28 @@ import (
 
 	"rss.chat.go/api"
 	"rss.chat.go/client"
+	"rss.chat.go/config"
 	"rss.chat.go/db"
+	"rss.chat.go/email"
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
 	"rss.chat.go/setup"
 )
 
-type Settings struct {
-	Note        string `json:"note"`
-	ProductName string `json:"productName"`
-}
-
-func readSettings(path string) (*Settings, error) {
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, err
-	}
-	var s Settings
-	if err := json.Unmarshal(data, &s); err != nil {
-		return nil, err
-	}
-	return &s, nil
-}
 
 func main() {
 	setupFlag := flag.Bool("setup", false, "initialize the database and exit")
+	configPath := flag.String("config", "config.json", "path to config file")
 	flag.Parse()
 
-	conn, err := db.Open("rss.chat.db")
+	// Load configuration
+	cfg, err := config.Load(*configPath)
+	if err != nil {
+		log.Fatalf("failed to load config: %v", err)
+	}
+
+	// Open database
+	conn, err := db.Open(cfg.DatabasePath)
 	if err != nil {
 		log.Fatalf("failed to open database: %v", err)
 	}
@@ -57,29 +50,45 @@ func main() {
 	}
 
 	log.Println("connected to database")
-	runHttpSvr(conn)
+	log.Println("server:", cfg.ProductNameForDisplay)
+	log.Println("domain:", cfg.MyDomain)
+
+	runHttpSvr(conn, cfg)
 }
 
-func runHttpSvr(conn *sql.DB) {
+func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	mux := http.NewServeMux()
 
-	// Create feed configuration
+	// Create feed configuration from app config
 	feedConfig := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
-		ProductName:  "rss.chat",
-		MaxFeedItems: 100,
-		Language:     "en",
-		DocsURL:      "http://www.rssboard.org/rss-specification",
+		BaseURL:         cfg.MyDomain,
+		ProductName:     cfg.ProductName,
+		MaxFeedItems:    100,
+		Language:        "en",
+		DocsURL:         "http://www.rssboard.org/rss-specification",
+		RSSCloudEnabled: false, // TODO: enable if rssCloud ping is implemented
 	}
 
 	// Initialize publisher
-	if err := os.MkdirAll("feeds", 0755); err != nil {
+	if err := os.MkdirAll(cfg.FeedsPath, 0755); err != nil {
 		log.Fatalf("failed to create feeds directory: %v", err)
 	}
-	pub := publish.NewPublisher("feeds", feedConfig)
+	pub := publish.NewPublisher(cfg.FeedsPath, feedConfig)
 	if err := pub.EnsureDir(); err != nil {
 		log.Fatalf("failed to ensure feed directories: %v", err)
 	}
+
+	// Create email sender from config
+	emailSender := email.NewSender(email.Config{
+		SMTPHost:     cfg.SMTPHost,
+		SMTPPort:     cfg.SMTPPort,
+		SMTPUsername: cfg.SMTPUsername,
+		SMTPPassword: cfg.SMTPPassword,
+		FromAddress:  cfg.MailSender,
+		FromName:     cfg.ProductNameForDisplay,
+		Provider:     "smtp",
+	})
+	_ = emailSender // TODO: wire into API endpoints
 
 	// Create API handler
 	handler := api.NewHandler(conn, pub, feedConfig)
@@ -87,19 +96,20 @@ func runHttpSvr(conn *sql.DB) {
 
 	// Register client server (serves at root, must be last)
 	clientConfig := client.Config{
-		ProductName:              "rss.chat",
-		ProductNameForDisplay:    "rss.chat",
+		ProductName:              cfg.ProductName,
+		ProductNameForDisplay:    cfg.ProductNameForDisplay,
 		Version:                  "1.0",
 		EnableLogin:              true,
-		URLServerForClient:       "http://localhost:8081",
-		URLWebsocketServerForClient: "ws://localhost:8081",
-		WebsocketEnabled:         false, // TODO: enable when websocket broadcast is implemented
+		URLServerForClient:       cfg.URLServerForClient,
+		URLWebsocketServerForClient: cfg.URLWebsocketServerForClient,
+		WebsocketEnabled:         cfg.WebsocketEnabled,
 	}
 
 	clientServer := client.NewServer("archive/rss.chat/client/code", clientConfig)
 	mux.Handle("/", clientServer)
 
-	fmt.Println("Server is running on :8081...")
+	fmt.Println("Server is running on :" + cfg.MyDomain)
+	fmt.Println("API Base:", cfg.URLServerForClient)
 	if err := http.ListenAndServe(":8081", mux); err != nil {
 		panic(err)
 	}

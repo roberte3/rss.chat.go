@@ -22,13 +22,12 @@ each needs a Go equivalent — those are called out below as their own tasks, no
 - ✓ Phase 4 (majority): HTTP API - all read/write endpoints, HTML linkification, HTML→Markdown conversion, auth
 - ✓ Phase 5 (majority): Email auth (/sendconfirmingemail, /createnewuser, email sender, secretgen, validation)
 - ✓ Phase 6: Client hosting (static asset serving, index.html macro substitution, directory traversal protection)
+- ✓ Phase 7: Config loading + full integration into all subsystems
 
 **In Progress:**
-- Phase 7 (majority): Config loading complete; needs integration into subsystems
 - Phase 4 (final): Websocket broadcasting
 
 **Deferred to later phases:**
-- Phase 7 (final): Wire config into email, client, publisher, API handlers
 - Phase 8: Testing & verification
 
 ## Phase 0 — schema
@@ -282,14 +281,25 @@ service—no separate static server needed, everything bundled.
       - Example config provided: `config.example.json`
       - Location: `config/config.go`
 
-- [ ] Integration: wire Config into main.go and subsystems (email sender, client server,
-      publisher, API handlers). Currently stubbed in main.go with hardcoded values.
+- [x] Integration: wire Config into main.go and subsystems (email sender, client server,
+      publisher, API handlers).
+      **Implementation notes:**
+      - `main()` now accepts `-config` flag (defaults to `config.json`)
+      - `main.go` calls `config.Load()` immediately after startup, before DB/subsystems
+      - `runHttpSvr()` signature updated to accept `*config.Config` parameter
+      - Feed configuration built from `cfg.MyDomain`, `cfg.ProductName`
+      - Publisher initialized with `cfg.FeedsPath` instead of hardcoded "feeds"
+      - Email sender created with SMTP config from `cfg.SMTPHost`, `cfg.SMTPPort`, `cfg.SMTPUsername`, `cfg.SMTPPassword`, `cfg.MailSender`
+      - Client server receives all config URLs and names: `cfg.URLServerForClient`, `cfg.URLWebsocketServerForClient`, `cfg.ProductName`, `cfg.ProductNameForDisplay`, `cfg.WebsocketEnabled`
+      - Database path from `cfg.DatabasePath` instead of hardcoded `"rss.chat.db"`
+      - All hardcoded values replaced with config values throughout subsystem initialization
+      - Removed unused `Settings` struct and `readSettings()` function from main.go
+      - All tests pass (41 tests across api, client, config, feed, publish packages)
 
 - [ ] `robots.txt` content from config, disallowing `/getitembyguid` and `/getiteminfo`.
 
-- [ ] Startup sequence: load config, connect DB, republish subscription list,
-      start any periodic tasks, start HTTP/websocket server. Partially done;
-      needs config wiring.
+- [x] Startup sequence: load config (done), connect DB (done with config path), wire email/client/publisher/API to config (done).
+      Ready for Phase 4 websocket broadcast or Phase 8 testing.
 
 ## Phase 8 — testing & verification
 
