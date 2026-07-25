@@ -115,6 +115,7 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	handler.MediaDB = mediaDB
 	handler.MaxMediaUploadBytes = cfg.MaxMediaUploadBytes
 	handler.TempMediaPath = cfg.TempMediaPath
+	handler.RobotsContent = cfg.RobotsTxt
 	handler.RegisterRoutes(mux)
 
 	// Register websocket endpoint

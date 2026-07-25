@@ -32,5 +32,7 @@
   "urlWebsocketServerForClient": "ws://localhost:1462",
 
   "whitelist": [],
-  "blockedUsersList": []
+  "blockedUsersList": [],
+
+  "robotsTxt": "User-agent: *\nDisallow: /getitembyguid\nDisallow: /getiteminfo\n"
 }

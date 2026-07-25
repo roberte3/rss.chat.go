@@ -99,6 +99,12 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - Updated example config with all options
   - Tests added and passing
 
+- [x] **robots.txt from Config** (JUST COMPLETED)
+  - Added `robotsTxt` config field with sensible default
+  - Config wiring through main.go
+  - API handler serving configured content
+  - Tests added and passing (custom + default values)
+
 ---
 
 ## 📋 Next Priority Items
@@ -162,8 +168,12 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 
 ### Tier 3: Nice-to-Have
 
-#### 8. robots.txt from Config (1 day)
-- [ ] Load robots.txt content from `config.json`
+#### 8. robots.txt from Config (1 day) ✅ COMPLETED
+- [x] Load robots.txt content from `config.json`
+- [x] Default robots.txt in applyDefaults()
+- [x] Config wiring in main.go
+- [x] API handler using configured content
+- [x] Tests for custom and default values
 - **Impact**: Operational flexibility
 
 #### 9. End-to-End Smoke Test (2-3 days)

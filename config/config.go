@@ -53,6 +53,9 @@ type Config struct {
 	TempMediaPath     string `json:"tempMediaPath"`     // Temporary storage for uploads
 	MaxMediaUploadBytes int  `json:"maxMediaUploadBytes"` // Max upload size in bytes
 
+	// SEO and robots
+	RobotsTxt string `json:"robotsTxt"` // Content for robots.txt file
+
 	// Optional metadata
 	Note string `json:"note"`
 }
@@ -132,6 +135,13 @@ func (c *Config) applyDefaults() {
 
 	if c.MaxMediaUploadBytes == 0 {
 		c.MaxMediaUploadBytes = 2 * 1024 * 1024 // 2MB default
+	}
+
+	if c.RobotsTxt == "" {
+		c.RobotsTxt = `User-agent: *
+Disallow: /getitembyguid
+Disallow: /getiteminfo
+`
 	}
 
 	// Normalize URLs to have trailing slashes

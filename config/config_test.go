@@ -227,6 +227,65 @@ func TestConfigurablePorts(t *testing.T) {
 	}
 }
 
+func TestRobotsTxtConfig(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "config_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	tests := []struct {
+		name        string
+		configJSON  string
+		wantContent string
+	}{
+		{
+			name: "custom robots.txt",
+			configJSON: `{
+				"productNameForDisplay": "Test",
+				"myDomain": "test",
+				"urlServerForClient": "http://test",
+				"urlServerForEmail": "http://test",
+				"mailSender": "test@test",
+				"robotsTxt": "User-agent: *\nDisallow: /private\n"
+			}`,
+			wantContent: "User-agent: *\nDisallow: /private\n",
+		},
+		{
+			name: "default robots.txt",
+			configJSON: `{
+				"productNameForDisplay": "Test",
+				"myDomain": "test",
+				"urlServerForClient": "http://test",
+				"urlServerForEmail": "http://test",
+				"mailSender": "test@test"
+			}`,
+			wantContent: `User-agent: *
+Disallow: /getitembyguid
+Disallow: /getiteminfo
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			configPath := filepath.Join(tmpDir, "config.json")
+			if err := os.WriteFile(configPath, []byte(tt.configJSON), 0644); err != nil {
+				t.Fatalf("failed to write config: %v", err)
+			}
+
+			cfg, err := Load(configPath)
+			if err != nil {
+				t.Fatalf("failed to load config: %v", err)
+			}
+
+			if cfg.RobotsTxt != tt.wantContent {
+				t.Errorf("RobotsTxt = %q, want %q", cfg.RobotsTxt, tt.wantContent)
+			}
+		})
+	}
+}
+
 func hasSuffix(s, suffix string) bool {
 	return len(s) >= len(suffix) && s[len(s)-len(suffix):] == suffix
 }

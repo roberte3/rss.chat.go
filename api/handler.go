@@ -18,6 +18,7 @@ type Handler struct {
 	MediaDB *sql.DB
 	MaxMediaUploadBytes int
 	TempMediaPath string
+	RobotsContent string
 }
 
 // NewHandler creates a new API handler.
@@ -318,13 +319,9 @@ func (h *Handler) CheckWhitelist(w http.ResponseWriter, r *http.Request) {
 	RespondJSON(w, map[string]bool{"flWhitelisted": true})
 }
 
-// RobotsTxt returns the robots.txt file.
+// RobotsTxt returns the robots.txt file from config.
 func (h *Handler) RobotsTxt(w http.ResponseWriter, r *http.Request) {
-	robotsTxt := `User-agent: *
-Disallow: /getitembyguid
-Disallow: /getiteminfo
-`
-	RespondText(w, robotsTxt)
+	RespondText(w, h.RobotsContent)
 }
 
 // NewPost creates a new post.

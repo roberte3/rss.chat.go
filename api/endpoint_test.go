@@ -60,6 +60,10 @@ func setupTestServer(t *testing.T) (*http.ServeMux, *sql.DB, *Handler) {
 
 	// Create handler
 	handler := NewHandler(conn, pub, feedConfig)
+	handler.RobotsContent = `User-agent: *
+Disallow: /getitembyguid
+Disallow: /getiteminfo
+`
 
 	// Create mux and register routes
 	mux := http.NewServeMux()
