@@ -42,6 +42,13 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		return
 	}
 
+	// Linkify bare URLs in description
+	linkified, err := LinkifyURLs(req.Description)
+	if err != nil {
+		RespondError(w, "Can't create post because "+err.Error())
+		return
+	}
+
 	now := time.Now()
 	feedURL := fmt.Sprintf("http://%s/feed?screenname=%s", h.FeedConfig.BaseURL, user.Screenname)
 
@@ -49,7 +56,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		FeedURL:      feedURL,
 		Title:        req.Title,
 		Link:         "",
-		Description:  req.Description,
+		Description:  linkified,
 		InReplyTo:    req.InReplyTo,
 		PubDate:      now,
 		MarkdownText: req.MarkdownText,
@@ -125,10 +132,21 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 		return
 	}
 
+	// Linkify bare URLs in description if provided
+	description := req.Description
+	if description != "" {
+		linkified, err := LinkifyURLs(description)
+		if err != nil {
+			RespondError(w, "Can't update post because "+err.Error())
+			return
+		}
+		description = linkified
+	}
+
 	patch := db.ItemPatch{
 		ID:           itemID,
 		Title:        strPtr(req.Title),
-		Description:  strPtr(req.Description),
+		Description:  strPtr(description),
 		MarkdownText: strPtr(req.MarkdownText),
 	}
 
