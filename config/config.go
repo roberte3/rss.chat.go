@@ -45,6 +45,11 @@ type Config struct {
 	Whitelist       []string `json:"whitelist"`
 	BlockedUsersList []string `json:"blockedUsersList"`
 
+	// Media handling
+	MediaDBPath       string `json:"mediaDBPath"`       // Path to separate media database
+	TempMediaPath     string `json:"tempMediaPath"`     // Temporary storage for uploads
+	MaxMediaUploadBytes int  `json:"maxMediaUploadBytes"` // Max upload size in bytes
+
 	// Optional metadata
 	Note string `json:"note"`
 }
@@ -108,6 +113,18 @@ func (c *Config) applyDefaults() {
 
 	if c.WebsocketPort == 0 {
 		c.WebsocketPort = 1462
+	}
+
+	if c.MediaDBPath == "" {
+		c.MediaDBPath = "rss.chat.media.db"
+	}
+
+	if c.TempMediaPath == "" {
+		c.TempMediaPath = "temp_media"
+	}
+
+	if c.MaxMediaUploadBytes == 0 {
+		c.MaxMediaUploadBytes = 2 * 1024 * 1024 // 2MB default
 	}
 
 	// Normalize URLs to have trailing slashes

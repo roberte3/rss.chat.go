@@ -15,6 +15,9 @@ type Handler struct {
 	Publisher *publish.Publisher
 	FeedConfig feed.BuilderConfig
 	WebsocketHub *websocket.Hub
+	MediaDB *sql.DB
+	MaxMediaUploadBytes int
+	TempMediaPath string
 }
 
 // NewHandler creates a new API handler.
@@ -29,6 +32,20 @@ func NewHandler(db *sql.DB, pub *publish.Publisher, cfg feed.BuilderConfig) *Han
 // SetWebsocketHub sets the websocket hub for broadcasting updates.
 func (h *Handler) SetWebsocketHub(hub *websocket.Hub) {
 	h.WebsocketHub = hub
+}
+
+// UploadMediaAuth wraps HandleUploadMedia with authentication
+func (h *Handler) UploadMediaAuth(w http.ResponseWriter, r *http.Request) {
+	email := r.FormValue("emailaddress")
+	code := r.FormValue("emailcode")
+
+	user, err := AuthenticateUser(h.DB, email, code)
+	if err != nil {
+		RespondError(w, "Can't upload media because "+err.Error())
+		return
+	}
+
+	h.HandleUploadMedia(w, r, user)
 }
 
 // RegisterRoutes registers all API endpoints with the mux.
@@ -60,6 +77,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /deletepost", h.DeletePost)
 	mux.HandleFunc("POST /togglelike", h.ToggleLike)
 	mux.HandleFunc("POST /saveprefs", h.SavePrefs)
+	mux.HandleFunc("POST /uploadmedia", h.UploadMediaAuth)
+
+	// Media serving (public)
+	mux.HandleFunc("GET /media/{id}", h.HandleGetMedia)
 
 	// Websocket
 	mux.HandleFunc("GET /ws", h.WebSocket)

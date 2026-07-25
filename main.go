@@ -81,6 +81,18 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 		log.Fatalf("failed to ensure feed directories: %v", err)
 	}
 
+	// Initialize media database
+	mediaDB, err := db.OpenMediaDB(cfg.MediaDBPath)
+	if err != nil {
+		log.Fatalf("failed to open media database: %v", err)
+	}
+	defer mediaDB.Close()
+
+	// Create temporary media directory
+	if err := os.MkdirAll(cfg.TempMediaPath, 0755); err != nil {
+		log.Fatalf("failed to create temp media directory: %v", err)
+	}
+
 	// Create email sender from config
 	emailSender := email.NewSender(email.Config{
 		SMTPHost:     cfg.SMTPHost,
@@ -97,9 +109,12 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	wsHub := websocket.NewHub()
 	go wsHub.Start(ctx)
 
-	// Create API handler with websocket hub
+	// Create API handler with websocket hub and media database
 	handler := api.NewHandler(conn, pub, feedConfig)
 	handler.SetWebsocketHub(wsHub)
+	handler.MediaDB = mediaDB
+	handler.MaxMediaUploadBytes = cfg.MaxMediaUploadBytes
+	handler.TempMediaPath = cfg.TempMediaPath
 	handler.RegisterRoutes(mux)
 
 	// Register websocket endpoint
