@@ -1,0 +1,180 @@
+package config
+
+import (
+	"encoding/json"
+	"fmt"
+	"os"
+	"strings"
+)
+
+// Config holds all application configuration.
+type Config struct {
+	// Required settings
+	ProductName              string `json:"productName"`
+	ProductNameForDisplay    string `json:"productNameForDisplay"`
+	MyDomain                 string `json:"myDomain"`
+	URLServerForClient       string `json:"urlServerForClient"`
+	URLServerForEmail        string `json:"urlServerForEmail"`
+
+	// Database (SQLite in our implementation, not MySQL)
+	DatabasePath string `json:"databasePath"` // Path to SQLite file
+
+	// Feed publishing (filesystem in our implementation, not S3)
+	FeedsPath           string `json:"feedsPath"`            // Local folder to publish feeds
+	SubscriptionListPath string `json:"subscriptionListPath"` // Path for subs.opml
+
+	// Email configuration
+	MailSender           string `json:"mailSender"`
+	SMTPHost             string `json:"smtpHost"`
+	SMTPPort             int    `json:"smtpPort"`
+	SMTPUsername         string `json:"smtpUsername"`
+	SMTPPassword         string `json:"smtpPassword"`
+	ConfirmEmailSubject  string `json:"confirmEmailSubject"`
+	OperationToConfirm   string `json:"operationToConfirm"`
+
+	// Optional settings with defaults
+	// (ProductName above is already set with sensible default)
+
+	// WebSocket configuration
+	WebsocketEnabled            bool   `json:"flWebsocketEnabled"`
+	WebsocketPort               int    `json:"websocketPort"`
+	SecureWebsocket             bool   `json:"flSecureWebsocket"`
+	URLWebsocketServerForClient string `json:"urlWebsocketServerForClient"`
+
+	// Whitelist/blocklist
+	Whitelist       []string `json:"whitelist"`
+	BlockedUsersList []string `json:"blockedUsersList"`
+
+	// Optional metadata
+	Note string `json:"note"`
+}
+
+// Load reads and parses a config.json file.
+func Load(path string) (*Config, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return nil, fmt.Errorf("read config file: %w", err)
+	}
+
+	var cfg Config
+	if err := json.Unmarshal(data, &cfg); err != nil {
+		return nil, fmt.Errorf("parse config file: %w", err)
+	}
+
+	// Apply defaults
+	cfg.applyDefaults()
+
+	// Validate required fields
+	if err := cfg.validate(); err != nil {
+		return nil, err
+	}
+
+	return &cfg, nil
+}
+
+// applyDefaults sets sensible defaults for optional fields.
+func (c *Config) applyDefaults() {
+	if c.ProductName == "" {
+		c.ProductName = "rssChat"
+	}
+
+	if c.ProductNameForDisplay == "" {
+		c.ProductNameForDisplay = c.MyDomain
+	}
+
+	if c.DatabasePath == "" {
+		c.DatabasePath = "rss.chat.db"
+	}
+
+	if c.FeedsPath == "" {
+		c.FeedsPath = "feeds"
+	}
+
+	if c.SubscriptionListPath == "" {
+		c.SubscriptionListPath = "feeds/subs.opml"
+	}
+
+	if c.SMTPPort == 0 {
+		c.SMTPPort = 587
+	}
+
+	if c.ConfirmEmailSubject == "" {
+		c.ConfirmEmailSubject = c.ProductNameForDisplay + " confirmation"
+	}
+
+	if c.OperationToConfirm == "" {
+		c.OperationToConfirm = "sign in to " + c.ProductNameForDisplay
+	}
+
+	if c.WebsocketPort == 0 {
+		c.WebsocketPort = 1462
+	}
+
+	// Normalize URLs to have trailing slashes
+	c.URLServerForClient = ensureTrailingSlash(c.URLServerForClient)
+	c.URLServerForEmail = ensureTrailingSlash(c.URLServerForEmail)
+	if c.URLWebsocketServerForClient != "" {
+		c.URLWebsocketServerForClient = ensureTrailingSlash(c.URLWebsocketServerForClient)
+	}
+}
+
+// validate checks that all required fields are set.
+func (c *Config) validate() error {
+	required := map[string]string{
+		"productNameForDisplay":  c.ProductNameForDisplay,
+		"myDomain":               c.MyDomain,
+		"urlServerForClient":     c.URLServerForClient,
+		"urlServerForEmail":      c.URLServerForEmail,
+		"mailSender":             c.MailSender,
+	}
+
+	for field, value := range required {
+		if value == "" {
+			return fmt.Errorf("required config field missing: %s", field)
+		}
+	}
+
+	// If websockets are enabled, validate websocket config
+	if c.WebsocketEnabled {
+		if c.URLWebsocketServerForClient == "" {
+			return fmt.Errorf("urlWebsocketServerForClient required when websockets enabled")
+		}
+	}
+
+	return nil
+}
+
+// ensureTrailingSlash adds a trailing slash to a URL if it doesn't have one.
+func ensureTrailingSlash(url string) string {
+	if url != "" && !strings.HasSuffix(url, "/") {
+		url += "/"
+	}
+	return url
+}
+
+// IsEmailWhitelisted checks if an email is on the whitelist.
+// Returns true if no whitelist is configured (allow all).
+func (c *Config) IsEmailWhitelisted(email string) bool {
+	if len(c.Whitelist) == 0 {
+		return true // No whitelist means allow all
+	}
+
+	email = strings.ToLower(email)
+	for _, whitelisted := range c.Whitelist {
+		if strings.ToLower(whitelisted) == email {
+			return true
+		}
+	}
+	return false
+}
+
+// IsEmailBlocked checks if an email is on the blocklist.
+func (c *Config) IsEmailBlocked(email string) bool {
+	email = strings.ToLower(email)
+	for _, blocked := range c.BlockedUsersList {
+		if strings.ToLower(blocked) == email {
+			return true
+		}
+	}
+	return false
+}

@@ -24,11 +24,11 @@ each needs a Go equivalent — those are called out below as their own tasks, no
 - ✓ Phase 6: Client hosting (static asset serving, index.html macro substitution, directory traversal protection)
 
 **In Progress:**
+- Phase 7 (majority): Config loading complete; needs integration into subsystems
 - Phase 4 (final): Websocket broadcasting
 
 **Deferred to later phases:**
-- Phase 5 (final): Wire email config from settings.json (Phase 7)
-- Phase 7: Config loading (email, whitelist, blocklist, URLs, etc.)
+- Phase 7 (final): Wire config into email, client, publisher, API handlers
 - Phase 8: Testing & verification
 
 ## Phase 0 — schema
@@ -267,16 +267,29 @@ service—no separate static server needed, everything bundled.
 
 ## Phase 7 — config & ops
 
-- [ ] `Settings`/config loading: reconcile the existing `Settings` struct in `main.go`
-      (`note`, `productName`) with the much larger `config.json` shape documented in
-      `config.md` (domain, S3 paths, email sender, websocket, whitelist, blockedUsersList).
-      Decide what's required vs. defaulted for a first Go release.
-- [ ] `setup/setup.go`'s `CreateSettings` currently writes a 2-field settings file —
-      expand it once the real config shape is settled, or split "app settings" from
-      "server config" if that separation is worth keeping.
+- [x] `Config` loading: comprehensive `config.Config` struct loaded from `config.json`.
+      **Implementation notes** (`config/config.go`):
+      - Loads from JSON file with full validation
+      - Required fields: productNameForDisplay, myDomain, urlServerForClient,
+        urlServerForEmail, mailSender
+      - Optional fields with sensible defaults: productName, databasePath, feedsPath,
+        subscriptionListPath, smtpPort (587), confirmEmailSubject, operationToConfirm,
+        websocketPort (1462)
+      - Adapted from archive's config.md for Go/SQLite/filesystem instead of Node/MySQL/S3
+      - Whitelist/blocklist checking with case-insensitive email matching
+      - URL normalization (ensures trailing slashes)
+      - 11 test cases: loading, validation, whitelist/blocklist, defaults, case-insensitivity
+      - Example config provided: `config.example.json`
+      - Location: `config/config.go`
+
+- [ ] Integration: wire Config into main.go and subsystems (email sender, client server,
+      publisher, API handlers). Currently stubbed in main.go with hardcoded values.
+
 - [ ] `robots.txt` content from config, disallowing `/getitembyguid` and `/getiteminfo`.
-- [ ] Startup sequence (`startup()` in the JS): load config, connect DB, republish
-      subscription list, start any periodic tasks, start the HTTP (and websocket) server.
+
+- [ ] Startup sequence: load config, connect DB, republish subscription list,
+      start any periodic tasks, start HTTP/websocket server. Partially done;
+      needs config wiring.
 
 ## Phase 8 — testing & verification
 
