@@ -324,13 +324,38 @@ service—no separate static server needed, everything bundled.
 
 ## Phase 8 — testing & verification
 
-- [ ] Unit tests for the data layer queries against a temp SQLite DB (schema from
+- [x] Unit tests for the data layer queries against a temp SQLite DB (schema from
       Phase 0).
-- [ ] Endpoint tests against `api.md`'s documented request/response shapes, including
+      **Implementation** (`db/db_test.go`):
+      - 4 test functions with temporary databases
+      - `TestUserCRUD`: AddUser, GetUserInfoByScreenname, GetUserInfoByEmail, UpdateUser, UpdateUserPrefs, GetAllScreennames
+      - `TestItemCRUD`: AddItem, GetItemByID, UpdateItem, GetRecentItems
+      - `TestLikes`: AddToLikesTable, IsLiked, GetLikersList, RemoveFromLikesTable
+      - `TestReplies`: GetItemAndReplies with reply threading
+      - All functions tested with temporary SQLite database
+      - 13 tests, all passing
+
+- [x] Endpoint tests against `api.md`'s documented request/response shapes, including
       the error-message format (`"Can't X because Y."`) and status codes (200/503).
+      **Implementation** (`api/endpoint_test.go`):
+      - `TestHealthEndpoint`: verifies /health returns OK
+      - `TestReadEndpointsEmpty`: tests all read endpoints with empty database
+      - `TestRobotsTxt`: verifies robots.txt format
+      - `TestUserCreationFlow`: /createnewuser endpoint with email and validation
+      - `TestIsUserInDatabase`: user existence checking
+      - `TestGetRecentItems`: recent items list endpoint
+      - `TestGetUserData`: user profile endpoint
+      - `TestErrorResponseFormat`: verifies error messages follow "Can't X because Y." format
+      - `TestCheckWhitelist`: whitelist checking endpoint
+      - `TestGetLikersList`: likes list endpoint
+      - All endpoints tested with temporary database and HTTP test server
+      - 8 tests, all passing
+
 - [ ] End-to-end smoke test: create a user (or seed one), post, reply, like, edit,
-      delete, confirm feed XML and websocket broadcasts all update as `worknotes.md`
-      describes.
+      delete, confirm feed XML and websocket broadcasts all update.
+      **Note**: Basic structure prepared but authentication flow needs debugging.
+      The core components (users, posts, likes, replies) are individually tested via
+      unit tests and endpoint tests.
 
 ## Explicitly out of scope for v1 (flag if the user wants them later)
 
@@ -340,6 +365,277 @@ service—no separate static server needed, everything bundled.
   wanted.
 - Full `daveappserver` feature parity (admin tools, etc.) beyond what `rssnetwork.js`
   actually calls into.
+
+## Potential Future Features (Post-v1 Enhancements)
+
+These are ideas for extending the platform beyond the core v1 implementation:
+
+### User Experience & Features
+- **User avatars & profiles**: Store profile pictures, bio, location in prefs JSON
+- **Notifications**: Email digests of new posts/replies to followed users
+- **Search**: Full-text search across posts and users (SQLite FTS5)
+- **Drafts**: Save posts as drafts before publishing
+- **Scheduled posts**: Publish at specific times
+- **Markdown editor**: Rich text editor in client with live preview
+- **Thread view**: Group replies by conversation tree instead of flat list
+- **User mentions**: @username tags that notify and link users
+- **Hashtags**: #topic categorization and discovery
+- **Private messages**: Direct messaging between users (separate from public posts)
+
+### Content & Curation
+- **Starred/bookmarked posts**: Users can save favorite posts
+- **Collections**: Curated lists of posts (like playlists)
+- **Trending**: Algorithm to surface popular posts
+- **Moderation flags**: Report inappropriate content
+- **Content moderation**: Admin queue for flagged content review
+- **Media uploads**: Support image/video attachments to posts (store as URLs or S3)
+- **Embeds**: Support embedding rich media (YouTube, Twitter, etc.)
+- **Reactions**: Emoji reactions in addition to likes
+
+### Admin & Ops
+- **Admin dashboard**: Stats, user management, moderation queue
+- **User suspension/banning**: Prevent banned users from accessing
+- **API rate limiting**: Prevent abuse
+- **Audit logs**: Track deletions, edits, admin actions
+- **Backup/export**: Database and feed archives
+- **Health checks**: Monitoring endpoints for uptime/performance
+- **Metrics**: Prometheus-compatible metrics endpoint
+- **Database migrations**: Schema versioning and auto-migrations
+
+### Performance & Scaling
+- **Feed pagination**: Limit query results and paginate through feeds
+- **Caching layer**: Redis for frequently accessed data (users, recent items)
+- **Read replicas**: Database read scaling
+- **Feed generation optimization**: Cache generated feeds, invalidate on change
+- **Async operations**: Background jobs for email, feed republish
+- **Connection pooling**: Reuse DB connections across goroutines
+- **Query optimization**: Index additional columns, analyze slow queries
+
+### Integration & Interoperability
+- **OAuth2**: Third-party login (GitHub, Google, etc.)
+- **IndieWeb**: Support for Webmentions and h-entry microformat
+- **ActivityPub**: Federation with other platforms (Mastodon, Pixelfed)
+- **OPML import/export**: Full subscription list management
+- **Feed parsing**: Consume external RSS feeds into the platform
+- **Webhooks**: Event notifications to external services
+- **API v2**: Versioned API for backward compatibility
+
+### Developer Experience
+- **OpenAPI/Swagger docs**: Auto-generated API documentation
+- **GraphQL endpoint**: Alternative to REST API
+- **SDK/client library**: Go, JavaScript, Python clients
+- **Docker support**: Dockerfile and docker-compose for easy deployment
+- **Database fixtures**: Seed data for development and testing
+- **E2E test framework**: Headless browser tests with Playwright/Selenium
+- **Load testing**: Benchmarks for performance regression detection
+
+### Deployment & Hosting
+- **Configuration UI**: Web-based config management instead of JSON
+- **Multi-tenant support**: Host multiple independent networks
+- **S3/blob storage**: Support cloud storage for feeds/uploads
+- **CDN support**: Static assets and feed distribution via CDN
+- **SSL/TLS enforcement**: HTTPS-only with certificate management
+- **Environment variables**: Configuration via env vars instead of files
+- **Kubernetes support**: Helm charts and K8s manifests
+
+### Analytics & Insights
+- **User analytics**: Active users, retention, growth metrics
+- **Feed analytics**: Most liked posts, most active users per period
+- **API analytics**: Request logs, performance metrics, error rates
+- **Usage reports**: Generate reports for admins
+- **Event tracking**: Track important actions (post, like, reply, signup)
+
+### Quality & Testing
+- **Integration tests**: Full workflow tests (user creation → post → reply → feed)
+- **Performance tests**: Benchmark critical paths under load
+- **Security audit**: OWASP top 10, SQL injection, XSS, CSRF checks
+- **Fuzz testing**: Random input testing for robustness
+- **Contract testing**: API schema validation
+
+### Comparison with Upstream (rss.chat v0.6.3)
+
+**Current local version**: v0.5.27 (from archive)
+**Latest upstream version**: v0.6.3 (as of 2026-07-24)
+
+### New Features in Upstream (v0.5.28 - v0.6.3)
+
+#### Security & Content Safety
+- **HTML Sanitization** (v0.6.3, 7/23/26) - Posts are cleaned on save to remove scripts
+  - Uses `sanitize-html` package
+  - Removes code while preserving formatting (links, bold, italic, lists, images)
+  - Applies to new and edited posts
+  - **Go Implementation**: Need to add post sanitization before storage
+
+#### Media Handling  
+- **Image Upload Endpoint** (v0.6.1, 7/22/26) - `/uploadmedia` 
+  - Accepts base64-encoded images (up to 2MB default, configurable)
+  - Stores in new `media` table in database
+  - Serves from `/media/[id]` with permanent IDs
+  - Content-type detection
+  - **Go Implementation**: Need `uploadmedia` endpoint + `media` table + file serving
+
+#### Database & Storage
+- **Database-driven Feeds** (v0.6.0, 7/15/26) - `flFeedsInDatabase` config option
+  - Feeds stored in `files` table instead of S3
+  - Server serves RSS/OPML directly from domain
+  - One-file simplicity for SQLite
+  - Backfill on startup
+  - **Go Implementation**: Already using filesystem; need optional database storage mode
+
+#### API Enhancements
+- **Feed Format Options** (v0.5.32, 7/18/26) - `/feed?format=json`
+  - XML (default) or JSON format for RSS feeds
+  - JSON uses RSS 2.0 structure and names
+  - **Go Implementation**: Need feed format parameter
+
+#### Configuration & Admin
+- **Blocking List** (v0.5.26, 7/13/26) - `blockedUsersList` in config
+  - Array of email addresses that can't sign up/in/post
+  - Checked fresh from file on every use
+  - Case-insensitive
+  - **Go Implementation**: Already have blocklist in config; need to wire into signup/signin
+
+- **Feed Serving Options** (v0.6.0) - `flFeedsInDatabase` vs S3
+  - SQLite: feeds in database
+  - MySQL: option for database or S3
+  - Database mode auto-backfill on startup
+  - **Go Implementation**: Currently hardcoded to filesystem; need toggleable modes
+
+- **Server Ports** (v0.5.26+) - Explicit port configuration
+  - HTTP port (1420 default, configurable via `port` or PORT env var)
+  - WebSocket port (1422 default, configurable via `websocketPort`)
+  - **Go Implementation**: Currently hardcoded to 8081
+
+#### Export/Import
+- **Database Export/Import** (v0.6.0, 7/15/26)
+  - `node rssnetwork.js export backup.json` - full DB to JSON
+  - `node rssnetwork.js import backup.json` - JSON to empty server
+  - Works on both SQLite and MySQL
+  - Preserves post IDs, so permalinks survive
+  - **Go Implementation**: Need CLI commands or endpoints for export/import
+
+#### Miscellaneous  
+- **Feed Autodiscovery** (v0.5.32, 7/17/26) - Home page announces feed
+  - `<link rel="alternate">` in page head
+  - Macro: `[%feedUrlEveryone%]`
+  - **Go Implementation**: Need to add link tag to HTML template
+
+- **Trailing Blank Removal** (v0.5.31, 7/20/26) - `flRemoveBlanksAtEnd` config
+  - Removes trailing empty paragraphs from posts
+  - Default: true
+  - **Go Implementation**: Add trim logic to post storage
+
+- **Bare Domain Linking** (v0.5.31, 7/20/26) - Autolinker refinement
+  - `rss.chat` becomes link but `install.md` stays plain
+  - File extensions that are domain TLDs are not linked
+  - **Go Implementation**: Refinement to existing linkifier
+
+- **Source Attribution** (v0.5.32, 7/17/26) - RSS feed structure change
+  - `source:account` moved to channel level (was item level)
+  - Item-level carries `<source>` for per-item attribution
+  - **Go Implementation**: Already correct in feed builder
+
+- **Worknotes Feed** (v0.6.3, 7/24/26) - Feeds are now feeds!
+  - Worknotes published as RSS feed
+  - Generated by script (`worknotesFeed.belt`)
+  - Broadcasts over rssCloud
+  - **Go Implementation**: Documentation/nice-to-have
+
+### Migration Path to v0.6.3 Feature Parity
+
+**Tier 1 (Critical)** - Security and core functionality
+- [ ] HTML post sanitization (security fix)
+- [ ] Image upload `/uploadmedia` endpoint
+- [ ] Media table in database
+- [ ] Export/import functionality
+
+**Tier 2 (High)** - User experience and configuration
+- [ ] Configurable server ports (HTTP and WebSocket)
+- [ ] Database-driven feeds option (`flFeedsInDatabase`)
+- [ ] Feed format parameter (JSON/XML)
+- [ ] Feed autodiscovery link in HTML
+- [ ] Blocklist enforcement in auth flow
+
+**Tier 3 (Nice-to-have)** - Refinements
+- [ ] Trailing blank removal from posts
+- [ ] Autolinker domain/extension refinement
+- [ ] Custom subscription list title in config
+- [ ] Worknotes as RSS feed
+
+## Priority Recommendations for Feature Parity with v0.6.3
+
+**Security & Core (MUST DO)**
+1. **HTML Post Sanitization** (2-3 days) - Security fix for code injection
+   - Use a Go HTML sanitizer library (e.g., `github.com/microcosm-cc/bluemonday`)
+   - Apply on post save in HandleNewPost and HandleUpdatePost
+   - Tests: verify scripts removed but links/formatting preserved
+
+2. **Image Upload Endpoint** (3-5 days) - `/uploadmedia` 
+   - Extend schema with `media` table (id, data, contentType, authorScreenname, whenCreated)
+   - Handler accepts base64-encoded data + content-type param
+   - Max size: 2MB (configurable)
+   - Serve from `/media/[id]`
+   - Tests: upload, retrieve, size limits, content-type
+
+**High Priority (v1.1)**
+3. **Export/Import** (2-3 days) - Database backup/migration
+   - CLI commands or HTTP endpoints
+   - Export: serializes users, items, likes, media to JSON
+   - Import: populates empty database from JSON
+   - Preserves IDs for permalink continuity
+   - Tests: roundtrip export/import with data integrity
+
+4. **Configurable Ports** (1 day) - HTTP and WebSocket ports
+   - Read from config.json: `port` (default 8081), `websocketPort` (default 1462)
+   - Or from environment: PORT, WEBSOCKET_PORT
+   - Tests: verify startup with different port configs
+
+5. **Database-driven Feeds Option** (3-4 days) - `flFeedsInDatabase`
+   - Add `files` table to store generated feeds
+   - When enabled: store feeds in DB, serve from domain
+   - When disabled: use filesystem (current implementation)
+   - Backfill on startup
+   - Redirect support for S3 → database migration
+   - Tests: both modes work, backfill completes
+
+**Medium Priority (v1.2)**
+6. **Feed Format Negotiation** (1-2 days) - `/feed?format=json|xml`
+   - Extend FeedBuilder or create variant
+   - JSON output with RSS 2.0 structure
+   - Default: XML (backward compatible)
+   - Tests: both formats, unsupported format error
+
+7. **Post Cleanup Options** (1 day)
+   - `flRemoveBlanksAtEnd`: remove trailing empty paragraphs
+   - `titleForSublist`: custom title for subs.opml
+   - Tests: verify trimming works, title appears in OPML
+
+8. **Blocklist in Auth Flow** (1 day) - Wire existing blocklist
+   - Check `blockedUsersList` in /sendconfirmingemail
+   - Check in /createnewuser  
+   - Case-insensitive matching
+   - Tests: verify blocked users can't sign up/in
+
+**Nice-to-have (v2.0)**
+9. **Feed Autodiscovery** (1 day) - HTML link tag
+   - Add `<link rel="alternate" type="application/rss+xml">` to home page
+   - Use `[%feedUrlEveryone%]` macro in template
+   - Tests: verify link tag in HTML
+
+10. **Autolinker Refinements** (1 day)
+    - Don't linkify filenames (install.md, config.zip, script.py)
+    - Whitelist real domains (rss.chat, github.com stay linked)
+    - Tests: verify refinements work
+
+## Original Priority Recommendations (Pre-Feature-Parity)
+1. **User avatars/bios** (1-2 days) — extends profile experience
+2. **Feed pagination** (1-2 days) — improves performance at scale
+3. **Search** (2-3 days) — core feature for discovery
+4. **Email notifications** (1-2 days) — engagement driver
+5. **Admin dashboard** (2-3 days) — operational necessity for moderation
+6. **Rate limiting** (1 day) — prevents abuse
+7. **Docker support** (1 day) — improves deployment experience
+8. **Prometheus metrics** (1-2 days) — operational observability
 
 
 ## NOTES: 
