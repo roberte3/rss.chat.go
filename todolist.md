@@ -12,6 +12,24 @@ the archive (`daveappserver`, `daverss`, `davesql`, `daveutils`, `daves3`, `opml
 each needs a Go equivalent — those are called out below as their own tasks, not just
 `rssnetwork.js`'s own functions.
 
+## Progress Summary
+
+**Completed:**
+- ✓ Phase 0: SQLite schema with users/items/likes tables
+- ✓ Phase 1: Data layer (all CRUD operations, hit tracking, likes, replies)
+- ✓ Phase 2: RSS 2.0 + OPML generation (buildFeedForUser, buildFeedForEveryone, buildCommentsFeed, buildSubscriptionList)
+- ✓ Phase 3: Local filesystem feed publishing (UpdateFeedsOnPostWrite, UpdateFeedsOnReply, BackfillCommentFeeds)
+- ✓ Phase 4 (majority): HTTP API - all read/write endpoints, HTML linkification, HTML→Markdown conversion, auth
+
+**In Progress:**
+- Phase 4 (final): Websocket broadcasting
+
+**Deferred to later phases:**
+- Phase 5: Email auth (/sendconfirmingemail, /createnewuser)
+- Phase 6: Static client hosting
+- Phase 7: Config loading
+- Phase 8: Testing & verification
+
 ## Phase 0 — schema
 
 Current `db/db.go` only creates a `users` table (`screenname`, `emailAddress`,
@@ -130,14 +148,45 @@ Full contract is in `server/docs/api.md` — use it as the spec.
       Authenticated via `AuthenticateUser` with `emailSecret` verification. (`api/auth.go`)
 - [x] `isEmailBlocked` / blocklist check — stubbed in `api/auth.go`, returns false
       (no blocklist for v1). TODO: wire from config in Phase 7.
-- [ ] `linkifyUrls` (replaces `autolinker`) — turn bare URLs in `description` HTML into
-      links. Deferred: check for existing library; not blocking Phase 4.
-- [ ] `getMarkdownFromHtml` (replaces `turndown`) — HTML→Markdown for `markdowntext`.
-      Deferred: check `github.com/JohannesKaufmann/html-to-markdown`; not blocking Phase 4.
+
+- [x] `linkifyUrls` (replaces `autolinker`) — bare URLs in HTML turned into `<a>` tags.
+      **Implementation notes:**
+      - Uses stdlib `golang.org/x/net/html` parser (no external deps)
+      - Wraps input in `<div>` and parses as full document, then extracts div's children
+      - Safe DOM tree walking: only processes text nodes, skips `<a>`, `<pre>`, `<code>`, `<script>`, `<style>`
+      - URL detection: regex finds `http://`, `https://`, `www.` prefixes
+      - Trailing punctuation trimming: `"Visit http://example.com."` → period stays outside link
+      - Creates new link nodes by splitting text, building `[<text>, <a>link</a>, <text>]` sequences
+      - Auto-called on `/newpost` and `/updatepost` before storing description
+      - 18 test cases: protocols, multiple URLs, punctuation, existing tags, edge cases
+      - Location: `api/linkify.go`
+
+- [x] `getMarkdownFromHtml` (replaces `turndown`) — HTML→Markdown for `markdowntext`.
+      **Implementation notes:**
+      - Uses stdlib `golang.org/x/net/html` parser (no external deps, no turndown library)
+      - Finds `<body>` element after full parse (html.Parse always creates full document structure)
+      - Processes body's children, recursively walking tree with state tracking (inPre, inList, etc.)
+      - Element conversions:
+        * Headings: `<h1>` → `# `, `<h2>` → `## `, `<h3>` → `### `
+        * Text formatting: `<strong>`/`<b>` → `**text**`, `<em>`/`<i>` → `*text*`
+        * Links: `<a href="url">text</a>` → `[text](url)`
+        * Lists: `<ul>/<ol>/<li>` → `- Item` (nested indentation)
+        * Code: inline `<code>` → `` `code` ``, blocks `<pre><code>` → `` ```code``` ``
+        * Line breaks: `<br>` → two spaces + newline (Markdown format)
+        * Blockquotes, horizontal rules, paragraphs with proper spacing
+      - Whitespace handling: normalizes newlines/tabs to spaces, collapses multiple spaces
+        to single space while preserving leading/trailing spaces for inline elements
+      - Smart paragraph spacing: adds `\n\n` between block elements, not just after
+      - Pre-formatted code: preserves exact whitespace inside `<pre>` blocks
+      - Auto-called on `/newpost` and `/updatepost` if markdown not provided by client
+      - 23 test cases: text, formatting, links, headings, lists, code, complex nesting,
+        whitespace normalization, preservation of formatting
+      - Location: `api/markdown.go`
+
 - [ ] Websocket broadcast: `notifySocketSubscribers` for newItem/updatedItem after
       publish/update/like-toggle. Stubbed (TODO). `github.com/coder/websocket` available.
 - [x] Integrated into `main.go`: publisher and API handler wired up, routes registered,
-      feeds directory created on startup.
+      feeds directory created on startup. All endpoints functional.
 
 ## Phase 5 — auth / accounts (replaces `daveappserver`'s auth callbacks)
 
