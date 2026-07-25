@@ -10,6 +10,7 @@ import (
 	"os"
 
 	"rss.chat.go/api"
+	"rss.chat.go/client"
 	"rss.chat.go/db"
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
@@ -83,6 +84,20 @@ func runHttpSvr(conn *sql.DB) {
 	// Create API handler
 	handler := api.NewHandler(conn, pub, feedConfig)
 	handler.RegisterRoutes(mux)
+
+	// Register client server (serves at root, must be last)
+	clientConfig := client.Config{
+		ProductName:              "rss.chat",
+		ProductNameForDisplay:    "rss.chat",
+		Version:                  "1.0",
+		EnableLogin:              true,
+		URLServerForClient:       "http://localhost:8081",
+		URLWebsocketServerForClient: "ws://localhost:8081",
+		WebsocketEnabled:         false, // TODO: enable when websocket broadcast is implemented
+	}
+
+	clientServer := client.NewServer("archive/rss.chat/client/code", clientConfig)
+	mux.Handle("/", clientServer)
 
 	fmt.Println("Server is running on :8081...")
 	if err := http.ListenAndServe(":8081", mux); err != nil {

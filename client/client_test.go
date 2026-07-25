@@ -1,0 +1,217 @@
+package client
+
+import (
+	"net/http"
+	"net/http/httptest"
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestClientServer(t *testing.T) {
+	// Create temporary directory with test files
+	tmpDir, err := os.MkdirTemp("", "client_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Create index.html with template variables
+	indexHTML := `<!DOCTYPE html>
+<html>
+<head>
+	<title>Test App</title>
+	<script>
+		const config = {
+			productName: "[%productName%]",
+			version: "[%version%]",
+			urlServer: "[%urlServerForClient%]",
+			flWebsocketEnabled: "[%flWebsocketEnabled%]"
+		};
+	</script>
+</head>
+<body>
+	<h1>Welcome</h1>
+</body>
+</html>`
+
+	if err := os.WriteFile(filepath.Join(tmpDir, "index.html"), []byte(indexHTML), 0644); err != nil {
+		t.Fatalf("failed to write index.html: %v", err)
+	}
+
+	// Create a static JS file
+	if err := os.WriteFile(filepath.Join(tmpDir, "app.js"), []byte("console.log('test');"), 0644); err != nil {
+		t.Fatalf("failed to write app.js: %v", err)
+	}
+
+	// Create client server with config
+	config := Config{
+		ProductName:              "rss.chat",
+		ProductNameForDisplay:    "rss.chat",
+		Version:                  "1.0",
+		EnableLogin:              true,
+		URLServerForClient:       "http://localhost:8081",
+		URLWebsocketServerForClient: "ws://localhost:8081",
+		WebsocketEnabled:         true,
+	}
+
+	server := NewServer(tmpDir, config)
+
+	// Test index.html with macro substitution
+	t.Run("index.html macro substitution", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/", nil)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", w.Code)
+		}
+
+		body := w.Body.String()
+
+		// Check that macros were substituted
+		if !strings.Contains(body, "rss.chat") {
+			t.Errorf("productName not substituted")
+		}
+
+		if !strings.Contains(body, "1.0") {
+			t.Errorf("version not substituted")
+		}
+
+		if !strings.Contains(body, "http://localhost:8081") {
+			t.Errorf("urlServer not substituted")
+		}
+
+		if !strings.Contains(body, "true") {
+			t.Errorf("websocket enabled not substituted")
+		}
+
+		// Check that template variables are NOT in the output
+		if strings.Contains(body, "[%") {
+			t.Errorf("template variables not fully substituted")
+		}
+	})
+
+	// Test static file serving
+	t.Run("serve static file", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/app.js", nil)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", w.Code)
+		}
+
+		if !strings.Contains(w.Body.String(), "console.log") {
+			t.Errorf("static file not served correctly")
+		}
+	})
+
+	// Test 404 for missing file
+	t.Run("404 for missing file", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/nonexistent.js", nil)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("expected status 404, got %d", w.Code)
+		}
+	})
+
+	// Test directory traversal prevention
+	t.Run("prevent directory traversal", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/../../../etc/passwd", nil)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, req)
+
+		if w.Code != http.StatusNotFound {
+			t.Errorf("expected status 404 for traversal attempt, got %d", w.Code)
+		}
+	})
+
+	// Test root path handling
+	t.Run("root path redirects to index.html", func(t *testing.T) {
+		req, err := http.NewRequest("GET", "/", nil)
+		if err != nil {
+			t.Fatalf("failed to create request: %v", err)
+		}
+
+		w := httptest.NewRecorder()
+		server.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("expected status 200, got %d", w.Code)
+		}
+
+		if !strings.Contains(w.Body.String(), "Welcome") {
+			t.Errorf("index.html not served at root")
+		}
+	})
+}
+
+func TestBoolToString(t *testing.T) {
+	tests := []struct {
+		input    bool
+		expected string
+	}{
+		{true, "true"},
+		{false, "false"},
+	}
+
+	for _, tt := range tests {
+		result := boolToString(tt.input)
+		if result != tt.expected {
+			t.Errorf("boolToString(%v) = %q, want %q", tt.input, result, tt.expected)
+		}
+	}
+}
+
+func TestSubstituteConfig(t *testing.T) {
+	config := Config{
+		ProductName:              "test-app",
+		ProductNameForDisplay:    "Test App",
+		Version:                  "2.0",
+		EnableLogin:              true,
+		URLServerForClient:       "http://api.test.com",
+		URLWebsocketServerForClient: "ws://api.test.com",
+		WebsocketEnabled:         false,
+	}
+
+	server := NewServer("", config)
+
+	html := `productName: [%productName%], version: [%version%], enabled: [%flWebsocketEnabled%]`
+	result := server.substituteConfig(html)
+
+	if !strings.Contains(result, "test-app") {
+		t.Errorf("productName not substituted")
+	}
+
+	if !strings.Contains(result, "2.0") {
+		t.Errorf("version not substituted")
+	}
+
+	if !strings.Contains(result, "false") {
+		t.Errorf("websocket enabled not substituted correctly")
+	}
+
+	if strings.Contains(result, "[%") {
+		t.Errorf("template variables remain in output")
+	}
+}

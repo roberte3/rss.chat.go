@@ -20,14 +20,15 @@ each needs a Go equivalent — those are called out below as their own tasks, no
 - ✓ Phase 2: RSS 2.0 + OPML generation (buildFeedForUser, buildFeedForEveryone, buildCommentsFeed, buildSubscriptionList)
 - ✓ Phase 3: Local filesystem feed publishing (UpdateFeedsOnPostWrite, UpdateFeedsOnReply, BackfillCommentFeeds)
 - ✓ Phase 4 (majority): HTTP API - all read/write endpoints, HTML linkification, HTML→Markdown conversion, auth
+- ✓ Phase 5 (majority): Email auth (/sendconfirmingemail, /createnewuser, email sender, secretgen, validation)
+- ✓ Phase 6: Client hosting (static asset serving, index.html macro substitution, directory traversal protection)
 
 **In Progress:**
 - Phase 4 (final): Websocket broadcasting
 
 **Deferred to later phases:**
-- Phase 5: Email auth (/sendconfirmingemail, /createnewuser)
-- Phase 6: Static client hosting
-- Phase 7: Config loading
+- Phase 5 (final): Wire email config from settings.json (Phase 7)
+- Phase 7: Config loading (email, whitelist, blocklist, URLs, etc.)
 - Phase 8: Testing & verification
 
 ## Phase 0 — schema
@@ -197,27 +198,72 @@ redirect, `/sendconfirmingemail`, `/createnewuser`) lives inside `daveappserver`
 isn't in the archive at all. This is the biggest "spec from the docs, not the code"
 piece. Reference: `api.md`'s "How authentication works" section.
 
-- [ ] `/sendconfirmingemail?email=...&urlredirect=...` — generate/reuse a per-user
-      `emailSecret` (mint only once — see the 5/10/26 worknote about email-scanner
-      pre-fetch breaking a naive "always regenerate" approach), email a confirmation
-      link.
-- [ ] `/createnewuser?email=...&name=...&urlredirect=...` — same flow for new
-      screennames, gated by whitelist (`checkWhitelist`) and blocklist.
-- [ ] Email sending: pick a Go mail path (SMTP, or an SES/Sendgrid API client). Render
-      `server/code/emailtemplate.html`'s `[%operationToConfirm%]` /
-      `[%confirmationUrl%]` macros.
-- [ ] Confirmation redirect: append `emailconfirmed=true&email=...&code=...&screenname=...`
-      to `urlredirect` and 302.
-- [ ] `isUserAdmin` — currently a stub (`callback(false)`) in the JS too; port as a stub.
+- [x] `/sendconfirmingemail?email=...&urlredirect=...` — generates/reuses per-user
+      `emailSecret`, emails confirmation link.
+      **Implementation notes** (`api/auth_endpoints.go`):
+      - Reuses existing `emailSecret` for existing users (never regenerates—critical for email scanner prefetch bug)
+      - Generates new secret for signup flow
+      - Checks email blocklist and whitelist before sending
+      - Builds confirmation URL: `urlredirect?emailconfirmed=true&email=X&code=Y&screenname=Z`
+      - Sends via `email.Sender` (stubbed to log, wired from config in Phase 7)
+      - Returns 200 with status message on success
+
+- [x] `/createnewuser?email=...&name=...&urlredirect=...` — creates new account with validation,
+      gated by whitelist and blocklist.
+      **Implementation notes** (`api/auth_endpoints.go`):
+      - Validates screenname: alphanumeric + underscore, 1-64 chars
+      - Checks email/screenname collisions before creating user
+      - Verifies whitelist and blocklist
+      - Generates cryptographic `emailSecret` via `crypto/rand` (32 bytes → base64url)
+      - Creates user in DB with secret
+      - Sends confirmation email (stubbed)
+      - Returns user info on success with 200
+
+- [x] Email sending infrastructure (`email/email.go`):
+      **Implementation notes:**
+      - SMTP-based sender with configurable host/port/auth
+      - HTML + plain-text email templates with proper formatting
+      - Support for "signup" and "signin" operation types
+      - Query string parsing for extracting confirmation codes from redirect URLs
+      - Placeholder for SES/Sendgrid (not implemented in v1)
+      - TODO: Wire `email.Config` from `settings.json` in Phase 7
+
+- [x] Confirmation redirect URL builder:
+      - Appends `emailconfirmed=true&email=...&code=...&screenname=...` to `urlredirect`
+      - Handles existing query params (uses `&` separator if needed)
+      - URL-escapes all params
+
+- [x] `isUserAdmin` stub (`api/auth.go`):
+      - Returns false (matches JS original behavior)
+      - TODO: Implement if admin features are added later
 
 ## Phase 6 — client hosting
 
-- [ ] Serve `archive/rss.chat/client/code/*` as static assets (or fetch/cache the home
-      page from `urlServerHomePageSource` the way `daveappserver` does — decide which
-      model fits a self-hosted Go binary better).
-- [ ] Macro substitution in the home page HTML (`[%title%]` etc. — same mechanism as
-      the email template, generalized) if config-driven values need to reach the client
-      without hardcoding.
+- [x] Serve `archive/rss.chat/client/code/*` as static assets.
+      **Implementation notes** (`client/client.go`):
+      - HTTP handler for static file serving with macro substitution
+      - Serves root `/` as `index.html`
+      - Prevents directory traversal (checks for `..` in paths)
+      - 404 handling for missing files
+      - Content-type detection (uses `http.ServeFile` for non-HTML)
+      - All assets self-contained in archive directory (no external CDN needed for v1)
+      - Integrated into main.go with client.NewServer and mux.Handle
+
+- [x] Macro substitution in `index.html` and other HTML files.
+      **Implementation notes** (`client/client.go`):
+      - Replaces template variables: `[%productName%]`, `[%version%]`, `[%urlServerForClient%]`,
+        `[%flWebsocketEnabled%]`, etc.
+      - Config-driven values passed at startup (no hardcoding)
+      - Variables mapped in `substituteConfig()` method
+      - Boolean values converted to JavaScript-safe "true"/"false" strings
+      - Static files (JS, CSS) served without substitution
+      - 7 test cases: macro substitution, static file serving, 404s, directory traversal,
+        root path handling
+      - Location: `client/client.go`
+
+**Design decision**: Serve static assets directly from Go binary rather than fetching
+from external URL (`urlServerHomePageSource`). Keeps deployment simple for self-hosted
+service—no separate static server needed, everything bundled.
 
 ## Phase 7 — config & ops
 
