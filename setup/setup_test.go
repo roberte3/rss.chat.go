@@ -4,7 +4,10 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
+
+	"rss.chat.go/config"
 )
 
 func TestCreateBlocklist(t *testing.T) {
@@ -60,7 +63,7 @@ func TestCreateSettings(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	settingsPath := filepath.Join(tmpDir, "settings.json")
-	err = CreateSettings(settingsPath)
+	err = CreateSettings(settingsPath, "test-app")
 	if err != nil {
 		t.Fatalf("CreateSettings failed: %v", err)
 	}
@@ -88,7 +91,165 @@ func TestCreateSettings(t *testing.T) {
 		t.Errorf("settings note is empty")
 	}
 
-	if s.ProductName == "" {
-		t.Errorf("settings productName is empty")
+	if s.ProductName != "test-app" {
+		t.Errorf("settings productName = %q, expected test-app", s.ProductName)
+	}
+}
+
+func TestCreateConfig(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "setup_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configPath := filepath.Join(tmpDir, "config.json")
+
+	// Simulate user input with custom values
+	input := `test-app
+http://example.com:8080
+sender@example.com
+smtp.example.com
+465
+custom-smtp-user
+password123
+y`
+
+	reader := strings.NewReader(input)
+	err = CreateConfig(configPath, reader)
+	if err != nil {
+		t.Fatalf("CreateConfig failed: %v", err)
+	}
+
+	// Verify file exists
+	_, err = os.Stat(configPath)
+	if err != nil {
+		t.Fatalf("config.json not created: %v", err)
+	}
+
+	// Verify file is parseable by config.Load
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		t.Fatalf("config.Load failed: %v", err)
+	}
+
+	// Verify prompted values were set
+	if cfg.ProductNameForDisplay != "test-app" {
+		t.Errorf("productNameForDisplay = %q, expected test-app", cfg.ProductNameForDisplay)
+	}
+
+	if cfg.MyDomain != "http://example.com:8080" {
+		t.Errorf("myDomain = %q, expected http://example.com:8080", cfg.MyDomain)
+	}
+
+	if cfg.MailSender != "sender@example.com" {
+		t.Errorf("mailSender = %q, expected sender@example.com", cfg.MailSender)
+	}
+
+	if cfg.SMTPHost != "smtp.example.com" {
+		t.Errorf("smtpHost = %q, expected smtp.example.com", cfg.SMTPHost)
+	}
+
+	if cfg.SMTPPort != 465 {
+		t.Errorf("smtpPort = %d, expected 465", cfg.SMTPPort)
+	}
+
+	if cfg.SMTPUsername != "custom-smtp-user" {
+		t.Errorf("smtpUsername = %q, expected custom-smtp-user", cfg.SMTPUsername)
+	}
+
+	if cfg.SMTPPassword != "password123" {
+		t.Errorf("smtpPassword = %q, expected password123", cfg.SMTPPassword)
+	}
+
+	if !cfg.WebsocketEnabled {
+		t.Errorf("websocketEnabled should be true")
+	}
+
+	// Verify derived values (note: applyDefaults adds trailing slashes to URLs)
+	if cfg.URLServerForClient != "http://example.com:8080/api/" {
+		t.Errorf("urlServerForClient = %q, expected http://example.com:8080/api/", cfg.URLServerForClient)
+	}
+
+	if cfg.URLServerForEmail != "http://example.com:8080/" {
+		t.Errorf("urlServerForEmail = %q, expected http://example.com:8080/", cfg.URLServerForEmail)
+	}
+
+	if cfg.URLWebsocketServerForClient != "ws://example.com:1462/" {
+		t.Errorf("urlWebsocketServerForClient = %q, expected ws://example.com:1462/", cfg.URLWebsocketServerForClient)
+	}
+}
+
+func TestCreateConfigDefaults(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "setup_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configPath := filepath.Join(tmpDir, "config.json")
+
+	// Simulate user pressing Enter for all prompts (all defaults)
+	input := "\n\n\n\n\n\n\n\n"
+	reader := strings.NewReader(input)
+	err = CreateConfig(configPath, reader)
+	if err != nil {
+		t.Fatalf("CreateConfig with defaults failed: %v", err)
+	}
+
+	// Verify file is parseable
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		t.Fatalf("config.Load failed: %v", err)
+	}
+
+	// Verify defaults were used
+	if cfg.ProductNameForDisplay != "rss.chat" {
+		t.Errorf("productNameForDisplay = %q, expected rss.chat (default)", cfg.ProductNameForDisplay)
+	}
+
+	if cfg.MyDomain != "http://localhost:8081" {
+		t.Errorf("myDomain = %q, expected http://localhost:8081 (default)", cfg.MyDomain)
+	}
+
+	if cfg.MailSender != "admin@localhost" {
+		t.Errorf("mailSender = %q, expected admin@localhost (default)", cfg.MailSender)
+	}
+
+	if cfg.SMTPPort != 587 {
+		t.Errorf("smtpPort = %d, expected 587 (default)", cfg.SMTPPort)
+	}
+}
+
+func TestCreateConfigSkipsExisting(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "setup_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configPath := filepath.Join(tmpDir, "config.json")
+
+	// Write a sentinel config
+	sentinelContent := []byte(`{"productNameForDisplay": "SENTINEL"}`)
+	if err := os.WriteFile(configPath, sentinelContent, 0644); err != nil {
+		t.Fatalf("failed to write sentinel config: %v", err)
+	}
+
+	// Try to create config again (should skip)
+	reader := strings.NewReader("\n\n\n\n\n\n\n\n")
+	err = CreateConfig(configPath, reader)
+	if err != nil {
+		t.Fatalf("CreateConfig (skip) failed: %v", err)
+	}
+
+	// Verify file wasn't overwritten
+	data, err := os.ReadFile(configPath)
+	if err != nil {
+		t.Fatalf("failed to read config.json: %v", err)
+	}
+
+	if string(data) != string(sentinelContent) {
+		t.Errorf("config.json was overwritten when it should have been skipped")
 	}
 }

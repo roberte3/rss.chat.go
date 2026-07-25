@@ -199,6 +199,18 @@ func (c *Config) validate() error {
 	return nil
 }
 
+// ApplyDefaults sets sensible defaults for optional fields.
+// Exported for use by setup.go during config generation.
+func (c *Config) ApplyDefaults() {
+	c.applyDefaults()
+}
+
+// Validate checks that all required fields are set.
+// Exported for use by setup.go during config generation.
+func (c *Config) Validate() error {
+	return c.validate()
+}
+
 // ensureTrailingSlash adds a trailing slash to a URL if it doesn't have one.
 func ensureTrailingSlash(url string) string {
 	if url != "" && !strings.HasSuffix(url, "/") {

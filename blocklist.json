@@ -1,0 +1,4 @@
+{
+	"note": "Email addresses to block from creating accounts or signing in. Add email addresses to the blockedEmails array.",
+	"blockedEmails": []
+}

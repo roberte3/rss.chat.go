@@ -26,6 +26,13 @@ func main() {
 	configPath := flag.String("config", "config.json", "path to config file")
 	flag.Parse()
 
+	// If setup flag is set, create config file first (if missing)
+	if *setupFlag {
+		if err := setup.CreateConfig(*configPath, os.Stdin); err != nil {
+			log.Fatalf("setup failed: %v", err)
+		}
+	}
+
 	// Load configuration
 	cfg, err := config.Load(*configPath)
 	if err != nil {
@@ -43,7 +50,7 @@ func main() {
 		if err := setup.CreateDatabase(conn); err != nil {
 			log.Fatalf("setup failed: %v", err)
 		}
-		if err := setup.CreateSettings("settings.json"); err != nil {
+		if err := setup.CreateSettings("settings.json", cfg.ProductName); err != nil {
 			log.Fatalf("setup failed: %v", err)
 		}
 		if err := setup.CreateBlocklist(cfg.BlocklistPath); err != nil {
