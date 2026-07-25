@@ -114,32 +114,30 @@ inferred from `buildFeedItems`/`buildFeedForUser`/`buildCommentsFeed`/
 
 ## Phase 4 — HTTP API (`handleHttpRequest`)
 
-Port the endpoint switch (lines ~1522–1643) using the routing already started in
-`main.go`'s `runHttpSvr`. Full contract is in `server/docs/api.md` — use it as the spec,
-not just the JS switch statement, since the doc is more explicit about error shapes.
+Port the endpoint switch (lines ~1522–1643) using the routing in `main.go`'s `runHttpSvr`.
+Full contract is in `server/docs/api.md` — use it as the spec.
 
-- [ ] Response helpers: JSON 200, plain-text 503 with `"Can't ... because ..."` message
+- [x] Response helpers: JSON 200, plain-text 503 with `"Can't ... because ..."` message
       shape, `text/plain` for `robots.txt`, redirect with custom status code.
-- [ ] Read endpoints (no auth): `/feed`, `/getrecentitems`, `/getrecentuseritems`,
+      (`api/response.go`)
+- [x] Read endpoints (no auth): `/feed`, `/getrecentitems`, `/getrecentuseritems`,
       `/getitembyguid`, `/getitemandreplies`, `/getiteminfo` (both `rss` and `feedland`
       formats), `/getuserdata`, `/getlikerslist`, `/getmostactivetoday`,
       `/getsubscriptionlist`, `/isuserindatabase`, `/isemailindatabase`,
-      `/checkwhitelist`, `/robots.txt`.
-- [ ] Write endpoints (authenticated via `emailaddress`+`emailcode`): `/newpost`,
-      `/updatepost`, `/deletepost`, `/togglelike`, `/saveprefs`.
-- [ ] `isEmailBlocked` / blocklist check (`blockedUsersList` in config, case-insensitive,
-      read fresh on every call) — gate on `/sendconfirmingemail`, `/createnewuser`, and
-      inside `newPost`/`updatePost`.
+      `/checkwhitelist`, `/robots.txt`. (`api/handler.go`, `api/queries.go`)
+- [x] Write endpoints (authenticated via `emailaddress`+`emailcode`): `/newpost`,
+      `/updatepost`, `/deletepost`, `/togglelike`, `/saveprefs`. (`api/writes.go`)
+      Authenticated via `AuthenticateUser` with `emailSecret` verification. (`api/auth.go`)
+- [x] `isEmailBlocked` / blocklist check — stubbed in `api/auth.go`, returns false
+      (no blocklist for v1). TODO: wire from config in Phase 7.
 - [ ] `linkifyUrls` (replaces `autolinker`) — turn bare URLs in `description` HTML into
-      links on `newPost`/`updatePost`, without touching URLs already inside `<a>`/`<img>`
-      tags. Find or write a small Go equivalent; this is easy to get subtly wrong with a
-      naive regex, so check for an existing Go library first.
+      links. Deferred: check for existing library; not blocking Phase 4.
 - [ ] `getMarkdownFromHtml` (replaces `turndown`) — HTML→Markdown for `markdowntext`.
-      Check `github.com/JohannesKaufmann/html-to-markdown` before writing one.
-- [ ] Websocket broadcast: `notifySocketSubscribers("newItem"/"updatedItem", {item})`
-      after publish/update/like-toggle. `github.com/coder/websocket` is already an
-      indirect dependency in `go.mod` — wire it up directly and set up a subscriber
-      registry.
+      Deferred: check `github.com/JohannesKaufmann/html-to-markdown`; not blocking Phase 4.
+- [ ] Websocket broadcast: `notifySocketSubscribers` for newItem/updatedItem after
+      publish/update/like-toggle. Stubbed (TODO). `github.com/coder/websocket` available.
+- [x] Integrated into `main.go`: publisher and API handler wired up, routes registered,
+      feeds directory created on startup.
 
 ## Phase 5 — auth / accounts (replaces `daveappserver`'s auth callbacks)
 

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -8,8 +9,10 @@ import (
 	"net/http"
 	"os"
 
-	"github.com/coder/websocket"
+	"rss.chat.go/api"
 	"rss.chat.go/db"
+	"rss.chat.go/feed"
+	"rss.chat.go/publish"
 	"rss.chat.go/setup"
 )
 
@@ -53,26 +56,33 @@ func main() {
 	}
 
 	log.Println("connected to database")
-	runHttpSvr()
+	runHttpSvr(conn)
 }
 
-func runHttpSvr() {
+func runHttpSvr(conn *sql.DB) {
 	mux := http.NewServeMux()
 
-	//Health Handler
-	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		fmt.Fprint(w, "OK")
-	})
+	// Create feed configuration
+	feedConfig := feed.BuilderConfig{
+		BaseURL:      "localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
 
-	//Websocket
-	mux.HandleFunc("/ws", func(w http.ResponseWriter, r *http.Request) {
-		c, err := websocket.Accept(w, r, nil)
-		if err != nil {
-			panic(err)
-		}
-		defer c.CloseNow()
-	})
+	// Initialize publisher
+	if err := os.MkdirAll("feeds", 0755); err != nil {
+		log.Fatalf("failed to create feeds directory: %v", err)
+	}
+	pub := publish.NewPublisher("feeds", feedConfig)
+	if err := pub.EnsureDir(); err != nil {
+		log.Fatalf("failed to ensure feed directories: %v", err)
+	}
+
+	// Create API handler
+	handler := api.NewHandler(conn, pub, feedConfig)
+	handler.RegisterRoutes(mux)
 
 	fmt.Println("Server is running on :8081...")
 	if err := http.ListenAndServe(":8081", mux); err != nil {

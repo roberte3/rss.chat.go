@@ -72,6 +72,22 @@ func UpdateUser(conn *sql.DB, screenname, emailAddress, emailSecret string) erro
 	return nil
 }
 
+// UpdateUserPrefs updates a user's preferences.
+func UpdateUserPrefs(conn *sql.DB, screenname string, prefs []byte) error {
+	result, err := conn.Exec(`update users set prefs = ? where screenname = ?`, string(prefs), screenname)
+	if err != nil {
+		return err
+	}
+	ct, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if ct == 0 {
+		return fmt.Errorf("Can't update prefs because there is no user with screenname %q.", screenname)
+	}
+	return nil
+}
+
 // GetAllScreennames ports getAllScreennames.
 func GetAllScreennames(conn *sql.DB) ([]string, error) {
 	rows, err := conn.Query(`select screenname from users`)
