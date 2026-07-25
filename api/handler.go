@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
+	"rss.chat.go/websocket"
 )
 
 // Handler holds dependencies for HTTP request handling.
@@ -13,6 +14,7 @@ type Handler struct {
 	DB        *sql.DB
 	Publisher *publish.Publisher
 	FeedConfig feed.BuilderConfig
+	WebsocketHub *websocket.Hub
 }
 
 // NewHandler creates a new API handler.
@@ -22,6 +24,11 @@ func NewHandler(db *sql.DB, pub *publish.Publisher, cfg feed.BuilderConfig) *Han
 		Publisher: pub,
 		FeedConfig: cfg,
 	}
+}
+
+// SetWebsocketHub sets the websocket hub for broadcasting updates.
+func (h *Handler) SetWebsocketHub(hub *websocket.Hub) {
+	h.WebsocketHub = hub
 }
 
 // RegisterRoutes registers all API endpoints with the mux.

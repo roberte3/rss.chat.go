@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"rss.chat.go/db"
+	"rss.chat.go/websocket"
 )
 
 // PostRequest holds fields for creating or updating a post.
@@ -101,6 +102,20 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		}
 	}
 
+	// Broadcast new item event to websocket subscribers
+	if h.WebsocketHub != nil {
+		h.WebsocketHub.Broadcast(&websocket.Event{
+			Type:   websocket.TypeNewItem,
+			ItemID: itemID,
+			Author: user.Screenname,
+			Data: map[string]interface{}{
+				"title":        item.Title,
+				"description":  item.Description,
+				"inReplyTo":    req.InReplyTo,
+			},
+		})
+	}
+
 	RespondJSON(w, item)
 }
 
@@ -187,6 +202,19 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 	// Republish feeds
 	if err := h.Publisher.UpdateFeedsOnPostWrite(h.DB, user.Screenname); err != nil {
 		fmt.Printf("Warning: failed to republish feeds: %v\n", err)
+	}
+
+	// Broadcast updated item event to websocket subscribers
+	if h.WebsocketHub != nil {
+		h.WebsocketHub.Broadcast(&websocket.Event{
+			Type:   websocket.TypeUpdatedItem,
+			ItemID: itemID,
+			Author: user.Screenname,
+			Data: map[string]interface{}{
+				"title":       updatedItem.Title,
+				"description": updatedItem.Description,
+			},
+		})
 	}
 
 	RespondJSON(w, updatedItem)
@@ -287,6 +315,19 @@ func (h *Handler) HandleToggleLike(w http.ResponseWriter, r *http.Request, user 
 	// Republish everyone feed (like counts may have changed)
 	if err := h.Publisher.UpdateFeedsOnLike(h.DB); err != nil {
 		fmt.Printf("Warning: failed to republish feeds: %v\n", err)
+	}
+
+	// Broadcast like toggle event to websocket subscribers
+	if h.WebsocketHub != nil {
+		h.WebsocketHub.Broadcast(&websocket.Event{
+			Type:   websocket.TypeToggledLike,
+			ItemID: itemID,
+			Author: user.Screenname,
+			Data: map[string]interface{}{
+				"liked":    !isLiked,
+				"ctLikes":  item.CtLikes,
+			},
+		})
 	}
 
 	RespondJSON(w, item)

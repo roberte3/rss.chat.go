@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"flag"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
 	"rss.chat.go/setup"
+	"rss.chat.go/websocket"
 )
 
 
@@ -58,6 +60,7 @@ func main() {
 
 func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	mux := http.NewServeMux()
+	ctx := context.Background()
 
 	// Create feed configuration from app config
 	feedConfig := feed.BuilderConfig{
@@ -90,9 +93,18 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	})
 	_ = emailSender // TODO: wire into API endpoints
 
-	// Create API handler
+	// Create and start websocket hub
+	wsHub := websocket.NewHub()
+	go wsHub.Start(ctx)
+
+	// Create API handler with websocket hub
 	handler := api.NewHandler(conn, pub, feedConfig)
+	handler.SetWebsocketHub(wsHub)
 	handler.RegisterRoutes(mux)
+
+	// Register websocket endpoint
+	wsHandler := websocket.NewHandler(wsHub)
+	mux.Handle("/subscribe", wsHandler)
 
 	// Register client server (serves at root, must be last)
 	clientConfig := client.Config{
@@ -110,6 +122,9 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 
 	fmt.Println("Server is running on :" + cfg.MyDomain)
 	fmt.Println("API Base:", cfg.URLServerForClient)
+	if cfg.WebsocketEnabled {
+		fmt.Println("WebSocket enabled at:", cfg.URLWebsocketServerForClient)
+	}
 	if err := http.ListenAndServe(":8081", mux); err != nil {
 		panic(err)
 	}
