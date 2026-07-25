@@ -644,5 +644,3 @@ Key things worth knowing about the plan:
 - Phase 0 flags that your current SQLite schema (db/db.go) only has a bare users table, while the archive's MySQL schema has users/items/likes with a lot more columns — that needs porting first, including translating MySQL's ->> JSON operator to SQLite's json_extract.
 - Phase 5 (auth/magic-link email) is the trickiest piece since daveappserver isn't in the archive at all — I derived its contract from api.md and a worknotes entry about a real bug (email-scanner pre-fetch breaking naive secret regeneration), not from source code.
 - The end has an explicit "out of scope for v1" section (extras-list OPML, rssCloud ping, full daveappserver admin parity) so it doesn't read as mandatory.
-
-Note: I left main.go alone since it looked like you were mid-edit there (currently has a stray mux.HandlerFunc("") causing a syntax error at line 66) — let me know if you want that cleaned up.
