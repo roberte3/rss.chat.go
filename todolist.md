@@ -23,9 +23,7 @@ each needs a Go equivalent — those are called out below as their own tasks, no
 - ✓ Phase 5 (majority): Email auth (/sendconfirmingemail, /createnewuser, email sender, secretgen, validation)
 - ✓ Phase 6: Client hosting (static asset serving, index.html macro substitution, directory traversal protection)
 - ✓ Phase 7: Config loading + full integration into all subsystems
-
-**In Progress:**
-- Phase 4 (final): Websocket broadcasting
+- ✓ Phase 4 (final): Websocket broadcasting for real-time updates
 
 **Deferred to later phases:**
 - Phase 8: Testing & verification
@@ -183,10 +181,33 @@ Full contract is in `server/docs/api.md` — use it as the spec.
         whitespace normalization, preservation of formatting
       - Location: `api/markdown.go`
 
-- [ ] Websocket broadcast: `notifySocketSubscribers` for newItem/updatedItem after
-      publish/update/like-toggle. Stubbed (TODO). `github.com/coder/websocket` available.
+- [x] Websocket broadcast: `notifySocketSubscribers` for newItem/updatedItem after
+      publish/update/like-toggle.
+      **Implementation notes** (`websocket/hub.go`, `websocket/handler.go`):
+      - Event hub manages all subscriber connections via channels (fan-out pattern)
+      - Supports three event types: TypeNewItem, TypeUpdatedItem, TypeToggledLike
+      - Hub.Start() runs event loop that processes registrations, unregistrations, broadcasts
+      - Subscriber.Run() listens on event channel and sends JSON to connected client
+      - /subscribe endpoint accepts WebSocket connections via github.com/coder/websocket
+      - Connections tracked by unique ID, messages include itemId, author, and event data
+      - Graceful shutdown: hub closes all subscribers on context cancellation
+      - Connection keepalive: clients send "ping", server responds with "pong"
+      - Non-blocking broadcast: events dropped if subscriber channel full (prevents deadlock)
+      - API writes broadcast immediately after UpdateFeedsOnPostWrite/UpdateFeedsOnLike
+      
+- [x] Websocket status CLI tool for testing and monitoring (`tools/websocket-status/`):
+      - Command-line client that connects to /subscribe endpoint
+      - Displays real-time events as they arrive with itemId, author, likes
+      - Flags: -server (default ws://localhost:8081), -timeout (30s), -v (verbose)
+      - Shows event count and elapsed time on disconnect
+      - Sends periodic pings to keep connection alive
+      - Graceful shutdown on Ctrl+C
+      - Useful for testing broadcast functionality without client UI
+      - Builds independently: `go build -o ws-status ./tools/websocket-status`
+
 - [x] Integrated into `main.go`: publisher and API handler wired up, routes registered,
-      feeds directory created on startup. All endpoints functional.
+      feeds directory created on startup. Websocket hub created and started in runHttpSvr.
+      All endpoints functional including /subscribe.
 
 ## Phase 5 — auth / accounts (replaces `daveappserver`'s auth callbacks)
 
