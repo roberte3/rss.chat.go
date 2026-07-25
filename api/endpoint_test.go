@@ -12,6 +12,7 @@ import (
 	"testing"
 	"time"
 
+	"rss.chat.go/config"
 	"rss.chat.go/db"
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
@@ -778,5 +779,81 @@ func TestGlobalFeedJSON(t *testing.T) {
 
 	if !strings.Contains(w.Body.String(), "Global JSON Test") {
 		t.Errorf("global JSON feed does not contain test post")
+	}
+}
+
+// Blocklist enforcement tests
+
+func TestBlockedUserCannotSignIn(t *testing.T) {
+	mux, _, handler := setupTestServer(t)
+
+	// Create a config with a blocked email
+	handler.Config = &config.Config{
+		BlockedUsersList: []string{"blocked@example.com"},
+	}
+
+	// Try to send confirmation email to blocked address
+	req := httptest.NewRequest("GET", "/sendconfirmingemail?email=blocked@example.com&urlredirect=http://localhost/", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if !strings.Contains(w.Body.String(), "not allowed") {
+		t.Errorf("expected 'not allowed' error for blocked email, got: %s", w.Body.String())
+	}
+}
+
+func TestBlockedUserCannotSignUp(t *testing.T) {
+	mux, _, handler := setupTestServer(t)
+
+	// Create a config with a blocked email
+	handler.Config = &config.Config{
+		BlockedUsersList: []string{"blocked@example.com"},
+	}
+
+	// Try to create new user with blocked email
+	req := httptest.NewRequest("GET", "/createnewuser?email=blocked@example.com&name=blockeduser&urlredirect=http://localhost/", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if !strings.Contains(w.Body.String(), "not allowed") {
+		t.Errorf("expected 'not allowed' error for blocked email, got: %s", w.Body.String())
+	}
+}
+
+func TestAllowedUserCanSignUp(t *testing.T) {
+	mux, _, handler := setupTestServer(t)
+
+	// Create a config with no blocklist (allow all)
+	handler.Config = &config.Config{
+		BlockedUsersList: []string{},
+	}
+
+	// Try to send confirmation email to allowed address
+	req := httptest.NewRequest("GET", "/sendconfirmingemail?email=allowed@example.com&urlredirect=http://localhost/", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	// Should succeed (or fail for other reasons like email sending, but not blocklist)
+	if strings.Contains(w.Body.String(), "not allowed") {
+		t.Errorf("allowed email should not be rejected by blocklist")
+	}
+}
+
+func TestBlocklistCaseInsensitive(t *testing.T) {
+	mux, _, handler := setupTestServer(t)
+
+	// Create a config with a blocked email in lowercase
+	handler.Config = &config.Config{
+		BlockedUsersList: []string{"blocked@example.com"},
+	}
+
+	// Try to sign up with uppercase version
+	req := httptest.NewRequest("GET", "/sendconfirmingemail?email=BLOCKED@EXAMPLE.COM&urlredirect=http://localhost/", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	// Should still be blocked (case insensitive)
+	if !strings.Contains(w.Body.String(), "not allowed") {
+		t.Errorf("blocklist check should be case-insensitive, but uppercase wasn't blocked")
 	}
 }

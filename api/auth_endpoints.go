@@ -28,7 +28,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check blocklist
-	if IsEmailBlocked(email) {
+	if !h.checkBlocklist(email) {
 		RespondError(w, "Can't send confirmation email because this email is not allowed")
 		return
 	}
@@ -119,7 +119,7 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Check blocklist
-	if IsEmailBlocked(email) {
+	if !h.checkBlocklist(email) {
 		RespondError(w, "Can't create new user because this email is not allowed")
 		return
 	}
@@ -207,10 +207,21 @@ func (h *Handler) sendConfirmationEmail(recipient string, confirmationURL string
 }
 
 // checkWhitelist checks if an email is on the whitelist.
-// TODO: Load from config in Phase 7
+// Returns true if whitelist is empty (allow all) or email is on the list.
 func (h *Handler) checkWhitelist(email string) bool {
-	// For v1, no whitelist means allow all
-	return true
+	if h.Config == nil {
+		return true // No config, allow all
+	}
+	return h.Config.IsEmailWhitelisted(email)
+}
+
+// checkBlocklist checks if an email is NOT blocked.
+// Returns true if email is allowed, false if blocked.
+func (h *Handler) checkBlocklist(email string) bool {
+	if h.Config == nil {
+		return true // No config, allow all
+	}
+	return !h.Config.IsEmailBlocked(email)
 }
 
 // generateEmailSecret generates a random email confirmation code.

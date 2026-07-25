@@ -3,7 +3,7 @@
 A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.6.3.
 
 **Reference**: Original RSS.Chat on GitHub: https://github.com/scripting/rss.chat  
-**Current Build**: Passing all tests (93 tests across 9 packages)
+**Current Build**: Passing all tests (97 tests across 9 packages)
 
 ---
 
@@ -116,7 +116,7 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - 27 total new tests (db + publisher + API endpoint tests)
   - All tests passing, no regressions
 
-- [x] **Feed Format Negotiation** (JUST COMPLETED)
+- [x] **Feed Format Negotiation** (COMPLETED)
   - JSON output support alongside RSS XML
   - Query parameter: `?format=json|xml` (default: xml)
   - JSON structure mirrors RSS 2.0 for consistency
@@ -125,6 +125,15 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
   - Content parity verified between JSON and XML formats
   - Invalid formats return proper error response
   - Backward compatible (XML is default)
+
+- [x] **Blocklist Enforcement in Auth** (JUST COMPLETED)
+  - Config blocklist wired into signup/signin endpoints
+  - `/sendconfirmingemail` checks config blocklist
+  - `/createnewuser` checks config blocklist
+  - Added `checkBlocklist()` handler method
+  - Case-insensitive email matching
+  - 4 new endpoint tests verify blocked users rejected
+  - Allowed users continue to work properly
 
 ---
 
@@ -152,13 +161,16 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 - **Tests**: 9 new tests (4 builder + 5 endpoint), all passing
 - **Impact**: Enables API clients that prefer JSON format
 
-#### 3. Blocklist Enforcement in Auth (1 day)
-**Feature**: Wire existing blocklist into signup/signin
-- [ ] Check `blockedUsersList` in `/sendconfirmingemail`
-- [ ] Check `blockedUsersList` in `/createnewuser`
-- [ ] Return appropriate error message
-- **Tests**: Blocked users can't sign up or signin
-- **Impact**: Completes security model
+#### 3. Blocklist Enforcement in Auth (1 day) ✅ COMPLETED
+**Feature**: Wire blocklist into signup/signin
+- [x] Check `blockedUsersList` in `/sendconfirmingemail` endpoint
+- [x] Check `blockedUsersList` in `/createnewuser` endpoint
+- [x] Return appropriate "not allowed" error message
+- [x] Handler.Config field added for auth checks
+- [x] Case-insensitive email blocking enforcement
+- [x] Tests verify blocked users can't sign up or signin
+- **Tests**: 4 new endpoint tests, all passing
+- **Impact**: Completes security model - fully operational blocklist
 
 #### 4. Post Cleanup Options (1 day)
 **Features**: 

@@ -133,6 +133,7 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	// Create API handler with websocket hub and media database
 	handler := api.NewHandler(conn, pub, feedConfig)
 	handler.SetWebsocketHub(wsHub)
+	handler.Config = cfg // Wire config for auth checks
 	handler.MediaDB = mediaDB
 	handler.FeedsDB = feedsDB // Set feeds database if available
 	handler.MaxMediaUploadBytes = cfg.MaxMediaUploadBytes

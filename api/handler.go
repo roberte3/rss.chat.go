@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"rss.chat.go/config"
 	"rss.chat.go/db"
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
@@ -15,6 +16,7 @@ type Handler struct {
 	DB        *sql.DB
 	Publisher *publish.Publisher
 	FeedConfig feed.BuilderConfig
+	Config    *config.Config // Application configuration
 	WebsocketHub *websocket.Hub
 	MediaDB *sql.DB
 	FeedsDB *sql.DB // Nil if feeds are served from filesystem
