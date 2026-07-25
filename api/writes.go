@@ -49,6 +49,16 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		return
 	}
 
+	// Generate markdown from HTML if not provided
+	markdownText := req.MarkdownText
+	if markdownText == "" {
+		markdownText, err = HtmlToMarkdown(linkified)
+		if err != nil {
+			// If markdown conversion fails, just use empty (not critical)
+			markdownText = ""
+		}
+	}
+
 	now := time.Now()
 	feedURL := fmt.Sprintf("http://%s/feed?screenname=%s", h.FeedConfig.BaseURL, user.Screenname)
 
@@ -59,7 +69,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		Description:  linkified,
 		InReplyTo:    req.InReplyTo,
 		PubDate:      now,
-		MarkdownText: req.MarkdownText,
+		MarkdownText: markdownText,
 	}
 
 	itemID, err := db.AddItem(h.DB, newItem)
@@ -134,6 +144,8 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 
 	// Linkify bare URLs in description if provided
 	description := req.Description
+	markdownText := req.MarkdownText
+
 	if description != "" {
 		linkified, err := LinkifyURLs(description)
 		if err != nil {
@@ -141,13 +153,22 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 			return
 		}
 		description = linkified
+
+		// Generate markdown if not provided
+		if markdownText == "" {
+			markdownText, err = HtmlToMarkdown(linkified)
+			if err != nil {
+				// If markdown conversion fails, just use empty (not critical)
+				markdownText = ""
+			}
+		}
 	}
 
 	patch := db.ItemPatch{
 		ID:           itemID,
 		Title:        strPtr(req.Title),
 		Description:  strPtr(description),
-		MarkdownText: strPtr(req.MarkdownText),
+		MarkdownText: strPtr(markdownText),
 	}
 
 	err = db.UpdateItem(h.DB, patch)
