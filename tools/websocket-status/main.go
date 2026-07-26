@@ -63,22 +63,20 @@ func main() {
 		default:
 		}
 
-		// Create a context with a short timeout for reading
-		readCtx, cancel := context.WithTimeout(interruptCtx, 1*time.Second)
-		messageType, data, err := conn.Read(readCtx)
-		cancel()
+		// Read with no timeout - just wait for messages
+		messageType, data, err := conn.Read(interruptCtx)
 		if err != nil {
 			if websocket.CloseStatus(err) == websocket.StatusNormalClosure {
 				fmt.Println("Server closed connection")
 				return
 			}
-			// Check for context cancellation
+			// Other error
 			select {
 			case <-interruptCtx.Done():
 				return
 			default:
-				// Timeout or other error, continue
-				continue
+				fmt.Printf("Connection error: %v\n", err)
+				return
 			}
 		}
 
@@ -91,6 +89,11 @@ func main() {
 			if *verbose {
 				fmt.Printf("Failed to parse message: %v\n", err)
 			}
+			continue
+		}
+
+		// Skip pong messages from output
+		if msg.Type == "pong" {
 			continue
 		}
 
@@ -119,12 +122,6 @@ func main() {
 				bytes, _ := json.MarshalIndent(msg, "", "  ")
 				fmt.Printf("  Full message: %s\n", bytes)
 			}
-		}
-
-		// Send ping to keep connection alive
-		if err := conn.Write(interruptCtx, websocket.MessageText, []byte("ping")); err != nil {
-			fmt.Printf("Failed to send ping: %v\n", err)
-			return
 		}
 	}
 }

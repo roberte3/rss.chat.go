@@ -70,7 +70,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 	}
 
 	now := time.Now()
-	feedURL := fmt.Sprintf("http://%s/feed?screenname=%s", h.FeedConfig.BaseURL, user.Screenname)
+	feedURL := fmt.Sprintf("%s/feed?screenname=%s", h.FeedConfig.BaseURL, user.Screenname)
 
 	newItem := db.NewItem{
 		FeedURL:      feedURL,

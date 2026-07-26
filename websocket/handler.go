@@ -69,7 +69,7 @@ func (h *Handler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 
 		// Echo pong for ping messages (keep-alive)
 		if messageType == websocket.MessageText && string(data) == "ping" {
-			if err := conn.Write(ctx, websocket.MessageText, []byte("pong")); err != nil {
+			if err := conn.Write(ctx, websocket.MessageText, []byte(`{"type":"pong"}`)); err != nil {
 				return
 			}
 		}
