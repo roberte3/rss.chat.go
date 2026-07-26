@@ -80,6 +80,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		InReplyTo:    req.InReplyTo,
 		PubDate:      now,
 		MarkdownText: markdownText,
+		Author:       user.Screenname,
 	}
 
 	itemID, err := db.AddItem(h.DB, newItem)

@@ -154,8 +154,10 @@ func idFromGuid(guid string) (int64, error) {
 
 // GetItemByID ports getItemById. viewerScreenname may be "" for an
 // anonymous caller. Returns (nil, nil) when there is no such item.
+// Uses joinedItemQuery to include author info so parent posts can be
+// republished when used in reply operations.
 func GetItemByID(conn *sql.DB, viewerScreenname string, id int64, baseURL string) (*Item, error) {
-	raw, err := scanBareItemRow(conn.QueryRow(bareItemQuery+` where items.id = ?`, nullIfEmpty(viewerScreenname), id))
+	raw, err := scanJoinedItemRow(conn.QueryRow(joinedItemQuery+` where items.id = ?`, nullIfEmpty(viewerScreenname), id))
 	if err == sql.ErrNoRows {
 		return nil, nil
 	}
