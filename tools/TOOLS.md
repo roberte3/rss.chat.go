@@ -94,6 +94,40 @@ Monitors real-time events from the WebSocket server.
 ./websocket-status -server ws://localhost:8081 -v
 ```
 
+## TestData Tool
+
+Generates sample data for testing and development: creates a test user and populates the database with 10 sample posts.
+
+### Usage
+
+```bash
+./testdata [options]
+```
+
+### Options
+
+- `-db string` - Path to main database (default: "rss.chat.db")
+
+### Example
+
+```bash
+./testdata -db rss.chat.db
+or 
+go run tools/testdata/main.go -db rss.chat.db
+from project root. 
+```
+
+### Generated Data
+
+Creates:
+- **Test User**: screenname `testuser`, email `testuser@example.com`
+- **10 Posts**: with sequential timestamps, sample HTML content, and markdown versions
+
+The posts span 10 hours and are immediately available through:
+- `/api/getrecentitems` — appears in network feed
+- `/feed?screenname=testuser` — user's personal RSS feed
+- `/api/getrecentuseritems?name=testuser` — user's recent posts
+
 ## Building the Tools
 
 Build all tools:
@@ -105,9 +139,10 @@ go build ./tools/...
 Build a specific tool:
 
 ```bash
-go build ./tools/backup
-go build ./tools/restore
-go build ./tools/websocket-status
+go build -o backup ./tools/backup
+go build -o restore ./tools/restore
+go build -o websocket-status ./tools/websocket-status
+go build -o testdata ./tools/testdata
 ```
 
 ## Testing
