@@ -111,9 +111,9 @@ type UserDataResponse struct {
 
 func getUserData(conn *sql.DB, screenname string, config feed.BuilderConfig) (*UserDataResponse, error) {
 	resp := &UserDataResponse{
-		EveryoneFeedUrl: fmt.Sprintf("http://%s/feed", config.BaseURL),
-		BaseUrl:         fmt.Sprintf("http://%s", config.BaseURL),
-		SubsUrl:         fmt.Sprintf("http://%s/getsubscriptionlist", config.BaseURL),
+		EveryoneFeedUrl: fmt.Sprintf("%s/feed", config.BaseURL),
+		BaseUrl:         config.BaseURL,
+		SubsUrl:         fmt.Sprintf("%s/getsubscriptionlist", config.BaseURL),
 		FlHasWhitelist:  false, // TODO: Set from config
 	}
 
@@ -128,7 +128,7 @@ func getUserData(conn *sql.DB, screenname string, config feed.BuilderConfig) (*U
 		}
 
 		resp.Screenname = user.Screenname
-		resp.FeedUrl = fmt.Sprintf("http://%s/feed?screenname=%s", config.BaseURL, screenname)
+		resp.FeedUrl = fmt.Sprintf("%s/feed?screenname=%s", config.BaseURL, screenname)
 		resp.ImageUrl = user.ImageURL
 		resp.Prefs = user.Prefs
 		resp.WhenCreated = user.WhenCreated
