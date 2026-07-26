@@ -128,6 +128,51 @@ The posts span 10 hours and are immediately available through:
 - `/feed?screenname=testuser` — user's personal RSS feed
 - `/api/getrecentuseritems?name=testuser` — user's recent posts
 
+## Reset Tool
+
+Clears all databases and settings files for a fresh start. Useful for testing, resetting development state, or preparing for a clean deployment.
+
+### Usage
+
+```bash
+./reset [options]
+```
+
+### Options
+
+- `-db string` - Path to main database (default: "rss.chat.db")
+- `-mediadb string` - Path to media database (default: "rss.chat.media.db")
+- `-feedsdb string` - Path to feeds database (default: "rss.chat.feeds.db")
+- `-settings string` - Path to settings file (default: "settings.json")
+- `-blocklist string` - Path to blocklist file (default: "blocklist.json")
+- `-config string` - Path to config file (default: "config.json")
+- `-feedsdir string` - Path to feeds directory (default: "feeds")
+- `-tempmedia string` - Path to temp media directory (default: "temp_media")
+- `-keep-config` - Preserve config.json (don't delete)
+- `-keep-feeds` - Preserve feeds directory (default: true)
+- `-force` - Skip confirmation prompt
+- `-v` - Verbose output
+
+### Example
+
+```bash
+# Interactive reset (asks for confirmation)
+./reset
+
+# Force reset without prompt, preserving config
+./reset -force -keep-config
+
+# Delete everything including config
+./reset -force -keep-config=false
+
+# Delete everything including feeds directory
+./reset -force -keep-feeds=false
+```
+
+### Safety
+
+By default, the tool asks for confirmation before deleting. Config.json and feeds/ directory are preserved by default to avoid data loss. Use `-keep-config=false` and `-keep-feeds=false` to delete them.
+
 ## Building the Tools
 
 Build all tools:
@@ -143,6 +188,7 @@ go build -o backup ./tools/backup
 go build -o restore ./tools/restore
 go build -o websocket-status ./tools/websocket-status
 go build -o testdata ./tools/testdata
+go build -o reset ./tools/reset
 ```
 
 ## Testing
