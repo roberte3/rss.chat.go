@@ -1,0 +1,522 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:source="http://www.opml.org/spec2">
+  <channel>
+    <title>Everyone on rss.network</title>
+    <link>http://http://localhost:8081/</link>
+    <description>All posts on rss.network</description>
+    <language>en</language>
+    <docs>http://www.rssboard.org/rss-specification</docs>
+    <generator>rssChat v1</generator>
+    <source:self rel="self" type="application/rss+xml" href="http://localhost:8081/feed"></source:self>
+    <item>
+      <description>&lt;p&gt;test message&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=43</guid>
+      <pubDate>Sun, 26 Jul 2026 16:38:17 GMT</pubDate>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>test message</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=42</guid>
+      <pubDate>Sun, 26 Jul 2026 16:36:57 GMT</pubDate>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>test</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=41</guid>
+      <pubDate>Sun, 26 Jul 2026 16:36:19 GMT</pubDate>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>test</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=40</guid>
+      <pubDate>Sun, 26 Jul 2026 16:35:45 GMT</pubDate>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>test</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;WebSocket test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=39</guid>
+      <pubDate>Sun, 26 Jul 2026 16:35:06 GMT</pubDate>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>WebSocket test</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>PJ of doom!</description>
+      <guid isPermalink="true">http://localhost:8081?id=38</guid>
+      <pubDate>Sun, 26 Jul 2026 16:33:58 GMT</pubDate>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>PJ of doom!</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>Do a thing</description>
+      <guid isPermalink="true">http://localhost:8081?id=37</guid>
+      <pubDate>Sun, 26 Jul 2026 16:33:26 GMT</pubDate>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>Do a thing</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>Gizmos and shortcuts o my</description>
+      <guid isPermalink="true">http://localhost:8081?id=36</guid>
+      <pubDate>Sun, 26 Jul 2026 16:30:27 GMT</pubDate>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>Gizmos and shortcuts o my</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>This is more stuff. </description>
+      <guid isPermalink="true">http://localhost:8081?id=35</guid>
+      <pubDate>Sun, 26 Jul 2026 16:27:19 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=34</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is more stuff.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>This is a new test</description>
+      <guid isPermalink="true">http://localhost:8081?id=34</guid>
+      <pubDate>Sun, 26 Jul 2026 16:27:04 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments/testmonkey/34.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is a new test</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>Fummm</description>
+      <guid isPermalink="true">http://localhost:8081?id=33</guid>
+      <pubDate>Sun, 26 Jul 2026 14:54:31 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=32</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>Fummm</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>Fee Fi Pho </description>
+      <guid isPermalink="true">http://localhost:8081?id=32</guid>
+      <pubDate>Sun, 26 Jul 2026 14:54:24 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments/testmonkey/32.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>Fee Fi Pho</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Reply test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=31</guid>
+      <pubDate>Sun, 26 Jul 2026 14:53:38 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>Reply test</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Test reply with author&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=30</guid>
+      <pubDate>Sun, 26 Jul 2026 14:53:17 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Test reply with author</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>Gizmos</description>
+      <guid isPermalink="true">http://localhost:8081?id=29</guid>
+      <pubDate>Sun, 26 Jul 2026 14:51:50 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=28</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Gizmos</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Funky town.&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=28</guid>
+      <pubDate>Sun, 26 Jul 2026 14:51:42 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments//28.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Funky town.</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Another reply&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=27</guid>
+      <pubDate>Sun, 26 Jul 2026 14:50:57 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Another reply</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>This is a deeper test</description>
+      <guid isPermalink="true">http://localhost:8081?id=26</guid>
+      <pubDate>Sun, 26 Jul 2026 14:50:04 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=25</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>This is a deeper test</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>This is a tester</description>
+      <guid isPermalink="true">http://localhost:8081?id=25</guid>
+      <pubDate>Sun, 26 Jul 2026 14:49:55 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments//25.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>This is a tester</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>Pj disagrees</description>
+      <guid isPermalink="true">http://localhost:8081?id=24</guid>
+      <pubDate>Sun, 26 Jul 2026 14:47:34 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=23</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Pj disagrees</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>Dogs arebetter than cats</description>
+      <guid isPermalink="true">http://localhost:8081?id=23</guid>
+      <pubDate>Sun, 26 Jul 2026 14:47:24 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments//23.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Dogs arebetter than cats</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>I want some chicken. </description>
+      <guid isPermalink="true">http://localhost:8081?id=22</guid>
+      <pubDate>Sun, 26 Jul 2026 14:46:30 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=21</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>I want some chicken.</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>This is the best</description>
+      <guid isPermalink="true">http://localhost:8081?id=21</guid>
+      <pubDate>Sun, 26 Jul 2026 14:46:19 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments//21.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>This is the best</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Reply test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=20</guid>
+      <pubDate>Sun, 26 Jul 2026 14:44:54 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Reply test</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Reply test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=19</guid>
+      <pubDate>Sun, 26 Jul 2026 14:44:43 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Reply test</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>No I think its in mario land</description>
+      <guid isPermalink="true">http://localhost:8081?id=18</guid>
+      <pubDate>Sun, 26 Jul 2026 14:43:22 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=14</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>No I think its in mario land</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Reply 2&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=17</guid>
+      <pubDate>Sun, 26 Jul 2026 14:42:18 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Reply 2</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;This is a reply&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=16</guid>
+      <pubDate>Sun, 26 Jul 2026 14:41:54 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>This is a reply</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;This is a reply&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=15</guid>
+      <pubDate>Sun, 26 Jul 2026 14:41:43 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>This is a reply</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>Is in donkey country </description>
+      <guid isPermalink="true">http://localhost:8081?id=14</guid>
+      <pubDate>Sun, 26 Jul 2026 14:40:16 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments//14.xml"></source:comments>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=13</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Is in donkey country</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>Funky town. </description>
+      <guid isPermalink="true">http://localhost:8081?id=13</guid>
+      <pubDate>Sun, 26 Jul 2026 14:40:02 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments//13.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Funky town.</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>no it doesn&amp;#39;t work</description>
+      <guid isPermalink="true">http://localhost:8081?id=12</guid>
+      <pubDate>Sun, 26 Jul 2026 14:37:45 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=11</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>no it doesn&#39;t work</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>Is this thing on? </description>
+      <guid isPermalink="true">http://localhost:8081?id=11</guid>
+      <pubDate>Sun, 26 Jul 2026 14:37:22 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://localhost:8081/comments//11.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Is this thing on?</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <title>Test Post #10</title>
+      <description>&lt;p&gt;This is test post number 10. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=10</guid>
+      <pubDate>Sun, 26 Jul 2026 14:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 10. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #9</title>
+      <description>&lt;p&gt;This is test post number 9. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=9</guid>
+      <pubDate>Sun, 26 Jul 2026 13:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 9. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #8</title>
+      <description>&lt;p&gt;This is test post number 8. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=8</guid>
+      <pubDate>Sun, 26 Jul 2026 12:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 8. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #7</title>
+      <description>&lt;p&gt;This is test post number 7. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=7</guid>
+      <pubDate>Sun, 26 Jul 2026 11:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 7. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #6</title>
+      <description>&lt;p&gt;This is test post number 6. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=6</guid>
+      <pubDate>Sun, 26 Jul 2026 10:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 6. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #5</title>
+      <description>&lt;p&gt;This is test post number 5. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=5</guid>
+      <pubDate>Sun, 26 Jul 2026 09:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 5. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #4</title>
+      <description>&lt;p&gt;This is test post number 4. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=4</guid>
+      <pubDate>Sun, 26 Jul 2026 08:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 4. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #3</title>
+      <description>&lt;p&gt;This is test post number 3. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=3</guid>
+      <pubDate>Sun, 26 Jul 2026 07:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 3. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #2</title>
+      <description>&lt;p&gt;This is test post number 2. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=2</guid>
+      <pubDate>Sun, 26 Jul 2026 06:36:53 GMT</pubDate>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 2. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <title>Test Post #1</title>
+      <description>&lt;p&gt;This is test post number 1. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=1</guid>
+      <pubDate>Sun, 26 Jul 2026 05:36:53 GMT</pubDate>
+      <source:comments count="8" feedUrl="http://localhost:8081/comments/testmonkey/1.xml"></source:comments>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 1. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+  </channel>
+</rss>

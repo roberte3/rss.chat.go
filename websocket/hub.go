@@ -50,7 +50,7 @@ func NewHub() *Hub {
 	return &Hub{
 		subscribers: make(map[string]*Subscriber),
 		broadcast:   make(chan *Event, 100),
-		register:    make(chan *Subscriber, 10),
+		register:    make(chan *Subscriber),
 		unregister:  make(chan *Subscriber, 10),
 	}
 }
@@ -135,12 +135,10 @@ func (s *Subscriber) Run(ctx context.Context) {
 			}
 			// Send event to client as JSON
 			msg := map[string]interface{}{
-				"type": event.Type,
-				"data": map[string]interface{}{
-					"itemId": event.ItemID,
-					"author": event.Author,
-					"event":  event.Data,
-				},
+				"type":   event.Type,
+				"itemId": event.ItemID,
+				"author": event.Author,
+				"data":   event.Data,
 			}
 			if err := s.conn.WriteJSON(msg); err != nil {
 				// Connection error, stop

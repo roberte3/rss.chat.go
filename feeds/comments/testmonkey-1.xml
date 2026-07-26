@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:source="http://www.opml.org/spec2">
+  <channel>
+    <title>Comments on post 1</title>
+    <link>http://localhost:8081?id=1</link>
+    <description>Replies to post by testmonkey</description>
+    <language>en</language>
+    <docs>http://www.rssboard.org/rss-specification</docs>
+    <generator>rssChat v1</generator>
+    <source:self rel="self" type="application/rss+xml" href="http://http://localhost:8081/comments/testmonkey/1.xml"></source:self>
+    <item>
+      <title>Test Post #1</title>
+      <description>&lt;p&gt;This is test post number 1. It contains some sample content to demonstrate the rss.chat.go application.&lt;/p&gt;&lt;p&gt;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=1</guid>
+      <pubDate>Sun, 26 Jul 2026 05:36:53 GMT</pubDate>
+      <source:comments count="8" feedUrl="http://http://localhost:8081/comments/testmonkey/1.xml"></source:comments>
+      <source>
+        <url>http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>This is test post number 1. It contains some sample content to demonstrate the rss.chat.go application.&#xA;&#xA;You can create, edit, and delete posts. Each post gets a unique GUID and can be referenced by other posts as replies.</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;This is a reply&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=15</guid>
+      <pubDate>Sun, 26 Jul 2026 14:41:43 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>This is a reply</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;This is a reply&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=16</guid>
+      <pubDate>Sun, 26 Jul 2026 14:41:54 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>This is a reply</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Reply 2&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=17</guid>
+      <pubDate>Sun, 26 Jul 2026 14:42:18 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Reply 2</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Reply test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=19</guid>
+      <pubDate>Sun, 26 Jul 2026 14:44:43 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Reply test</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Reply test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=20</guid>
+      <pubDate>Sun, 26 Jul 2026 14:44:54 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Reply test</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Another reply&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=27</guid>
+      <pubDate>Sun, 26 Jul 2026 14:50:57 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Another reply</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Test reply with author&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=30</guid>
+      <pubDate>Sun, 26 Jul 2026 14:53:17 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Test reply with author</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>&lt;p&gt;Reply test&lt;/p&gt;</description>
+      <guid isPermalink="true">http://localhost:8081?id=31</guid>
+      <pubDate>Sun, 26 Jul 2026 14:53:38 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=1</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>Reply test</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+  </channel>
+</rss>
