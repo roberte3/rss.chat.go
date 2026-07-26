@@ -54,39 +54,45 @@ func (h *Handler) UploadMediaAuth(w http.ResponseWriter, r *http.Request) {
 	h.HandleUploadMedia(w, r, user)
 }
 
-// RegisterRoutes registers all API endpoints with the mux.
+// RegisterRoutes registers all API endpoints with the mux at both root and /api/ paths.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	// Helper to register each route at both /route and /api/route
+	register := func(method, path string, handler http.HandlerFunc) {
+		mux.HandleFunc(method+" "+path, handler)
+		mux.HandleFunc(method+" /api"+path, handler)
+	}
+
 	// Read endpoints (no auth)
-	mux.HandleFunc("GET /health", h.Health)
-	mux.HandleFunc("GET /feed", h.Feed)
-	mux.HandleFunc("GET /getrecentitems", h.GetRecentItems)
-	mux.HandleFunc("GET /getrecentuseritems", h.GetRecentUserItems)
-	mux.HandleFunc("GET /getitembyguid", h.GetItemByGuid)
-	mux.HandleFunc("GET /getitemandreplies", h.GetItemAndReplies)
-	mux.HandleFunc("GET /getiteminfo", h.GetItemInfo)
-	mux.HandleFunc("GET /getuserdata", h.GetUserData)
-	mux.HandleFunc("GET /getlikerslist", h.GetLikersList)
-	mux.HandleFunc("GET /getmostactivetoday", h.GetMostActiveToday)
-	mux.HandleFunc("GET /getsubscriptionlist", h.GetSubscriptionList)
-	mux.HandleFunc("GET /isuserindatabase", h.IsUserInDatabase)
-	mux.HandleFunc("GET /isemailindatabase", h.IsEmailInDatabase)
-	mux.HandleFunc("GET /checkwhitelist", h.CheckWhitelist)
-	mux.HandleFunc("GET /robots.txt", h.RobotsTxt)
+	register("GET", "/health", h.Health)
+	register("GET", "/feed", h.Feed)
+	register("GET", "/getrecentitems", h.GetRecentItems)
+	register("GET", "/getrecentuseritems", h.GetRecentUserItems)
+	register("GET", "/getitembyguid", h.GetItemByGuid)
+	register("GET", "/getitemandreplies", h.GetItemAndReplies)
+	register("GET", "/getiteminfo", h.GetItemInfo)
+	register("GET", "/getuserdata", h.GetUserData)
+	register("GET", "/getlikerslist", h.GetLikersList)
+	register("GET", "/getmostactivetoday", h.GetMostActiveToday)
+	register("GET", "/getsubscriptionlist", h.GetSubscriptionList)
+	register("GET", "/isuserindatabase", h.IsUserInDatabase)
+	register("GET", "/isemailindatabase", h.IsEmailInDatabase)
+	register("GET", "/checkwhitelist", h.CheckWhitelist)
+	register("GET", "/robots.txt", h.RobotsTxt)
 
 	// Auth endpoints (no auth required, but rate-limited in production)
-	mux.HandleFunc("GET /sendconfirmingemail", h.SendConfirmingEmail)
-	mux.HandleFunc("GET /createnewuser", h.CreateNewUser)
+	register("GET", "/sendconfirmingemail", h.SendConfirmingEmail)
+	register("GET", "/createnewuser", h.CreateNewUser)
 
 	// Write endpoints (authenticated)
-	mux.HandleFunc("POST /newpost", h.NewPost)
-	mux.HandleFunc("POST /updatepost", h.UpdatePost)
-	mux.HandleFunc("POST /deletepost", h.DeletePost)
-	mux.HandleFunc("POST /togglelike", h.ToggleLike)
-	mux.HandleFunc("POST /saveprefs", h.SavePrefs)
-	mux.HandleFunc("POST /uploadmedia", h.UploadMediaAuth)
+	register("POST", "/newpost", h.NewPost)
+	register("POST", "/updatepost", h.UpdatePost)
+	register("POST", "/deletepost", h.DeletePost)
+	register("POST", "/togglelike", h.ToggleLike)
+	register("POST", "/saveprefs", h.SavePrefs)
+	register("POST", "/uploadmedia", h.UploadMediaAuth)
 
 	// Media serving (public)
-	mux.HandleFunc("GET /media/{id}", h.HandleGetMedia)
+	register("GET", "/media/{id}", h.HandleGetMedia)
 
 	// Websocket
 	mux.HandleFunc("GET /ws", h.WebSocket)
