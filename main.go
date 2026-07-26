@@ -165,7 +165,7 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 		URLServerForClient:       cfg.URLServerForClient,
 		URLWebsocketServerForClient: cfg.URLWebsocketServerForClient,
 		WebsocketEnabled:         cfg.WebsocketEnabled,
-		FeedURLEveryone:          fmt.Sprintf("http://%s/feed", cfg.MyDomain),
+		FeedURLEveryone:          fmt.Sprintf("%s/feed", cfg.MyDomain),
 	}
 
 	clientServer := client.NewServer("archive/rss.chat/client/code", clientConfig)
