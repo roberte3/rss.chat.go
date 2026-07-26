@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:source="http://www.opml.org/spec2">
+  <channel>
+    <title>Comments on post 14</title>
+    <link>http://localhost:8081?id=14</link>
+    <description>Replies to post by </description>
+    <language>en</language>
+    <docs>http://www.rssboard.org/rss-specification</docs>
+    <generator>rssChat v1</generator>
+    <source:self rel="self" type="application/rss+xml" href="http://http://localhost:8081/comments//14.xml"></source:self>
+    <item>
+      <description>Is in donkey country </description>
+      <guid isPermalink="true">http://localhost:8081?id=14</guid>
+      <pubDate>Sun, 26 Jul 2026 14:40:16 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://http://localhost:8081/comments//14.xml"></source:comments>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=13</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>Is in donkey country</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+    <item>
+      <description>No I think its in mario land</description>
+      <guid isPermalink="true">http://localhost:8081?id=18</guid>
+      <pubDate>Sun, 26 Jul 2026 14:43:22 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=14</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title></title>
+      </source>
+      <source:markdown>No I think its in mario land</source:markdown>
+      <source:account service="http://localhost:8081" name=""></source:account>
+    </item>
+  </channel>
+</rss>

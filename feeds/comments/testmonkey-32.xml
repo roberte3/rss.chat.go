@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0" xmlns:source="http://www.opml.org/spec2">
+  <channel>
+    <title>Comments on post 32</title>
+    <link>http://localhost:8081?id=32</link>
+    <description>Replies to post by testmonkey</description>
+    <language>en</language>
+    <docs>http://www.rssboard.org/rss-specification</docs>
+    <generator>rssChat v1</generator>
+    <source:self rel="self" type="application/rss+xml" href="http://http://localhost:8081/comments/testmonkey/32.xml"></source:self>
+    <item>
+      <description>Fee Fi Pho </description>
+      <guid isPermalink="true">http://localhost:8081?id=32</guid>
+      <pubDate>Sun, 26 Jul 2026 14:54:24 GMT</pubDate>
+      <source:comments count="1" feedUrl="http://http://localhost:8081/comments/testmonkey/32.xml"></source:comments>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>Fee Fi Pho</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+    <item>
+      <description>Fummm</description>
+      <guid isPermalink="true">http://localhost:8081?id=33</guid>
+      <pubDate>Sun, 26 Jul 2026 14:54:31 GMT</pubDate>
+      <source:inReplyTo isPermalink="true">http://localhost:8081?id=32</source:inReplyTo>
+      <source>
+        <url>http://http://localhost:8081/feed?screenname=testmonkey</url>
+        <title>testmonkey</title>
+      </source>
+      <source:markdown>Fummm</source:markdown>
+      <source:account service="http://localhost:8081" name="testmonkey"></source:account>
+    </item>
+  </channel>
+</rss>

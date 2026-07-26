@@ -17,7 +17,7 @@ func getRecentItems(conn *sql.DB, viewerScreenname string, maxCt int, baseURL st
 
 // getRecentUserItems fetches a user's recent posts.
 func getRecentUserItems(conn *sql.DB, screenname, viewerScreenname string, maxCt int, baseURL string) ([]db.Item, error) {
-	feedURL := fmt.Sprintf("http://%s/feed?screenname=%s", baseURL, screenname)
+	feedURL := fmt.Sprintf("%s/feed?screenname=%s", baseURL, screenname)
 	return db.GetRecentUserItems(conn, viewerScreenname, feedURL, maxCt, baseURL)
 }
 

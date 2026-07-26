@@ -6,24 +6,25 @@ import (
 	"encoding/xml"
 	"fmt"
 	"net/url"
-	"rss.chat.go/db"
 	"strconv"
 	"time"
+
+	"rss.chat.go/db"
 )
 
 // BuilderConfig holds configuration for feed generation.
 type BuilderConfig struct {
-	BaseURL         string
-	ProductName     string
-	MaxFeedItems    int
-	Language        string
-	DocsURL         string
-	RSSCloudEnabled bool
-	RSSCloudDomain  string
-	RSSCloudPort    string
-	RSSCloudPath    string
-	RSSCloudReg     string
-	RSSCloudProto   string
+	BaseURL                  string
+	ProductName              string
+	MaxFeedItems             int
+	Language                 string
+	DocsURL                  string
+	RSSCloudEnabled          bool
+	RSSCloudDomain           string
+	RSSCloudPort             string
+	RSSCloudPath             string
+	RSSCloudReg              string
+	RSSCloudProto            string
 	TitleForSubscriptionList string // Custom OPML title (optional)
 }
 
@@ -336,15 +337,15 @@ func buildFeedItems(items []*db.Item, config BuilderConfig, sourceAttribution bo
 // Helper functions for URLs
 
 func getFeedURL(baseURL, screenname string) string {
-	return fmt.Sprintf("http://%s/feed?screenname=%s", baseURL, url.QueryEscape(screenname))
+	return fmt.Sprintf("%s/feed?screenname=%s", baseURL, url.QueryEscape(screenname))
 }
 
 func getEveryoneFeedURL(baseURL string) string {
-	return fmt.Sprintf("http://%s/feed", baseURL)
+	return fmt.Sprintf("%s/feed", baseURL)
 }
 
 func getCommentsFeedURL(baseURL, screenname string, itemID int64) string {
-	return fmt.Sprintf("http://%s/comments/%s/%d.xml", baseURL, url.QueryEscape(screenname), itemID)
+	return fmt.Sprintf("%s/comments/%s/%d.xml", baseURL, url.QueryEscape(screenname), itemID)
 }
 
 func formatEnclosureLength(length *int64) string {
@@ -363,18 +364,18 @@ type Link struct {
 
 // JSONFeed represents an RSS feed in JSON format (mirrors RSS 2.0 structure).
 type JSONFeed struct {
-	Version string     `json:"version"`
+	Version string      `json:"version"`
 	Channel JSONChannel `json:"channel"`
 }
 
 // JSONChannel represents the channel element in JSON format.
 type JSONChannel struct {
-	Title       string       `json:"title"`
-	Link        string       `json:"link"`
-	Description string       `json:"description"`
-	Language    string       `json:"language,omitempty"`
+	Title         string     `json:"title"`
+	Link          string     `json:"link"`
+	Description   string     `json:"description"`
+	Language      string     `json:"language,omitempty"`
 	LastBuildDate string     `json:"lastBuildDate,omitempty"`
-	Items       []JSONItem   `json:"item,omitempty"`
+	Items         []JSONItem `json:"item,omitempty"`
 }
 
 // JSONItem represents an item element in JSON format.
@@ -430,10 +431,10 @@ func convertRSSToJSON(rssXML string) (string, error) {
 	jsonFeed := JSONFeed{
 		Version: rssFeed.Version,
 		Channel: JSONChannel{
-			Title:         rssFeed.Channel.Title,
-			Link:          rssFeed.Channel.Link,
-			Description:   rssFeed.Channel.Description,
-			Language:      rssFeed.Channel.Language,
+			Title:       rssFeed.Channel.Title,
+			Link:        rssFeed.Channel.Link,
+			Description: rssFeed.Channel.Description,
+			Language:    rssFeed.Channel.Language,
 		},
 	}
 
