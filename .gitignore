@@ -2,8 +2,10 @@
 *.db-wal
 *.db-shm
 /archive/*
-/rss-chat 
+/rss-chat
 /notes/*
 /tools/backup
 /tools/restore
-/feeds/* y
+/websocket-status
+/feeds/*
+*.log
