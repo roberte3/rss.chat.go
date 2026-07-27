@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 	"time"
@@ -1280,5 +1281,161 @@ func TestDeleteReplyRepublishesParentCommentsFeed(t *testing.T) {
 	// truncated: the parent must still be there.
 	if !strings.Contains(string(republished), "Parent Post") {
 		t.Errorf("comments feed lost the parent post, so the check above proves nothing:\n%s", republished)
+	}
+}
+
+// seedPostWithReply inserts a parent post and one reply, returning their ids.
+func seedPostWithReply(t *testing.T, conn *sql.DB) (parentID, replyID int64) {
+	t.Helper()
+	insertTestUser(t, conn, "alice", "alice-secret")
+	insertTestUser(t, conn, "bob", "bob-secret")
+
+	now := time.Now()
+	pr, err := conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		"http://localhost:8081/feed?screenname=alice", "alice", "Parent Post", "original", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert parent: %v", err)
+	}
+	parentID, _ = pr.LastInsertId()
+
+	rr, err := conn.Exec(`insert into items (feedUrl, author, title, description, inReplyTo, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"http://localhost:8081/feed?screenname=bob", "bob", "A Reply", "responding", parentID, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert reply: %v", err)
+	}
+	replyID, _ = rr.LastInsertId()
+	return parentID, replyID
+}
+
+// TestCommentsFeedAdvertisedURLResolves is the round trip that matters: take
+// the comments URL the server puts in its own generated feed and request
+// exactly that. Every such URL used to 404 — the feed was published to
+// feeds/comments/{screenname}-{id}.xml, advertised at
+// /comments/{screenname}/{id}.xml, and no route served either.
+func TestCommentsFeedAdvertisedURLResolves(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+	parentID, _ := seedPostWithReply(t, conn)
+
+	// The everyone feed is served from disk in filesystem mode, so publish it
+	// the way a write would before reading it back.
+	if err := handler.Publisher.PublishEveryoneFeed(conn); err != nil {
+		t.Fatalf("failed to publish everyone feed: %v", err)
+	}
+
+	// Pull the advertised URL out of the everyone feed rather than hardcoding
+	// it, so the test breaks if the advertised shape and the route drift apart.
+	req := httptest.NewRequest("GET", "/feed", nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	m := regexp.MustCompile(`feedUrl="([^"]*/comments/[^"]+)"`).FindStringSubmatch(rec.Body.String())
+	if m == nil {
+		t.Fatalf("everyone feed advertises no comments URL, nothing to resolve:\n%s", rec.Body.String())
+	}
+	advertised := strings.ReplaceAll(m[1], "&amp;", "&")
+
+	u, err := url.Parse(advertised)
+	if err != nil {
+		t.Fatalf("advertised comments URL %q does not parse: %v", advertised, err)
+	}
+	if !strings.Contains(u.Path, fmt.Sprint(parentID)) {
+		t.Fatalf("advertised URL %q is not for parent %d", advertised, parentID)
+	}
+
+	req = httptest.NewRequest("GET", u.Path, nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("advertised comments URL %s returned %d, want 200", u.Path, rec.Code)
+	}
+	if ct := rec.Header().Get("Content-Type"); !strings.Contains(ct, "rss+xml") {
+		t.Errorf("content type = %q, want rss+xml", ct)
+	}
+	body := rec.Body.String()
+	for _, want := range []string{"Parent Post", "A Reply"} {
+		if !strings.Contains(body, want) {
+			t.Errorf("comments feed missing %q, got:\n%s", want, body)
+		}
+	}
+}
+
+// TestCommentsFeedServedWithoutPublishing pins the on-demand behaviour: no
+// PublishCommentsFeed call, so there is no file and no stored copy, and the
+// response must still be correct. This is the case that fails if the handler
+// is ever switched back to serving the published artifact.
+func TestCommentsFeedServedWithoutPublishing(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+	parentID, _ := seedPostWithReply(t, conn)
+
+	published := filepath.Join(handler.Publisher.BaseDir(), "comments", fmt.Sprintf("alice-%d.xml", parentID))
+	if _, err := os.Stat(published); err == nil {
+		t.Fatalf("precondition failed: %s already exists, so this proves nothing", published)
+	}
+
+	req := httptest.NewRequest("GET", fmt.Sprintf("/comments/alice/%d.xml", parentID), nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200 with nothing published", rec.Code)
+	}
+	if !strings.Contains(rec.Body.String(), "A Reply") {
+		t.Errorf("comments feed missing the reply:\n%s", rec.Body.String())
+	}
+}
+
+// TestCommentsFeedReflectsDeletedReply covers freshness: a reply deleted after
+// the feed was last published must not come back.
+func TestCommentsFeedReflectsDeletedReply(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+	parentID, replyID := seedPostWithReply(t, conn)
+
+	path := fmt.Sprintf("/comments/alice/%d.xml", parentID)
+	req := httptest.NewRequest("GET", path, nil)
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if !strings.Contains(rec.Body.String(), "A Reply") {
+		t.Fatalf("precondition failed: reply absent before deletion")
+	}
+
+	if w := authedPost(mux, "/deletepost", "bob", "bob-secret", url.Values{"id": {fmt.Sprint(replyID)}}); w.Code != http.StatusOK {
+		t.Fatalf("delete failed: %d %s", w.Code, w.Body.String())
+	}
+
+	req = httptest.NewRequest("GET", path, nil)
+	rec = httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+	if strings.Contains(rec.Body.String(), "A Reply") {
+		t.Error("comments feed still lists the deleted reply")
+	}
+	if !strings.Contains(rec.Body.String(), "Parent Post") {
+		t.Errorf("comments feed lost the parent, so the check above proves nothing:\n%s", rec.Body.String())
+	}
+}
+
+// TestCommentsFeedRejectsBadPaths checks the parsing edges answer rather than
+// panic or 500.
+func TestCommentsFeedRejectsBadPaths(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+	seedPostWithReply(t, conn)
+
+	for _, path := range []string{
+		"/comments/alice/notanumber.xml",
+		"/comments/alice/42",        // missing .xml
+		"/comments/alice/.xml",      // empty id
+		"/comments/alice/99999.xml", // no such post
+	} {
+		req := httptest.NewRequest("GET", path, nil)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code == http.StatusOK {
+			t.Errorf("%s returned 200, want an error response", path)
+		}
+		if rec.Code >= 500 && rec.Code != 503 {
+			t.Errorf("%s returned %d; bad input should not be a server error", path, rec.Code)
+		}
 	}
 }

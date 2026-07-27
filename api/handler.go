@@ -4,6 +4,9 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
+	"strings"
+
 	"rss.chat.go/config"
 	"rss.chat.go/db"
 	"rss.chat.go/feed"
@@ -75,6 +78,9 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Read endpoints (no auth)
 	register("GET", "/health", h.Health)
 	register("GET", "/feed", h.Feed)
+	// Matches the URL getCommentsFeedURL advertises. The trailing ".xml" is
+	// part of {file}, not the pattern; see CommentsFeed.
+	register("GET", "/comments/{screenname}/{file}", h.CommentsFeed)
 	register("GET", "/getrecentitems", h.GetRecentItems)
 	register("GET", "/getrecentuseritems", h.GetRecentUserItems)
 	register("GET", "/getitembyguid", h.GetItemByGuid)
@@ -174,6 +180,45 @@ func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 		// Serve user feed
 		h.Publisher.ServeUserFeed(w, r, screenname)
 	}
+}
+
+// CommentsFeed serves a post's comments feed: the post plus its replies. The
+// URL shape is /comments/{screenname}/{id}.xml, which is what
+// getCommentsFeedURL advertises in every feed the server generates.
+//
+// The ".xml" cannot be part of the route pattern — net/http requires a wildcard
+// to span a whole path segment, and "{id}.xml" panics at registration — so the
+// segment is matched whole and the extension is stripped here.
+//
+// The feed is built from the database per request, like the subscription list.
+// PublishCommentsFeed only ever writes to the filesystem, so serving the
+// published copy would fail outright in database mode, and in filesystem mode
+// until the first republish.
+//
+// {screenname} is not checked against the post's author. The id determines the
+// content, and the original treats the path as a storage location rather than
+// an assertion about ownership.
+func (h *Handler) CommentsFeed(w http.ResponseWriter, r *http.Request) {
+	idStr, ok := strings.CutSuffix(r.PathValue("file"), ".xml")
+	if !ok {
+		RespondError(w, "Can't get the comments feed because the path must end in .xml")
+		return
+	}
+
+	itemID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		RespondError(w, "Can't get the comments feed because "+idStr+" is not a post id")
+		return
+	}
+
+	rss, err := feed.BuildCommentsFeed(h.DB, itemID, h.FeedConfig.BaseURL, h.FeedConfig)
+	if err != nil {
+		RespondError(w, "Can't get the comments feed because "+err.Error())
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+	w.Write([]byte(rss))
 }
 
 // GetRecentItems returns the most recent posts on the network.
