@@ -1,0 +1,78 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push to the same branch cancels the first; only the latest matters.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: build, vet, test
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        # The author develops on macOS and CI hosts are Linux; the SQLite
+        # driver is pure Go, so both should stay green without CGO.
+        os: [ubuntu-latest, macos-latest]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          # Track the toolchain in go.mod rather than pinning a second copy
+          # here that silently drifts.
+          go-version-file: go.mod
+          cache: true
+
+      - name: go mod download
+        run: go mod download
+
+      - name: Build
+        run: go build ./...
+
+      - name: Vet
+        run: go vet ./...
+
+      - name: Test
+        run: go test -race ./...
+
+  tidy:
+    name: gofmt and go.mod tidy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l .)
+          if [ -n "$unformatted" ]; then
+            echo "These files need gofmt:"
+            echo "$unformatted"
+            gofmt -d $unformatted
+            exit 1
+          fi
+
+      - name: go.mod and go.sum are tidy
+        run: |
+          go mod tidy
+          if ! git diff --quiet -- go.mod go.sum; then
+            echo "go.mod/go.sum are not tidy; run 'go mod tidy' and commit:"
+            git diff -- go.mod go.sum
+            exit 1
+          fi

@@ -267,13 +267,16 @@ rss.chat.go/
 ├── feed/                   # RSS feed generation
 ├── publish/                # Feed publishing to disk
 ├── websocket/              # Real-time updates
-├── client/                 # Web client server (archive/rss.chat/client)
+├── client/                 # Web client server
+│   ├── client.go          # Serves client/code, substitutes [%macros%]
+│   └── code/              # Vendored upstream web client (MIT, Dave Winer)
 ├── setup/                  # Database initialization
-├── tools/                  # CLI tools
-│   ├── backup/            # Database export
-│   ├── restore/           # Database import
-│   └── websocket-status/  # Event monitor
-└── archive/                # Upstream RSS.Chat reference
+└── tools/                  # CLI tools
+    ├── backup/            # Database export
+    ├── restore/           # Database import
+    ├── reset/             # Database/config reset
+    ├── testdata/          # Sample data generator
+    └── websocket-status/  # Event monitor
 ```
 
 ## Architecture
@@ -430,11 +433,24 @@ See [todolist.md](todolist.md) for detailed roadmap.
 
 ## License
 
-This project is licensed under the MIT License. See LICENSE file for details.
+The Go server is licensed under the MIT License — see [LICENSE](LICENSE).
+
+### Third-party code
+
+`client/code/` is **not** part of the Go server. It is the web client from
+[Dave Winer's rss.chat](https://github.com/scripting/rss.chat), vendored so
+that a clone serves a working site with no extra setup. It is byte-for-byte
+upstream, with no local modifications.
+
+That directory is covered by its own copy of Dave Winer's MIT license at
+[client/code/LICENSE](client/code/LICENSE), not by the license above.
+[client/code/README-VENDORED.md](client/code/README-VENDORED.md) records the
+exact upstream commit and how to re-sync it.
 
 ## Acknowledgments
 
-- [Dave Winer](https://en.wikipedia.org/wiki/Dave_Winer) - Original RSS Chat creator
+- [Dave Winer](https://en.wikipedia.org/wiki/Dave_Winer) — creator of RSS Chat,
+  and author of the web client vendored in `client/code/`
 - [Original RSS.Chat Repository](https://github.com/scripting/rss.chat)
 - Go community and excellent standard library
 
