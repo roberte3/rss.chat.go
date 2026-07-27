@@ -74,48 +74,67 @@ func CreateConfig(path string, in io.Reader) error {
 	}
 
 	// 3. Mail sender address
-	fmt.Printf("Mail sender address [admin@localhost]: ")
+	fmt.Printf("Mail sender address (from email) [admin@localhost]: ")
 	mailSender, _ := reader.ReadString('\n')
 	mailSender = strings.TrimSpace(mailSender)
 	if mailSender == "" {
 		mailSender = "admin@localhost"
 	}
 
-	// 4. SMTP host
-	fmt.Printf("SMTP host [smtp.gmail.com]: ")
-	smtpHost, _ := reader.ReadString('\n')
-	smtpHost = strings.TrimSpace(smtpHost)
-	if smtpHost == "" {
-		smtpHost = "smtp.gmail.com"
+	// 4. Enable email sending
+	fmt.Printf("\nEnable email sending for confirmation links? (y/n) [y]: ")
+	emailEnabledStr, _ := reader.ReadString('\n')
+	emailEnabledStr = strings.TrimSpace(emailEnabledStr)
+	if emailEnabledStr == "" {
+		emailEnabledStr = "y"
 	}
+	emailEnabled := strings.ToLower(emailEnabledStr) == "y"
 
-	// 5. SMTP port
-	fmt.Printf("SMTP port [587]: ")
-	smtpPortStr, _ := reader.ReadString('\n')
-	smtpPortStr = strings.TrimSpace(smtpPortStr)
-	if smtpPortStr == "" {
-		smtpPortStr = "587"
-	}
+	var smtpHost string
 	var smtpPort int
-	if _, err := fmt.Sscanf(smtpPortStr, "%d", &smtpPort); err != nil {
-		smtpPort = 587
+	var smtpUsername string
+	var smtpPassword string
+
+	if emailEnabled {
+		fmt.Printf("\n--- Email Configuration (SMTP) ---\n")
+		fmt.Printf("For Gmail: Use smtp.gmail.com:587 and an App Password (not your regular password)\n")
+		fmt.Printf("  Get App Password: Google Account > Security > App passwords\n\n")
+
+		// 5. SMTP host
+		fmt.Printf("SMTP host [smtp.gmail.com]: ")
+		smtpHostInput, _ := reader.ReadString('\n')
+		smtpHost = strings.TrimSpace(smtpHostInput)
+		if smtpHost == "" {
+			smtpHost = "smtp.gmail.com"
+		}
+
+		// 6. SMTP port
+		fmt.Printf("SMTP port [587]: ")
+		smtpPortStr, _ := reader.ReadString('\n')
+		smtpPortStr = strings.TrimSpace(smtpPortStr)
+		if smtpPortStr == "" {
+			smtpPortStr = "587"
+		}
+		if _, err := fmt.Sscanf(smtpPortStr, "%d", &smtpPort); err != nil {
+			smtpPort = 587
+		}
+
+		// 7. SMTP username (default to mail sender if blank)
+		fmt.Printf("SMTP username [%s]: ", mailSender)
+		smtpUsernameInput, _ := reader.ReadString('\n')
+		smtpUsername = strings.TrimSpace(smtpUsernameInput)
+		if smtpUsername == "" {
+			smtpUsername = mailSender
+		}
+
+		// 8. SMTP password
+		fmt.Printf("SMTP password (for Gmail, use App Password) []: ")
+		smtpPasswordInput, _ := reader.ReadString('\n')
+		smtpPassword = strings.TrimSpace(smtpPasswordInput)
 	}
 
-	// 6. SMTP username (default to mail sender if blank)
-	fmt.Printf("SMTP username [%s]: ", mailSender)
-	smtpUsername, _ := reader.ReadString('\n')
-	smtpUsername = strings.TrimSpace(smtpUsername)
-	if smtpUsername == "" {
-		smtpUsername = mailSender
-	}
-
-	// 7. SMTP password (can be blank)
-	fmt.Printf("SMTP password []: ")
-	smtpPassword, _ := reader.ReadString('\n')
-	smtpPassword = strings.TrimSpace(smtpPassword)
-
-	// 8. Enable WebSocket
-	fmt.Printf("Enable WebSocket? (y/n) [y]: ")
+	// 9. Enable WebSocket
+	fmt.Printf("\nEnable WebSocket for real-time updates? (y/n) [y]: ")
 	wsEnabledStr, _ := reader.ReadString('\n')
 	wsEnabledStr = strings.TrimSpace(wsEnabledStr)
 	if wsEnabledStr == "" {
