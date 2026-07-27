@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -1134,5 +1135,150 @@ func TestGetSubscriptionListReflectsNewUsers(t *testing.T) {
 
 	if !strings.Contains(w.Body.String(), "carol") {
 		t.Errorf("OPML is stale: missing user added after the last publish, got: %s", w.Body.String())
+	}
+}
+
+// insertTestUser adds a user whose emailSecret doubles as the emailcode used
+// to authenticate write requests.
+func insertTestUser(t *testing.T, conn *sql.DB, screenname, secret string) {
+	t.Helper()
+	now := time.Now()
+	_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		screenname, screenname+"@example.com", secret, "", `{}`, 0, 0, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert user %s: %v", screenname, err)
+	}
+}
+
+// authedPost issues an authenticated form POST the way the web client does.
+func authedPost(mux *http.ServeMux, path, screenname, secret string, form url.Values) *httptest.ResponseRecorder {
+	form.Set("emailaddress", screenname+"@example.com")
+	form.Set("emailcode", secret)
+	req := httptest.NewRequest("POST", path, strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+	return w
+}
+
+// TestDeletePostEndpoint covers the soft delete. The handler used to verify
+// ownership, discard the patch it had built, and answer {"status":"deleted"}
+// without touching the row, so the post survived every subsequent read while
+// the client believed it was gone.
+func TestDeletePostEndpoint(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+	insertTestUser(t, conn, "alice", "s3cret")
+
+	now := time.Now()
+	res, err := conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		"http://localhost:8081/feed?screenname=alice", "alice", "Doomed Post", "goodbye", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+	itemID, _ := res.LastInsertId()
+
+	w := authedPost(mux, "/deletepost", "alice", "s3cret", url.Values{"id": {fmt.Sprint(itemID)}})
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+
+	// The row must actually be flagged, not merely reported as deleted.
+	var flDeleted int
+	if err := conn.QueryRow(`select flDeleted from items where id = ?`, itemID).Scan(&flDeleted); err != nil {
+		t.Fatalf("failed to read flDeleted: %v", err)
+	}
+	if flDeleted != 1 {
+		t.Errorf("flDeleted = %d, want 1: the post was reported deleted but the row is untouched", flDeleted)
+	}
+
+	// And it must drop out of the reads that filter on the flag.
+	for _, path := range []string{"/getrecentitems", "/feed", "/feed?screenname=alice"} {
+		req := httptest.NewRequest("GET", path, nil)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if strings.Contains(rec.Body.String(), "Doomed Post") {
+			t.Errorf("%s still lists the deleted post", path)
+		}
+	}
+}
+
+// TestDeletePostRejectsNonOwner keeps the ownership check honest now that the
+// handler actually writes.
+func TestDeletePostRejectsNonOwner(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+	insertTestUser(t, conn, "alice", "alice-secret")
+	insertTestUser(t, conn, "mallory", "mallory-secret")
+
+	now := time.Now()
+	res, err := conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		"http://localhost:8081/feed?screenname=alice", "alice", "Alice's Post", "mine", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+	itemID, _ := res.LastInsertId()
+
+	authedPost(mux, "/deletepost", "mallory", "mallory-secret", url.Values{"id": {fmt.Sprint(itemID)}})
+
+	var flDeleted int
+	if err := conn.QueryRow(`select flDeleted from items where id = ?`, itemID).Scan(&flDeleted); err != nil {
+		t.Fatalf("failed to read flDeleted: %v", err)
+	}
+	if flDeleted != 0 {
+		t.Error("a non-owner deleted the post")
+	}
+}
+
+// TestDeleteReplyRepublishesParentCommentsFeed covers the reply half. The
+// parent's comments feed still lists a deleted reply unless it is rebuilt,
+// which is the updateReplyFeedsOnS3 call deletePost makes in rssnetwork.js.
+func TestDeleteReplyRepublishesParentCommentsFeed(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+	insertTestUser(t, conn, "alice", "alice-secret")
+	insertTestUser(t, conn, "bob", "bob-secret")
+
+	now := time.Now()
+	parentRes, err := conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		"http://localhost:8081/feed?screenname=alice", "alice", "Parent Post", "original", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert parent: %v", err)
+	}
+	parentID, _ := parentRes.LastInsertId()
+
+	replyRes, err := conn.Exec(`insert into items (feedUrl, author, title, description, inReplyTo, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?)`,
+		"http://localhost:8081/feed?screenname=bob", "bob", "Regrettable Reply", "oops", parentID, now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert reply: %v", err)
+	}
+	replyID, _ := replyRes.LastInsertId()
+
+	if err := handler.Publisher.PublishCommentsFeed(conn, "alice", parentID); err != nil {
+		t.Fatalf("failed to publish comments feed: %v", err)
+	}
+
+	w := authedPost(mux, "/deletepost", "bob", "bob-secret", url.Values{"id": {fmt.Sprint(replyID)}})
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+
+	// Assert against the published file rather than an HTTP route: the
+	// comments feed is written to disk and advertised in RSS, but no route
+	// serves it, so a request-based assertion would pass vacuously on a 404.
+	commentsPath := filepath.Join(handler.Publisher.BaseDir(), "comments", fmt.Sprintf("alice-%d.xml", parentID))
+	republished, err := os.ReadFile(commentsPath)
+	if err != nil {
+		t.Fatalf("failed to read republished comments feed at %s: %v", commentsPath, err)
+	}
+	if strings.Contains(string(republished), "Regrettable Reply") {
+		t.Error("parent's comments feed was not republished; it still lists the deleted reply")
+	}
+	// Guard against the assertion above passing because the feed is empty or
+	// truncated: the parent must still be there.
+	if !strings.Contains(string(republished), "Parent Post") {
+		t.Errorf("comments feed lost the parent post, so the check above proves nothing:\n%s", republished)
 	}
 }

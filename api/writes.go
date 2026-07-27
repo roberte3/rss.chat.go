@@ -3,6 +3,7 @@ package api
 import (
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -258,23 +259,32 @@ func (h *Handler) HandleDeletePost(w http.ResponseWriter, r *http.Request, user 
 		return
 	}
 
-	patch := &db.ItemPatch{
-		ID: itemID,
-		// Mark as deleted by setting flDeleted = 1
-		// Note: The db layer doesn't currently expose this in ItemPatch
-		// For now, use raw SQL or extend ItemPatch
+	deleted := true
+	if err := db.UpdateItem(h.DB, db.ItemPatch{ID: itemID, FlDeleted: &deleted}); err != nil {
+		RespondError(w, "Can't delete post because "+err.Error())
+		return
 	}
-
-	// TODO: Implement soft delete properly in db layer
-	// For now, just return success but note this is incomplete
-	_ = patch
 
 	// Republish feeds
 	if err := h.Publisher.UpdateFeedsOnPostWrite(h.DB, user.Screenname); err != nil {
-		fmt.Printf("Warning: failed to republish feeds: %v\n", err)
+		log.Printf("warning: failed to republish feeds after deleting %d: %v", itemID, err)
 	}
 
-	RespondJSON(w, map[string]string{"status": "deleted"})
+	// If the deleted post was a reply, the parent's comments feed still lists
+	// it, so republish that too. Ports the updateReplyFeedsOnS3 call deletePost
+	// makes in rssnetwork.js.
+	if existing.InReplyToNum != nil {
+		parent, err := db.GetItemByID(h.DB, "", *existing.InReplyToNum, h.FeedConfig.BaseURL)
+		if err == nil && parent != nil {
+			if err := h.Publisher.UpdateFeedsOnReply(h.DB, parent.Screenname, *existing.InReplyToNum); err != nil {
+				log.Printf("warning: failed to republish reply feeds after deleting %d: %v", itemID, err)
+			}
+		}
+	}
+
+	// Return the deleted item, matching deletePost in rssnetwork.js.
+	existing.FlDeleted = true
+	RespondJSON(w, existing)
 }
 
 // HandleToggleLike toggles a like on a post.

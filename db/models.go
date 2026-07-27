@@ -76,4 +76,8 @@ type ItemPatch struct {
 	MarkdownText    *string
 	OutlineJSONText *string
 	Author          *string
+	// FlDeleted marks a post deleted. Deletion is soft throughout: every read
+	// query filters on `flDeleted is null or flDeleted = 0` rather than the
+	// row going away, so permalinks to a deleted post stay resolvable.
+	FlDeleted *bool
 }

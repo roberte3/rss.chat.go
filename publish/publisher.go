@@ -32,6 +32,11 @@ func (p *Publisher) SetDatabaseMode(feedsDB *sql.DB) {
 	p.StorageMode = "database"
 }
 
+// BaseDir returns the directory feeds are written to in filesystem mode.
+func (p *Publisher) BaseDir() string {
+	return p.baseDir
+}
+
 // EnsureDir ensures the feeds directory structure exists.
 func (p *Publisher) EnsureDir() error {
 	dirs := []string{

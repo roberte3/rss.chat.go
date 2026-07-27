@@ -311,6 +311,15 @@ func UpdateItem(conn *sql.DB, patch ItemPatch) error {
 	if patch.Author != nil {
 		add("author", *patch.Author)
 	}
+	if patch.FlDeleted != nil {
+		// The column is INTEGER NOT NULL DEFAULT 0, so store 1/0 rather than
+		// letting the driver pick a bool representation.
+		v := 0
+		if *patch.FlDeleted {
+			v = 1
+		}
+		add("flDeleted", v)
+	}
 	if len(setParts) == 0 {
 		return fmt.Errorf("Can't update the item because no fields were provided.")
 	}
