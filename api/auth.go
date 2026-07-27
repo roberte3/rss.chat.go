@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"database/sql"
 	"fmt"
 
@@ -22,8 +23,16 @@ func AuthenticateUser(conn *sql.DB, email, code string) (*db.User, error) {
 		return nil, fmt.Errorf("user not found")
 	}
 
-	// Verify the email code matches the user's email secret
-	if user.EmailSecret != code {
+	// Compared in constant time. == returns as soon as two bytes differ, so how
+	// long a rejection takes depends on how long a prefix the caller got right,
+	// which is a signal an attacker can walk the secret out of one byte at a
+	// time. The margin is tiny next to a network round trip and the database
+	// read above, but the fix costs nothing.
+	//
+	// Length still leaks: ConstantTimeCompare reports 0 immediately for
+	// mismatched lengths. Secrets here are a fixed 32 bytes from
+	// generateEmailSecret, so that reveals nothing.
+	if subtle.ConstantTimeCompare([]byte(user.EmailSecret), []byte(code)) != 1 {
 		return nil, fmt.Errorf("invalid authentication code")
 	}
 
