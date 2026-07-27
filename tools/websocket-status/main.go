@@ -8,6 +8,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"regexp"
+	"strings"
 	"time"
 
 	"github.com/coder/websocket"
@@ -15,9 +17,27 @@ import (
 
 // EventMessage represents a message from the server
 type EventMessage struct {
-	Type string                 `json:"type"`
-	Data map[string]interface{} `json:"data,omitempty"`
-	ConnID string `json:"connId,omitempty"`
+	Type   string                 `json:"type"`
+	ItemID int64                  `json:"itemId,omitempty"`
+	Author string                 `json:"author,omitempty"`
+	ConnID string                 `json:"connId,omitempty"`
+	Data   map[string]interface{} `json:"data,omitempty"`
+}
+
+// stripHTML removes HTML tags from a string
+func stripHTML(html string) string {
+	re := regexp.MustCompile(`<[^>]*>`)
+	text := re.ReplaceAllString(html, "")
+	text = strings.TrimSpace(text)
+	return text
+}
+
+// truncate shortens a string to maxLen, adding "..." if truncated
+func truncate(s string, maxLen int) string {
+	if len(s) <= maxLen {
+		return s
+	}
+	return s[:maxLen] + "..."
 }
 
 func main() {
@@ -102,13 +122,37 @@ func main() {
 		// Display message
 		if msg.Type == "connected" {
 			fmt.Printf("[CONNECTED] Connection ID: %s\n", msg.ConnID)
-		} else {
-			fmt.Printf("[%s] ", msg.Type)
-			if itemID, ok := msg.Data["itemId"]; ok {
-				fmt.Printf("ItemID=%v ", itemID)
+		} else if msg.Type == "newItem" {
+			// Display newItem with title/description preview
+			fmt.Printf("[newItem] ")
+			if msg.ItemID > 0 {
+				fmt.Printf("#%d ", msg.ItemID)
 			}
-			if author, ok := msg.Data["author"]; ok {
-				fmt.Printf("Author=%v ", author)
+			if msg.Author != "" {
+				fmt.Printf("by %s: ", msg.Author)
+			}
+
+			// Show title if present, otherwise show description preview
+			if title, ok := msg.Data["title"].(string); ok && title != "" {
+				fmt.Printf("\"%s\"", truncate(title, 60))
+			} else if desc, ok := msg.Data["description"].(string); ok && desc != "" {
+				plainText := stripHTML(desc)
+				fmt.Printf("\"%s\"", truncate(plainText, 60))
+			}
+			fmt.Println()
+
+			if *verbose {
+				bytes, _ := json.MarshalIndent(msg, "", "  ")
+				fmt.Printf("  Full message: %s\n", bytes)
+			}
+		} else {
+			// Display other event types
+			fmt.Printf("[%s] ", msg.Type)
+			if msg.ItemID > 0 {
+				fmt.Printf("ItemID=%d ", msg.ItemID)
+			}
+			if msg.Author != "" {
+				fmt.Printf("Author=%s ", msg.Author)
 			}
 			if liked, ok := msg.Data["liked"]; ok {
 				fmt.Printf("Liked=%v ", liked)
