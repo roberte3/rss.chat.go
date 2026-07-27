@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"time"
 
-	"rss.chat.go/db"
-	"rss.chat.go/feed"
+	"github.com/roberte3/rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/feed"
 )
 
 // getRecentItems fetches the most recent posts on the network.

@@ -54,7 +54,7 @@ RSS Chat Go is a backend service that enables real-time social conversations pow
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/rss.chat.go.git
+git clone https://github.com/roberte3/rss.chat.go.git
 cd rss.chat.go
 
 # Download dependencies

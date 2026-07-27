@@ -8,8 +8,8 @@ import (
 	"strings"
 	"time"
 
-	"rss.chat.go/db"
-	"rss.chat.go/websocket"
+	"github.com/roberte3/rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/websocket"
 )
 
 // PostRequest holds fields for creating or updating a post.

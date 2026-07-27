@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"strings"
 
-	"rss.chat.go/config"
-	"rss.chat.go/db"
-	"rss.chat.go/feed"
-	"rss.chat.go/publish"
-	"rss.chat.go/websocket"
+	"github.com/roberte3/rss.chat.go/config"
+	"github.com/roberte3/rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/feed"
+	"github.com/roberte3/rss.chat.go/publish"
+	"github.com/roberte3/rss.chat.go/websocket"
 )
 
 // Handler holds dependencies for HTTP request handling.

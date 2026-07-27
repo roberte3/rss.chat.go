@@ -4,10 +4,10 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	_ "modernc.org/sqlite"
 	"time"
 
-	_ "modernc.org/sqlite"
-	"rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/db"
 )
 
 const (

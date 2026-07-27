@@ -10,8 +10,8 @@ import (
 	"os"
 	"strings"
 
-	"rss.chat.go/config"
-	"rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/config"
+	"github.com/roberte3/rss.chat.go/db"
 )
 
 type Settings struct {

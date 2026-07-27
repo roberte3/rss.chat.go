@@ -9,7 +9,7 @@ import (
 	"strconv"
 	"time"
 
-	"rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/db"
 )
 
 // BuilderConfig holds configuration for feed generation.

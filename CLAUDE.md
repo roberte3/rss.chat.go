@@ -18,7 +18,7 @@ A copy of the RSS.Chat app is in the subfolder (archive/rss.chat)
 
 ## Architecture
 
-- Module: `rss.chat.go` (Go 1.25).
+- Module: `github.com/roberte3/rss.chat.go` (Go 1.25).
 - `db/db.go`: opens the SQLite connection via `db.Open(path)`. Uses `modernc.org/sqlite`, a pure-Go driver (no CGO/C toolchain needed). Applies default pragmas on open: WAL journal mode, foreign keys enforced, 5s busy timeout.
 - `db/media.go`: manages separate media database (`rss.chat.media.db`) with CRUD operations for uploaded media files. Uses base64 encoding for safe binary data storage.
 - `main.go`: opens `rss.chat.db` and `rss.chat.media.db` on startup, creates temp media directory for validation.

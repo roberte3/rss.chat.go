@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/db"
 )
 
 // UploadMediaRequest holds the media upload data

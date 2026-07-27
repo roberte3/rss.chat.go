@@ -8,9 +8,10 @@ import (
 	"net/http"
 	"net/url"
 	"os"
-	"rss.chat.go/config"
-	"rss.chat.go/db"
 	"strings"
+
+	"github.com/roberte3/rss.chat.go/config"
+	"github.com/roberte3/rss.chat.go/db"
 )
 
 // SendConfirmingEmail handles the /sendconfirmingemail endpoint.

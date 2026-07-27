@@ -3,7 +3,8 @@ package api
 import (
 	"database/sql"
 	"fmt"
-	"rss.chat.go/db"
+
+	"github.com/roberte3/rss.chat.go/db"
 )
 
 // AuthenticateUser verifies email and code credentials.

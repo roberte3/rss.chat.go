@@ -10,15 +10,15 @@ import (
 	"net/http"
 	"os"
 
-	"rss.chat.go/api"
-	"rss.chat.go/client"
-	"rss.chat.go/config"
-	"rss.chat.go/db"
-	"rss.chat.go/email"
-	"rss.chat.go/feed"
-	"rss.chat.go/publish"
-	"rss.chat.go/setup"
-	"rss.chat.go/websocket"
+	"github.com/roberte3/rss.chat.go/api"
+	"github.com/roberte3/rss.chat.go/client"
+	"github.com/roberte3/rss.chat.go/config"
+	"github.com/roberte3/rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/email"
+	"github.com/roberte3/rss.chat.go/feed"
+	"github.com/roberte3/rss.chat.go/publish"
+	"github.com/roberte3/rss.chat.go/setup"
+	"github.com/roberte3/rss.chat.go/websocket"
 )
 
 func main() {

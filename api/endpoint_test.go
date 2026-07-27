@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	_ "modernc.org/sqlite"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -14,11 +15,10 @@ import (
 	"testing"
 	"time"
 
-	_ "modernc.org/sqlite"
-	"rss.chat.go/config"
-	"rss.chat.go/db"
-	"rss.chat.go/feed"
-	"rss.chat.go/publish"
+	"github.com/roberte3/rss.chat.go/config"
+	"github.com/roberte3/rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/feed"
+	"github.com/roberte3/rss.chat.go/publish"
 )
 
 // setupTestServer creates a test HTTP server with handler

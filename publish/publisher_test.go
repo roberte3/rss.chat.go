@@ -2,15 +2,14 @@ package publish
 
 import (
 	"database/sql"
+	_ "modernc.org/sqlite"
 	"os"
 	"path/filepath"
 	"testing"
 	"time"
 
-	"rss.chat.go/db"
-	"rss.chat.go/feed"
-
-	_ "modernc.org/sqlite"
+	"github.com/roberte3/rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/feed"
 )
 
 func TestPublishUserFeed(t *testing.T) {

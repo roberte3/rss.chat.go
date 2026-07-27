@@ -5,8 +5,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
-	"rss.chat.go/db"
-	"rss.chat.go/feed"
+
+	"github.com/roberte3/rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/feed"
 )
 
 // Publisher handles writing feeds to disk or database.

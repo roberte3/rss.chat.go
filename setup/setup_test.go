@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"rss.chat.go/config"
+	"github.com/roberte3/rss.chat.go/config"
 )
 
 func TestCreateBlocklist(t *testing.T) {

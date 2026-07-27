@@ -13,7 +13,7 @@ import (
 	"strings"
 	"testing"
 
-	"rss.chat.go/db"
+	"github.com/roberte3/rss.chat.go/db"
 )
 
 func TestUploadMediaValidation(t *testing.T) {

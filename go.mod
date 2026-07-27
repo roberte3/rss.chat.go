@@ -1,4 +1,4 @@
-module rss.chat.go
+module github.com/roberte3/rss.chat.go
 
 go 1.25.3
 
