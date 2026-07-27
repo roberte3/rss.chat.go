@@ -150,26 +150,44 @@ See Tier 2 item above.
 
 ---
 
-## 🚀 Features Just Completed (This Session)
+## 🚀 Yesterday's Progress (2026-07-26)
 
-### Setup: Interactive Config Generation
+### Security & Auth Hardening
+- ✅ Rewritten CLAUDE.md focusing on non-discoverable info (architecture, storage modes, auth design)
+- ✅ Documented credentials travelling in URL (query parameters on POSTs)
+- ✅ Implemented constant-time secret comparison (crypto/subtle)
+- ✅ Stopped leaking emailSecret in logging/responses
+- ✅ Rate-limited mail-sending endpoints per mailbox and source address
+- ✅ Added Referrer-Policy and Cache-Control headers for authenticated responses
+
+### Feature Fixes & Improvements
+- ✅ Actually delete posts in /deletepost (was soft-delete only)
+- ✅ Serve comments feeds at advertised URL (fixed 404s)
+- ✅ Fix /getsubscriptionlist 404 in default configuration
+- ✅ Fix WebSocket subscriber registration race condition
+- ✅ Fix WebSocket event delivery to all subscribers
+- ✅ Enhance websocket-status tool to show title and description preview
+
+### Repository & Build
+- ✅ Move module to github.com/roberte3/rss.chat.go
+- ✅ Add MIT LICENSE and CI workflow
+- ✅ Vendor web client so fresh clone serves working site
+- ✅ Apply gofmt across tree
+- ✅ Clean .gitignore
+
+### Previous Sessions
+#### Setup: Interactive Config Generation
 - ✅ Fixed chicken-and-egg bug: `-setup` now creates config.json *before* config.Load()
 - ✅ Interactive prompts for 8 fields with sensible defaults
-  - Product display name, domain, mail sender, SMTP (host/port/user/password), WebSocket enable
-  - All fields optional; press Enter to use defaults
 - ✅ Auto-derives URLs: URLServerForClient, URLServerForEmail, URLWebsocketServerForClient
 - ✅ Idempotent: re-running `-setup` never overwrites existing config.json
-- ✅ Exposed ApplyDefaults() and Validate() as public Config methods
-- ✅ Added deriveWebsocketURL() helper for https ↔ wss conversion
-- ✅ 4 new comprehensive tests for config generation
 - ✅ Full workflow: binary-only user can bootstrap with `binary -setup` + defaults
 
-### Blocklist Persistence (Earlier Session)
+#### Blocklist Persistence
 - ✅ Separate blocklist.json file (operational data, not config)
 - ✅ SQLite blocklist table for backup/restore
 - ✅ Hot-reload: changes take effect on next auth check without restart
 - ✅ Case-insensitive email matching
-- ✅ Full database CRUD layer
 
 ---
 
@@ -220,11 +238,20 @@ See Tier 2 item above.
 - Performance optimizations
 - Operational improvements
 
-### v2.0+ (Future)
-- Advanced user features (avatars, mentions, hashtags)
+### v2.0 (Frontend Clients & Integrations)
+- **HTMX-based front end** - Server-rendered HTML with dynamic interactions (no JS framework)
+- **Mobile-optimized front end** - iOS/Android-ready UI for publishing into wider community
+- **Bluesky (ATProtocol) Bridge** - Federation with Bluesky network
+- **Advanced user features** (avatars, mentions, hashtags)
+- **Email notifications** - User activity summaries and mentions
+- **rssCloud support** - Legacy feed notification protocol
+
+### v2.1+ (Future)
 - Federation/interoperability (ActivityPub)
 - Admin dashboard & moderation
 - Horizontal scaling support
+- Docker/Kubernetes deployment
+- External storage (S3) support
 
 ---
 
@@ -281,5 +308,5 @@ See Tier 2 item above.
 
 ---
 
-**Last Updated**: 2026-07-25  
-**Project Status**: v1.0 core complete, v1.1 nearly complete (autolinker + mtime cache done, email sender documented), ready for testing
+**Last Updated**: 2026-07-27  
+**Project Status**: v1.0 core complete, v1.1 complete (security hardening, bug fixes, testing infrastructure), v2.0 frontend work in planning phase

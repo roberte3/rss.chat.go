@@ -10,6 +10,8 @@ A modern Go implementation of [Dave Winer's RSS Chat](https://github.com/scripti
 
 RSS Chat Go is a backend service that enables real-time social conversations powered by RSS. Users can post messages, reply to conversations, like posts, and share media — all synchronized in real-time across clients. The system is designed for scalability and self-hosting.
 
+The overall longer term goals of this fork are to make a backend that is easily spun up on a wide varity of systems (including docker/ Kubernetes containers), so a wide variety of communities can easily build communities. Also this backend will make it easier to build mobile applications that publish into the wider community. 
+
 **Key Characteristics:**
 - ✅ Pure Go implementation (no CGO required)
 - ✅ SQLite database with WAL mode for concurrent access
@@ -546,6 +548,7 @@ For issues, questions, or suggestions:
 
 ### Phase 2 (In Progress)
 - 🔄 HTMX based front end
+- 🔄 Mobile based front end
 - 🔄 Bluesky (ATProtocol) Bridge 
 - 🔄 Email notifications
 - 🔄 Feed format negotiation
