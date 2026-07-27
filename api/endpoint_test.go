@@ -12,11 +12,11 @@ import (
 	"testing"
 	"time"
 
+	_ "modernc.org/sqlite"
 	"rss.chat.go/config"
 	"rss.chat.go/db"
 	"rss.chat.go/feed"
 	"rss.chat.go/publish"
-	_ "modernc.org/sqlite"
 )
 
 // setupTestServer creates a test HTTP server with handler
@@ -1023,18 +1023,18 @@ func TestCustomOPMLTitle(t *testing.T) {
 	}
 
 	tests := []struct {
-		name         string
-		customTitle  string
+		name          string
+		customTitle   string
 		shouldContain string
 	}{
 		{
-			name:         "default title",
-			customTitle:  "",
+			name:          "default title",
+			customTitle:   "",
 			shouldContain: "Subscription list",
 		},
 		{
-			name:         "custom title",
-			customTitle:  "My News Subscriptions",
+			name:          "custom title",
+			customTitle:   "My News Subscriptions",
 			shouldContain: "My News Subscriptions",
 		},
 	}
@@ -1059,5 +1059,80 @@ func TestCustomOPMLTitle(t *testing.T) {
 				t.Errorf("OPML should contain %q, got: %s", tt.shouldContain, opml)
 			}
 		})
+	}
+}
+
+// TestGetSubscriptionListEndpoint covers the endpoint in the default
+// filesystem storage mode with nothing published yet. It used to serve
+// feeds/subs.opml from disk, but that file was only ever written by
+// BackfillMissingFeeds, which returns early unless storage is "database" — so
+// in the default configuration the file never existed and the endpoint always
+// 404'd. The list is now built from the database per request, so a fresh
+// install answers correctly.
+func TestGetSubscriptionListEndpoint(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	now := time.Now()
+	for _, name := range []string{"alice", "bob"} {
+		_, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+			values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			name, name+"@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+		if err != nil {
+			t.Fatalf("failed to insert user %s: %v", name, err)
+		}
+	}
+
+	// Deliberately no PublishSubscriptionList call: a fresh install has no
+	// published artifact, which is the case that regressed.
+	for _, path := range []string{"/getsubscriptionlist", "/api/getsubscriptionlist"} {
+		req := httptest.NewRequest("GET", path, nil)
+		w := httptest.NewRecorder()
+		mux.ServeHTTP(w, req)
+
+		if w.Code != http.StatusOK {
+			t.Errorf("%s: status = %d, want 200", path, w.Code)
+			continue
+		}
+		if ct := w.Header().Get("Content-Type"); !strings.Contains(ct, "xml") {
+			t.Errorf("%s: content type = %q, want xml", path, ct)
+		}
+		body := w.Body.String()
+		for _, want := range []string{"<opml", "alice", "bob"} {
+			if !strings.Contains(body, want) {
+				t.Errorf("%s: OPML missing %q, got: %s", path, want, body)
+			}
+		}
+	}
+}
+
+// TestGetSubscriptionListReflectsNewUsers guards the staleness half: because
+// the list is generated per request, a user added after the last publish still
+// shows up.
+func TestGetSubscriptionListReflectsNewUsers(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+
+	now := time.Now()
+	if _, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"alice", "alice@example.com", "secret", "", `{}`, 0, 0, now, now, now); err != nil {
+		t.Fatalf("failed to insert alice: %v", err)
+	}
+	if err := handler.Publisher.PublishSubscriptionList(conn); err != nil {
+		t.Fatalf("failed to publish subscription list: %v", err)
+	}
+
+	// carol arrives after the artifact was written
+	if _, err := conn.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		"carol", "carol@example.com", "secret", "", `{}`, 0, 0, now, now, now); err != nil {
+		t.Fatalf("failed to insert carol: %v", err)
+	}
+
+	req := httptest.NewRequest("GET", "/getsubscriptionlist", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if !strings.Contains(w.Body.String(), "carol") {
+		t.Errorf("OPML is stale: missing user added after the last publish, got: %s", w.Body.String())
 	}
 }

@@ -34,27 +34,6 @@ func (p *Publisher) ServeFeed(w http.ResponseWriter, r *http.Request, feedPath s
 	return nil
 }
 
-// ServeOPML serves the subscription list.
-func (p *Publisher) ServeOPML(w http.ResponseWriter, r *http.Request) error {
-	path := filepath.Join(p.baseDir, "subs.opml")
-
-	abs, err := filepath.Abs(path)
-	if err != nil {
-		return err
-	}
-	absBase, err := filepath.Abs(p.baseDir)
-	if err != nil {
-		return err
-	}
-	if !strings.HasPrefix(abs, absBase) {
-		return fmt.Errorf("opml path outside base directory")
-	}
-
-	w.Header().Set("Content-Type", "application/xml")
-	http.ServeFile(w, r, path)
-	return nil
-}
-
 // ServeUserFeed serves a user's RSS feed.
 // Expects feedPath like "dave/rss.xml"
 func (p *Publisher) ServeUserFeed(w http.ResponseWriter, r *http.Request, screenname string) error {

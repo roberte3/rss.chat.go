@@ -331,19 +331,23 @@ func (h *Handler) GetMostActiveToday(w http.ResponseWriter, r *http.Request) {
 
 // GetSubscriptionList returns the OPML subscription list.
 // No query params.
+//
+// The list is built from the database on every request, matching
+// getSubscriptionList in rssnetwork.js. It is cheap — one query for the
+// screennames — and it means the endpoint can never 404 or go stale because a
+// published artifact is missing. The on-disk/in-database copy that
+// PublishSubscriptionList maintains is the mirror for external consumers,
+// analogous to the original's S3 copy, and is deliberately not what is served
+// here.
 func (h *Handler) GetSubscriptionList(w http.ResponseWriter, r *http.Request) {
-	// If feeds are stored in database, serve OPML from there
-	if h.FeedsDB != nil {
-		content, err := db.GetFeed(h.FeedsDB, "opml", "")
-		if err == nil && content != nil {
-			w.Header().Set("Content-Type", "application/xml; charset=utf-8")
-			w.Write(content)
-			return
-		}
+	opml, err := feed.BuildSubscriptionList(h.DB, h.FeedConfig.BaseURL, h.FeedConfig)
+	if err != nil {
+		RespondError(w, "Can't get the subscription list because "+err.Error())
+		return
 	}
 
-	// Fallback to filesystem mode
-	h.Publisher.ServeOPML(w, r)
+	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	w.Write([]byte(opml))
 }
 
 // IsUserInDatabase checks if a user exists.

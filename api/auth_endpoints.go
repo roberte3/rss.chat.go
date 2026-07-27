@@ -4,6 +4,7 @@ import (
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -161,6 +162,14 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	if err := db.AddUser(h.DB, screenname, email, emailSecret); err != nil {
 		RespondError(w, "Can't create new user because "+err.Error())
 		return
+	}
+
+	// A new user changes the subscription list, so refresh the published copy.
+	// Ports the updateSubscriptionListOnS3 call addUser makes in
+	// rssnetwork.js. The user exists either way, so a failure here is logged
+	// rather than surfaced.
+	if err := h.Publisher.PublishSubscriptionList(h.DB); err != nil {
+		log.Printf("warning: failed to publish subscription list after creating %s: %v", screenname, err)
 	}
 
 	// Build confirmation URL
