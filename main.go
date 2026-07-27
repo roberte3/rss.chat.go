@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"flag"
 	"fmt"
 	"log"
@@ -36,6 +37,9 @@ func main() {
 	// Load configuration
 	cfg, err := config.Load(*configPath)
 	if err != nil {
+		if os.IsNotExist(errors.Unwrap(err)) {
+			log.Fatalf("no config file at %s.\nRun `go run . -setup` to create one, or copy config.example.json to %s and edit it.", *configPath, *configPath)
+		}
 		log.Fatalf("failed to load config: %v", err)
 	}
 
