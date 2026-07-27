@@ -5,6 +5,7 @@ import (
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 )
@@ -47,13 +48,13 @@ func TestClientServer(t *testing.T) {
 
 	// Create client server with config
 	config := Config{
-		ProductName:              "rss.chat",
-		ProductNameForDisplay:    "rss.chat",
-		Version:                  "1.0",
-		EnableLogin:              true,
-		URLServerForClient:       "http://localhost:8081",
+		ProductName:                 "rss.chat",
+		ProductNameForDisplay:       "rss.chat",
+		Version:                     "1.0",
+		EnableLogin:                 true,
+		URLServerForClient:          "http://localhost:8081",
 		URLWebsocketServerForClient: "ws://localhost:8081",
-		WebsocketEnabled:         true,
+		WebsocketEnabled:            true,
 	}
 
 	server := NewServer(tmpDir, config)
@@ -185,13 +186,13 @@ func TestBoolToString(t *testing.T) {
 
 func TestSubstituteConfig(t *testing.T) {
 	config := Config{
-		ProductName:              "test-app",
-		ProductNameForDisplay:    "Test App",
-		Version:                  "2.0",
-		EnableLogin:              true,
-		URLServerForClient:       "http://api.test.com",
+		ProductName:                 "test-app",
+		ProductNameForDisplay:       "Test App",
+		Version:                     "2.0",
+		EnableLogin:                 true,
+		URLServerForClient:          "http://api.test.com",
 		URLWebsocketServerForClient: "ws://api.test.com",
-		WebsocketEnabled:         false,
+		WebsocketEnabled:            false,
 	}
 
 	server := NewServer("", config)
@@ -246,14 +247,14 @@ func TestFeedAutodiscoveryLink(t *testing.T) {
 
 	feedURL := "http://example.com/feed"
 	config := Config{
-		ProductName:             "rss.chat",
-		ProductNameForDisplay:   "rss.chat",
-		Version:                 "1.0",
-		EnableLogin:             true,
-		URLServerForClient:      "http://api.example.com",
+		ProductName:                 "rss.chat",
+		ProductNameForDisplay:       "rss.chat",
+		Version:                     "1.0",
+		EnableLogin:                 true,
+		URLServerForClient:          "http://api.example.com",
 		URLWebsocketServerForClient: "ws://api.example.com",
-		WebsocketEnabled:        true,
-		FeedURLEveryone:         feedURL,
+		WebsocketEnabled:            true,
+		FeedURLEveryone:             feedURL,
 	}
 
 	server := NewServer(tmpDir, config)
@@ -301,4 +302,63 @@ func TestFeedAutodiscoveryLink(t *testing.T) {
 			t.Errorf("macro not substituted")
 		}
 	})
+}
+
+// TestVendoredClientMacrosAreSatisfied checks the real vendored index.html
+// against the server's substitution table. The vendored client is upstream
+// code that gets re-synced from github.com/scripting/rss.chat, and a sync can
+// introduce a new [%macro%] the server knows nothing about. That failure is
+// silent at runtime — the placeholder is served verbatim into the page — so
+// catch it here instead.
+func TestVendoredClientMacrosAreSatisfied(t *testing.T) {
+	indexPath := filepath.Join("code", "index.html")
+	data, err := os.ReadFile(indexPath)
+	if err != nil {
+		t.Fatalf("cannot read vendored %s: %v", indexPath, err)
+	}
+
+	// A fully-populated server: anything it still fails to substitute is a
+	// macro it genuinely does not know about, not one left blank by config.
+	srv := NewServer("code", Config{
+		ProductName:                 "p",
+		ProductNameForDisplay:       "d",
+		Version:                     "v",
+		EnableLogin:                 true,
+		URLServerForClient:          "u",
+		URLWebsocketServerForClient: "w",
+		WebsocketEnabled:            true,
+		FeedURLEveryone:             "f",
+	})
+
+	macro := regexp.MustCompile(`\[%[a-zA-Z]+%\]`)
+	if leftover := macro.FindAllString(srv.substituteConfig(string(data)), -1); len(leftover) > 0 {
+		seen := map[string]bool{}
+		var uniq []string
+		for _, m := range leftover {
+			if !seen[m] {
+				seen[m] = true
+				uniq = append(uniq, m)
+			}
+		}
+		t.Errorf("vendored index.html uses macros the server does not substitute: %s\n"+
+			"Add them to substituteConfig (and Config) or re-check the upstream sync.",
+			strings.Join(uniq, ", "))
+	}
+}
+
+// TestVendoredClientAssetsPresent guards against a partial vendor drop: the
+// server serves these from disk, so a missing file is a 404 in the browser
+// rather than a build error.
+func TestVendoredClientAssetsPresent(t *testing.T) {
+	for _, f := range []string{
+		"index.html", "api.js", "code.js", "globals.js", "misc.js", "chat.js",
+		"chat.css", "styles.css",
+		filepath.Join("themes", "classic", "theme.js"),
+		filepath.Join("themes", "classic", "theme.css"),
+		"LICENSE",
+	} {
+		if _, err := os.Stat(filepath.Join("code", f)); err != nil {
+			t.Errorf("vendored client asset missing: %s (%v)", f, err)
+		}
+	}
 }

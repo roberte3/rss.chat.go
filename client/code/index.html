@@ -1,0 +1,212 @@
+<html>
+	<head>
+		<title>[%productNameForDisplay%]</title>
+		<meta charset="UTF-8">
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<meta name="viewport" content="width=device-width, initial-scale=1.0">
+		<link rel="alternate" type="application/rss+xml" href="[%feedUrlEveryone%]">
+		
+		<script>
+			const settingsFromServer = { //4/15/26 by DW -- values filled in by server
+				productName: "[%productName%]",
+				productNameForDisplay: "[%productNameForDisplay%]",
+				appServerVersion: "[%version%]",
+				flEnableLogin: "[%flEnableLogin%]",
+				urlServer: "[%urlServerForClient%]",
+				urlSocketServer: "[%urlWebsocketServerForClient%]",
+				flSocketsEnabled: "[%flWebsocketEnabled%]",
+				feedUrlEveryone: "[%feedUrlEveryone%]",
+				};
+			</script>
+		
+		<link rel="preload" as="font" type="font/woff2" href="//s3.amazonaws.com/scripting.com/code/fontawesome/webfonts/fa-solid-900.woff2" crossorigin> 
+		
+		<script src="//s3.amazonaws.com/scripting.com/code/includes/jquery-1.9.1.min.js"></script>
+<link href="//s3.amazonaws.com/scripting.com/code/includes/bootstrap.css" rel="stylesheet">
+<script src="//s3.amazonaws.com/scripting.com/code/includes/bootstrap.min.js"></script>
+
+<link rel="stylesheet" href="//s3.amazonaws.com/scripting.com/code/fontawesome/css/all.css">
+<link href="https://fonts.googleapis.com/css2?family=Ubuntu:ital,wght@0,300;0,400;0,500;0,700;1,300;1,400;1,500;1,700" rel="stylesheet">
+
+<script src="//s3.amazonaws.com/scripting.com/code/includes/basic/code.js?x=2"></script>
+<link href="//s3.amazonaws.com/scripting.com/code/includes/basic/styles.css" rel="stylesheet" type="text/css">
+
+		
+		<script src="//s3.amazonaws.com/scripting.com/code/feedland/home/dev/api.js?x=2"></script>
+		
+		<link rel="stylesheet" href="//s3.amazonaws.com/scripting.com/code/feedland/home/dev/signupdialog.css?x=2"/>
+		<script src="//s3.amazonaws.com/scripting.com/code/feedland/home/dev/signupdialog.js?x=2" /></script>
+		
+		<script src="//s3.amazonaws.com/scripting.com/code/concord/testing/3.0.6/concord.js?x=2"></script>
+		<link rel="stylesheet" href="//s3.amazonaws.com/scripting.com/code/concord/testing/3.0.6/concordstyles.css?x=2"/>
+		<script src="//s3.amazonaws.com/fargo.io/code/shared/outliner.js?x=2"></script>
+		<script src="//s3.amazonaws.com/scripting.com/code/outlinedialog/code.js?x=2"></script>
+		<link rel="stylesheet" href="//s3.amazonaws.com/scripting.com/code/outlinedialog/styles.css?x=2"> 
+		
+		<script src="//s3.amazonaws.com/fargo.io/code/markdownConverter.js?x=2"></script>
+		<script src="https://cdn.jsdelivr.net/npm/turndown@7.1.1/dist/turndown.js?x=2"></script>
+		
+		
+		<script src="https://code.scripting.com/rsschat/globals.js?x=2"></script>
+		<script src="//s3.amazonaws.com/scripting.com/code/rsschat/misc.js?x=2"></script>
+		<script src="https://code.scripting.com/rsschat/api.js?x=2"></script>
+		<link href="https://code.scripting.com/rsschat/styles.css?x=2" rel="stylesheet">
+		<script src="https://code.scripting.com/rsschat/code.js?x=2"></script>
+		
+		<!-- Facebook metadata -->
+			<meta property="og:url" content="[%urlServerForClient%]" />
+			<meta property="og:type" content="website" />
+			<meta property="og:title" content="[%productNameForDisplay%]" />
+			<meta property="og:description" content="We're bootstrapping a network of twitter-like systems built out of components of the web and nothing more. Every part replaceable." />
+			<meta property="og:site_name" content="[%productNameForDisplay%]" />
+		<!-- Twitter metadata -->
+			<meta name="twitter:card" content="summary_large_image">
+			<meta name="twitter:site" content="@davewiner">
+			<meta name="twitter:title" content="[%productNameForDisplay%]">
+			<meta name="twitter:url" content="[%urlServerForClient%]">
+			<meta name="twitter:description" content="We're bootstrapping a network of twitter-like systems built out of components of the web and nothing more. Every part replaceable.">
+		
+		</head>
+	<body>
+		<div class="divPrefsDialog">
+			<div id="idPrefsDialog" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="windowTitleLabel" aria-hidden="true">
+				<div class="modal-body">
+					<div class="divDialogElements">
+						<form method="POST">
+	<div class="divTabsFromOutline">
+	<div class="tabbable">
+		<ul class="nav nav-tabs" data-tabs="tabs">
+			<li class="active" ><a href="#idFeed130"  data-toggle="tab">Feed</a></li>
+			<li><a href="#idPrompts130"  data-toggle="tab">Prompts</a></li>
+			</ul>
+		<div id="my-tab-content" class="tab-content">
+			<div class="active tab-pane" id="idFeed130">
+				<fieldset>
+					<div class="divPrefs">	<p>You can set the title, link and description for the feed that we maintain for you.</p><div class="clearfix">	<label for="myFeedTitle">TItle:</label>	<div class="input">		<input class="xlarge prefsInput" id="myFeedTitle" name="myFeedTitle" size="50" type="text" value="" placeholder="Your feed's title." />		</div>	</div><div class="clearfix">	<label for="myFeedLink">Link:</label>	<div class="input">		<input class="xlarge prefsInput" id="myFeedLink" name="myFeedLink" size="50" type="text" value="" placeholder="Link to your home page or profile site." />		</div>	</div><div class="clearfix">	<label for="myFeedDescription">Description:</label>	<div class="input">		<textarea class="xxlarge" id="myFeedDescription" name="myFeedDescription" cols="70" rows="3"placeholder="A short description of your feed." ></textarea>		</div>	</div><div class="clearfix">	<label for="myAvatarImageUrl">Avatar URL:</label>	<div class="input">		<input class="xlarge prefsInput" id="myAvatarImageUrl" name="myAvatarImageUrl" size="50" type="text" value="" placeholder="A square image that represents you on the net." />		</div>	</div>	</div>
+					</fieldset>
+						</div>
+					<div class="tab-pane" id="idPrompts130">
+						<fieldset>
+							<div class="divPrefs">	<div class="clearfix">	<label for="placeholderSignedIn">New post:</label>	<div class="input">		<input class="xlarge prefsInput" id="placeholderSignedIn" name="placeholderSignedIn" size="50" type="text" value="" placeholder="What's happening?" />		</div>	</div><div class="clearfix">	<label for="placeholderReply">Reply:</label>	<div class="input">		<input class="xlarge prefsInput" id="placeholderReply" name="placeholderReply" size="50" type="text" value="" placeholder="Post your reply" />		</div>	</div>	</div>
+							</fieldset>
+								</div>
+							</div>
+						</div>
+					</div>
+
+	</form>
+
+						</div>
+					</div>
+				<div class="modal-footer">
+					<a href="#" class="btn" onclick="prefsCloseDialog ();">Cancel</a>
+					<a href="#" class="btn btn-primary" onclick="prefsOkClicked ();">OK</a>
+					</div>
+				</div>
+			</div>
+		<div class="divMenubar">
+			<div class="topbar-wrapper" style="z-index: 5;">
+				<div class="navbar navbar-fixed-top" data-dropdown="dropdown">
+					<div class="divThemeVersion"></div>
+					<div class="navbar-inner">
+						<div class="container">
+							<a class="brand" href="/" title="A simple chat network based on RSS 2.0 feeds and websockets.">
+								<span class="divMenuProductName">rss.chat</span>
+								</a>
+							<ul class="nav">
+								<li class="dropdown" id="idMainMenu"> 
+									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Menu&nbsp;<b class="caret"></b></a>
+									<ul class="dropdown-menu">
+										<li><a onclick="newPostCommand ();">New post...</a></li>
+										<li class="divider"></li>
+										<li><a onclick="showEditorCommand ();" id="idShowEditor">Focus on editor</a></li>
+										<li class="divider"></li>
+										<li><a onclick="viewMyFeedCommand ()" id="idViewMyFeed">View my feed...</a></li>
+										<li><a onclick="viewEveryonesFeedCommand ()" id="idViewEveryonesFeed">View everyone's feed...</a></li>
+										<li><a onclick="viewUserlistCommand ()">View OPML user list...</a></li>
+										</ul>
+									</li>
+								<li class="dropdown" id="idDocsMenu"> 
+									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Docs&nbsp;<b class="caret"></b></a>
+									<ul class="dropdown-menu">
+										<li><a href="https://demo.rss.chat/" target="_blank">Demo site...</a></li>
+										<li class="divider"></li>
+										<li class="dropdown-submenu">
+											<a href="#" tabindex="-1">Blog posts</a>
+												<ul class="dropdown-menu">
+													<li><a href="http://scripting.com/2026/07/22/202118.html" target="_blank">How the web got gunked</a></li>
+													<li><a href="http://scripting.com/2026/07/25/141253.html" target="_blank">RSS.chat has an API</a></li>
+													<li><a href="http://scripting.com/2026/07/21/134309.html" target="_blank">Three-part ecosystem</a></li>
+													<li><a href="http://scripting.com/2026/07/20/161752.html" target="_blank">What is RSS.chat for Howard Rheingold</a></li>
+													<li><a href="http://scripting.com/2026/07/18/143021.html" target="_blank">A peptalk for devs</a></li>
+													<li><a href="http://scripting.com/2026/07/18/143021.html" target="_blank">Claude and me</a></li>
+													<li><a href="http://scripting.com/2026/07/16/134247.html" target="_blank">A feed icon on every post</a></li>
+													<li><a href="http://scripting.com/2026/07/14.html#a153708" target="_blank">demo.rss.chat</a></li>
+													<li><a href="https://shownotes.scripting.com/scripting/2026/07/12/myFirstRsschatPodcast.html" target="_blank">My first RSS.chat podcast</a></li>
+													<li><a href="http://scripting.com/2026/07/12/121948.html" target="_blank">Why you can't create an account</a></li>
+													<li><a href="https://rss.chat/?id=241" target="_blank">Fractional horsepower social networks</a></li>
+													<li><a href="http://scripting.com/2026/07/11/162854.html" target="_blank">My Twitter/X announcement</a></li>
+													<li><a href="http://scripting.com/2026/07/10/161133.html" target="_blank">Introducing RSS.chat</a></li>
+													<li><a href="http://scripting.com/2026/07/09/152001.html" target="_blank">Can RSS be a social network?</a></li>
+													</ul>
+											</li>
+										<li class="dropdown-submenu">
+											<a href="#" tabindex="-1">RSS & OPML</a>
+												<ul class="dropdown-menu">
+													<li><a href="https://cyber.harvard.edu/rss/rss.html" target="_blank">RSS 2.0</a></li>
+													<li><a href="https://opml.org/spec2.opml" target="_blank">OPML 2.0</a></li>
+													<li><a href="https://source.scripting.com" target="_blank">Source namespace</a></li>
+													<li><a href="https://source.scripting.com/social.opml" target="_blank">RSS as a social network</a></li>
+													</ul>
+											</li>
+										<li class="dropdown-submenu">
+											<a href="#" tabindex="-1">Github Repo...</a>
+											<ul class="dropdown-menu">
+												<li><a href="https://github.com/scripting/rss.chat" target="_blank">Github home</a></li>
+												<li class="divider"></li>
+												<li><a href="https://github.com/scripting/rss.chat/blob/main/server/docs/install.md" target="_blank">Run your own server</a></li>
+												<li><a href="https://github.com/scripting/rss.chat/blob/main/server/docs/api.md" target="_blank">API docs</a></li>
+												<li><a href="https://github.com/scripting/rss.chat/tree/main/examples" target="_blank">Example apps</a></li>
+												<li><a href="https://github.com/scripting/rss.chat/issues/17" target="_blank">Questions and answers</a></li>
+												<li class="divider"></li>
+												<li><a href="https://github.com/scripting/rss.chat/blob/main/client/code/worknotes.md" target="_blank">Client worknotes</a></li>
+												<li><a href="https://github.com/scripting/rss.chat/blob/main/server/code/worknotes.md" target="_blank">Server worknotes</a></li>
+												</ul>
+											</li>
+										</ul>
+									</li>
+								</ul>
+							<ul class="nav pull-right">
+								<li class="dropdown">
+									<a href="#" class="dropdown-toggle" data-toggle="dropdown">
+										<i class="fa fa-user" style="color: cornflowerblue;"></i>
+										<span id="idUsername"></span>
+										</a>
+									<ul class="dropdown-menu">
+										<li><a onclick="versionsDialog ();">Software versions...</a></li>
+										<li class="divider"></li>
+										<li><a onclick="settingsCommand ();">Settings...</a></li>
+										<li class="divider"></li>
+										<li><a onclick="createAccountCommand ()" id="idCreateAccount">Create account...</a></li>
+										<li><a onclick="signInCommand ()" id="idSignIn">Sign In...</a></li>
+										<li><a onclick="signOutCommand ()" id="idSignOut">Sign out...</a></li>
+										
+										
+										
+										</ul>
+									</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+				</div>
+			</div>
+		<div class="divChatContainer">
+			</div>
+		<script>
+			$(document).ready (function () {
+				startup ();
+				});
+			</script>
+		</body>
+	</html>

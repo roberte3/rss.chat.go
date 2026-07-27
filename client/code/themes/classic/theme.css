@@ -1,0 +1,1392 @@
+
+			:root {
+				--icon-size: 24px;
+				--icon-gap: 72px;
+				}
+
+			.divChat [class^="span"], .divReplyOverlay [class^="span"] { /*7/20/26 by CC -- #155: bootstrap's grid claims any class containing "span" (float + 20px margin); the reply editor lives outside .divChat, so it needs the same protection*/
+				margin-left: 0;
+				float: none;
+				min-height: 0;
+				}
+
+			.divChat {
+				width: 1200px;
+				max-width: 100%;
+				margin: 25px auto 0;
+				display: flex;
+				flex-direction: row;
+				justify-content: center;
+				align-items: flex-start;
+				background: white;
+				font-family: "Ubuntu", -apple-system, "Segoe UI", sans-serif;
+				color: #0f1419;
+				}
+
+			.divChat .divChatLeft { /*7/9/26 by CC -- the left column grew from a strip of icons into a panel: the icon list up top, the map of the middle column below, like the sidebars in Claude and ChatGPT. 7/10/26 by CC -- narrowed to fit the labels; kills the dead space that pushed the whole group left and stranded the tooltips far from the icons*/
+				width: 140px;
+				flex-shrink: 0;
+				padding-top: 16px;
+				padding-right: 10px;
+				padding-bottom: 12px;
+				padding-left: 10px;
+				background: white;
+				border-right: none;
+				display: flex;
+				flex-direction: column;
+				position: sticky;
+				top: 90px; /* 6/10/26 by Claude -- #57: pin below the fixed top menu bar so the topmost icon (the +) doesn't tuck under it on scroll. 7/11/26 by CC -- 90 = the 65px menu bar plus the 25px gap above the chat container: the exact height the panel sits at when the page is at the top, so scrolling never shifts the icons under the mouse (a Home click that scrolled the page was landing the mouse on New post) */
+				height: calc(100vh - 90px);
+				overflow-y: auto;
+				}
+			.divChat .divIconsContainer {
+				display: flex;
+				flex-direction: column;
+				align-items: stretch;
+				gap: 2px;
+				padding-top: 8px;
+				}
+			.divChat .divIconsContainer .divIcon {
+				cursor: pointer;
+				opacity: 0.5;
+				color: gray;
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				padding-top: 8px;
+				padding-right: 10px;
+				padding-bottom: 8px;
+				padding-left: 10px;
+				border-radius: 8px;
+				line-height: 18px;
+				}
+			.divChat .divIconsContainer .divIcon:hover {
+				background: #eff3f4;
+				}
+			.divChat .divIconsContainer .divIcon.enabled {
+				opacity: 1;
+				}
+			.divChat .divIconsContainer .divIcon svg {
+				width: 18px;
+				height: 18px;
+				vertical-align: middle;
+				flex-shrink: 0;
+				}
+			.divChat .divIconsContainer .divIcon i {
+				font-size: 18px;
+				line-height: 18px;
+				width: 18px;
+				text-align: center;
+				flex-shrink: 0;
+				}
+			.divChat .spanIconLabel {
+				font-size: 15px;
+				color: #0f1419;
+				white-space: nowrap;
+				}
+			.divChat .divMapOutline { /*7/9/26 by CC -- the map: one line per post the middle column is showing, indented like the thread, wedges twinned with the posts'. Late 7/9: hidden -- the wedge may make it unnecessary; the machinery stays while we decide*/
+				margin-top: 18px;
+				padding-top: 12px;
+				border-top: 1px solid #eff3f4;
+				display: none;
+				flex-direction: column;
+				gap: 1px;
+				overflow-y: auto;
+				}
+			.divChat .divMapLine {
+				display: flex;
+				align-items: center;
+				gap: 6px;
+				padding-top: 4px;
+				padding-right: 8px;
+				padding-bottom: 4px;
+				padding-left: 4px;
+				border-radius: 6px;
+				cursor: pointer;
+				min-width: 0;
+				}
+			.divChat .divMapLine:hover {
+				background: #eff3f4;
+				}
+			.divChat .divMapLine.flSelected {
+				background: #eff3f4;
+				}
+			.divChat .divMapWedge {
+				color: #c8cdd2;
+				font-size: 13px;
+				width: 13px;
+				text-align: center;
+				flex-shrink: 0;
+				cursor: default;
+				user-select: none;
+				}
+			.divChat .divMapWedge.wedgeDark {
+				color: #536471;
+				}
+			.divChat .divMapWedge.wedgeClickable {
+				cursor: pointer;
+				}
+			.divChat .divMapWedge.wedgeClickable:hover {
+				color: #1d9bf0;
+				}
+			.divChat .divMapLineText {
+				font-size: 13px;
+				color: #536471;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				min-width: 0;
+				}
+			.divChat .spanMapAuthor {
+				font-weight: 700;
+				color: #0f1419;
+				margin-right: 5px;
+				}
+			.divChat .divBrand {
+				font-size: 20px;
+				font-weight: 800;
+				padding: 6px 12px;
+				color: #0f1419;
+				}
+			.divChat .divNav {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				}
+			.divChat .divNavItem {
+				padding: 10px 12px;
+				border-radius: 9999px;
+				font-size: 16px;
+				font-weight: 600;
+				cursor: pointer;
+				color: #0f1419;
+				}
+			.divChat .divNavItem:hover {
+				background: #eff3f4;
+				}
+			.divChat .divNavActive {
+				background: #1d9bf0;
+				color: white;
+				}
+			.divChat .divNavActive:hover {
+				background: #1a8cd8;
+				}
+
+			.divChat .divUserProfile {
+				margin-top: auto;
+				padding: 8px;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				border-radius: 9999px;
+				background: white;
+				}
+			.divChat .divProfileAvatar {
+				width: 64px;
+				height: 64px;
+				border-radius: 50%;
+				background: #1d9bf0;
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 600;
+				font-size: 24px;
+				flex-shrink: 0;
+				overflow: hidden;
+				}
+			.divChat .divProfileInfo {
+				flex: 1;
+				min-width: 0;
+				overflow: hidden;
+				}
+			.divChat .divProfileName {
+				font-weight: 700;
+				font-size: 14px;
+				color: #0f1419;
+				white-space: nowrap;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				}
+			.divChat .divProfileHandle {
+				font-size: 13px;
+				color: #536471;
+				}
+			.divChat .divProfileSignedOut {
+				font-size: 13px;
+				color: #536471;
+				padding: 4px 8px;
+				}
+			.divChat .buttonSignOut {
+				background: transparent;
+				border: 1px solid #cfd9de;
+				border-radius: 9999px;
+				padding: 4px 10px;
+				font-size: 12px;
+				cursor: pointer;
+				color: #0f1419;
+				flex-shrink: 0;
+				}
+			.divChat .buttonSignOut:hover {
+				background: #eff3f4;
+				}
+
+			.divChat .divChatCenter {
+				width: calc(var(--text-display-width, 640px) + 108px); /* 108px = avatar 64 + gap 12 + item padding 32, so the text column equals --text-display-width */
+				flex-shrink: 0;
+				background: white;
+				border-left: 1px solid #e1e8ed;
+				border-right: 1px solid #e1e8ed;
+				display: flex;
+				flex-direction: column;
+				min-width: 0;
+				}
+			.divChat .divCenterHeader {
+				padding: 28px 16px 14px 16px;
+				font-size: 20px;
+				font-weight: 700;
+				border-bottom: 1px solid #eff3f4;
+				flex-shrink: 0;
+				display: none;
+				}
+
+			.divChat .divComposer {
+				--toolbarOffset: 32px;
+				padding: 12px 16px;
+				border-bottom: 1px solid #eff3f4;
+				display: none;
+				gap: 12px;
+				align-items: flex-start;
+				flex-shrink: 0;
+				}
+			.divChat .divComposerAvatar {
+				width: 64px;
+				height: 64px;
+				border-radius: 50%;
+				background: #1d9bf0;
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 600;
+				font-size: 24px;
+				flex-shrink: 0;
+				overflow: hidden;
+				margin-top: var(--toolbarOffset);
+				}
+			.divChat .inputComposer {
+				flex: 1;
+				border: 2px solid #cfd9de;
+				border-radius: 6px;
+				outline: none;
+				font-size: 16px;
+				padding: 5px 8px;
+				color: #0f1419;
+				font-family: inherit;
+				background: transparent;
+				line-height: 1.5;
+				min-height: 26px;
+				max-height: 70vh;
+				overflow-y: auto;
+				box-sizing: border-box;
+				word-wrap: break-word;
+				transition: border-color 0.15s, background 0.15s;
+				}
+			.divChat .inputComposer:focus {
+				border-color: #a8d6f0;
+				}
+			.divChat .divComposer.flWritingMode .inputComposer {
+				background: #ffffff;
+				min-height: 100px;
+				}
+			.divChat .inputComposer.flDisabled {
+				color: #536471;
+				cursor: not-allowed;
+				}
+			.divChat .inputComposer:empty:not(:focus):before {
+				content: attr(data-placeholder);
+				color: #536471;
+				pointer-events: none;
+				}
+			.divChat .inputComposer a {
+				color: #1d9bf0;
+				}
+			.divChat .inputComposer p,
+			.divChat .inputComposer div { /*6/29/26 by CC -- #91: match the published post -- 10px below paragraphs and blocks in the big-plus editor, which had no block spacing*/
+				margin: 0 0 10px 0;
+				}
+			.divChat .inputComposer p:last-child,
+			.divChat .inputComposer div:last-child {
+				margin-bottom: 0;
+				}
+			.divChat .buttonPost {
+				background: #1d9bf0;
+				color: white;
+				border: none;
+				border-radius: 9999px;
+				padding: 8px 18px;
+				font-weight: 700;
+				font-size: 14px;
+				cursor: pointer;
+				flex-shrink: 0;
+				margin-top: var(--toolbarOffset);
+				}
+			.divChat .buttonPost:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+				}
+
+			.divChat .divComposerBody {
+				flex: 1;
+				display: flex;
+				flex-direction: column;
+				min-width: 0;
+				}
+			.divChat .divComposerToolbar {
+				display: flex;
+				justify-content: flex-end;
+				align-items: flex-end;
+				visibility: hidden;
+				gap: 4px;
+				height: var(--toolbarOffset);
+				}
+			.divChat .divComposerTitle {
+				margin-right: auto;
+				font-size: 16px;
+				font-weight: 600;
+				color: #0f1419;
+				cursor: pointer;
+				padding: 4px 8px;
+				border-radius: 4px;
+				max-width: 60%;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				}
+			.divChat .divComposerTitle:hover {
+				background: #eff3f4;
+				}
+			.divChat .divComposer.flWritingMode .divComposerToolbar {
+				visibility: visible;
+				}
+			.divChat .buttonToolbar {
+				background: transparent;
+				border: none;
+				border-radius: 4px;
+				padding: 6px 10px;
+				color: #536471;
+				cursor: pointer;
+				font-size: 14px;
+				}
+			.divChat .buttonToolbar:hover {
+				background: #eff3f4;
+				color: #1d9bf0;
+				}
+			.divChat .buttonToolbar:disabled,
+			.divChat .buttonToolbar:disabled:hover {
+				opacity: 0.4;
+				background: transparent;
+				color: #536471;
+				cursor: default;
+				}
+			.divChat .divContextMenu {
+				position: relative;
+				}
+			.divChat .divContextMenuPopup { /* 6/10/26 by Claude -- match the bootstrap dropdown look of the top Menu */
+				display: none;
+				position: absolute;
+				bottom: 100%;
+				right: 0;
+				margin-bottom: 4px;
+				background: #ffffff;
+				border: 1px solid rgba(0, 0, 0, 0.15);
+				border-radius: 4px;
+				box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+				min-width: 160px;
+				padding-top: 5px;
+				padding-right: 0;
+				padding-bottom: 5px;
+				padding-left: 0;
+				z-index: 100;
+				}
+			.divChat .divContextMenuPopup.flOpen {
+				display: block;
+				}
+			.divChat .divContextMenuItem {
+				padding-top: 3px;
+				padding-right: 20px;
+				padding-bottom: 3px;
+				padding-left: 20px;
+				cursor: pointer;
+				font-size: 14px;
+				line-height: 1.42857143;
+				color: #333333;
+				white-space: nowrap;
+				}
+			.divChat .divContextMenuItem:hover {
+				background: #f5f5f5;
+				color: #262626;
+				}
+			.divChat .divContextMenuItem.flDisabled {
+				color: #bbbbbb;
+				cursor: default;
+				}
+			.divChat .divContextMenuItem.flDisabled:hover {
+				background: transparent;
+				color: #bbbbbb;
+				}
+			.divChat .divContextMenuDivider {
+				height: 1px;
+				background: #e5e5e5;
+				margin-top: 9px;
+				margin-bottom: 9px;
+				}
+			.divChat .divItemMenu {
+				position: relative;
+				}
+			.divChat .buttonItemMenu {
+				background: transparent;
+				border: none;
+				padding: 0;
+				color: #536471;
+				cursor: pointer;
+				font-size: 14px;
+				line-height: 1;
+				}
+			.divChat .buttonItemMenu:hover {
+				color: #1d9bf0;
+				}
+
+			.divChat .divTimeline {
+				padding: 0;
+				background: white;
+				}
+			.divChat .divStory { /*6/20/26 by Claude -- the in-place story area; hidden until a story is shown*/
+				display: none;
+				background: white;
+				}
+
+			.divChat .divProfile { /*6/26/26 by CC -- #79: the in-place profile area; hidden until a profile is shown*/
+				display: none;
+				background: white;
+				}
+
+			.divChat .divScanner { /*6/27/26 by CC -- #104: the flip target area; hidden until opened. Shows the focused post story-page style -- crumb trail above, post full-length, replies below*/
+				display: none;
+				background: white;
+				}
+			.divChat.scannerPage .divScanner .divTweetText { /*the focused post shows full-length, like the story view*/
+				max-height: none;
+				overflow: visible;
+				}
+			.divChat .divScannerCrumbTrail { /*6/27/26 by CC -- #106: the path up the tree, above the post*/
+				padding-top: 12px;
+				padding-right: 16px;
+				padding-bottom: 12px;
+				padding-left: 16px;
+				font-size: 14px;
+				color: #536471;
+				border-bottom: 1px solid #e1e8ed;
+				}
+			.divChat .spanScannerCrumb {
+				cursor: pointer;
+				color: rgb(30, 104, 166);
+				}
+			.divChat .spanScannerCrumb:hover {
+				text-decoration: underline;
+				}
+			.divChat .spanScannerCrumbCurrent {
+				font-weight: 600;
+				color: #0f1419;
+				}
+			.divChat .divProfileHeader {
+				border-bottom: 1px solid #e1e8ed;
+				padding-top: 16px;
+				padding-right: 16px;
+				padding-bottom: 16px;
+				padding-left: 16px;
+				}
+			.divChat .divProfilePageName {
+				font-family: var(--font, "Ubuntu", -apple-system, sans-serif);
+				font-size: 24px;
+				font-weight: bold;
+				color: var(--text-color, #0f1419);
+				}
+			.divChat .divProfilePageHandle {
+				font-family: var(--font, "Ubuntu", -apple-system, sans-serif);
+				font-size: 15px;
+				color: #536471;
+				margin-top: 2px;
+				}
+			.divChat .divProfilePageDescription {
+				font-family: var(--font, "Ubuntu", -apple-system, sans-serif);
+				font-size: 15px;
+				color: var(--text-color, #0f1419);
+				margin-top: 10px;
+				}
+			.divChat .aProfilePageLink {
+				display: inline-block;
+				font-family: var(--font, "Ubuntu", -apple-system, sans-serif);
+				font-size: 15px;
+				color: #1d9bf0;
+				text-decoration: none;
+				margin-top: 8px;
+				}
+			.divChat .aProfilePageLink:hover {
+				text-decoration: underline;
+				}
+			.divChat .divProfileNotFound {
+				font-family: var(--font, "Ubuntu", -apple-system, sans-serif);
+				font-size: 20px;
+				font-weight: bold;
+				color: var(--text-color, #0f1419);
+				padding-top: 16px;
+				padding-right: 24px;
+				padding-bottom: 16px;
+				padding-left: 24px;
+				}
+
+			.divChat .divThread {
+				background: white;
+				border-bottom: 1px solid #e1e8ed;
+				}
+			.divChat .divThread:last-child {
+				border-bottom: none;
+				}
+			.divChat .divThread:hover {
+				background: #fafafa;
+				}
+			.divChat .divThread.flSelected > .divTweet {
+				background: whitesmoke;
+				}
+			.divChat .divThread .divThread {
+				background: transparent;
+				border: none;
+				border-radius: 0;
+				}
+			.divChat .divThread .divThread:hover {
+				box-shadow: none;
+				}
+
+			.divChat .divTweet {
+				padding: 12px 16px;
+				display: flex;
+				gap: 12px;
+				}
+			.divChat .divAvatar {
+				width: 48px;
+				height: 48px;
+				border-radius: 50%;
+				background: #1d9bf0;
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 600;
+				font-size: 24px;
+				flex-shrink: 0;
+				overflow: hidden;
+				}
+			.divChat .divAvatar:has(.imgAvatar) {
+				background: transparent;
+				}
+			.divChat .imgAvatar {
+				width: 100%;
+				height: 100%;
+				border-radius: 50%;
+				object-fit: cover;
+				display: block;
+				}
+			.divChat .divTweetBody {
+				flex: 1;
+				min-width: 0;
+				margin-right: 0px;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				}
+			.divChat .divReplyingTo {
+				font-size: 13px;
+				color: #536471;
+				cursor: pointer;
+				}
+			.divChat .divReplyingTo:hover {
+				text-decoration: underline;
+				}
+			.divChat .divTweetHeader {
+				font-size: 15px;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 4px;
+				align-items: baseline;
+				margin-bottom: 10px;
+				}
+			.divChat .spanAuthor {
+				font-weight: 700;
+				color: #0f1419;
+				cursor: default;
+				}
+			.divChat .spanAuthor a {
+				color: inherit;
+				text-decoration: none;
+				cursor: pointer;
+				}
+			.divChat .spanAuthor:hover {
+				text-decoration: underline;
+				}
+			.divChat .spanHandle {
+				color: #536471;
+				font-weight: 400;
+				}
+			.divChat .spanTimestamp {
+				color: #536471;
+				font-weight: 400;
+				}
+			.divChat .spanTimestamp a {
+				color: inherit;
+				text-decoration: none;
+				}
+			.divChat .spanTimestamp a:hover {
+				text-decoration: underline;
+				}
+			.divChat .spanFeedIcon {
+				color: #536471;
+				font-weight: 400;
+				margin-left: 3px; /*space before the dot -- adds to the header's 4px gap, 7px total*/
+				}
+			.divChat .spanFeedIcon a {
+				color: inherit;
+				font-size: 13px;
+				text-decoration: none;
+				margin-left: 7px; /*space between the dot and the icon*/
+				}
+			.divChat .spanFeedIcon a:hover {
+				color: #0f1419;
+				}
+			.divChat .divTweetTitle {
+				font-family: var(--font, "Ubuntu", -apple-system, sans-serif);
+				font-size: var(--title-size, 18px);
+				font-weight: 700;
+				line-height: 1.25;
+				color: var(--text-color, #0f1419);
+				margin-bottom: 10px;
+				}
+			.divChat .divTweetTitle a {
+				color: inherit;
+				text-decoration: none;
+				}
+			.divChat .divTweetTitle a:hover {
+				text-decoration: underline;
+				}
+			.divChat .divTweetText {
+				font-family: var(--font, "Ubuntu", -apple-system, sans-serif);
+				font-size: var(--text-size, 16px);
+				line-height: var(--line-spacing, 1.5);
+				color: var(--text-color, #0f1419);
+				word-break: break-word;
+				max-height: 200px;
+				overflow: hidden;
+				cursor: pointer;
+				margin-bottom: 10px;
+				}
+			/* 6/27/26 by CC -- focused-item (story) view: a normal timeline item shown full-length. Same font-size/line-spacing as the timeline now (DW 6/27); only the truncation is lifted so the whole post shows. The story concept may re-emerge with its own sizing down the road. */
+			.divChat.storyPage .divStory .divTweetText {
+				max-height: none;
+				overflow: visible;
+				}
+			.divChat.storyPage .divStory .divStoryNotFound { /*6/21/26 by CC -- shown when the guid doesn't resolve to a post*/
+				font-family: var(--font, "Ubuntu", -apple-system, sans-serif);
+				font-size: var(--story-text-size, 20px);
+				font-weight: bold;
+				color: var(--text-color, #0f1419);
+				padding-top: 16px;
+				padding-right: 24px;
+				padding-bottom: 16px;
+				padding-left: 24px;
+				}
+			.divChat .divTweetText * {
+				font-family: inherit !important;
+				font-size: inherit !important;
+				color: inherit !important;
+				background: transparent !important;
+				}
+			.divChat .divTweetText > * {
+				margin: 0 0 10px 0;
+				padding: 0;
+				}
+			.divChat .divTweetText > *:last-child {
+				margin-bottom: 0;
+				}
+			.divChat .divTweetText ul, .divChat .divTweetText ol {
+				margin-top: 0;
+				margin-right: 0;
+				margin-bottom: 10px;
+				margin-left: 0;
+				padding-top: 0;
+				padding-right: 0;
+				padding-bottom: 0;
+				padding-left: 24px;
+				}
+			.divChat .divTweetText img, .divChat .inputComposer img, .inputReplyComposer img, .divReplyParentText img { /*7/22/26 by CC -- #188: a pasted image fits the column, in displayed posts and in the editor*/
+				max-width: 100%;
+				height: auto;
+				border-radius: 8px;
+				}
+			.spanImageUploading { /*7/22/26 by CC -- #188: the stand-in text while a pasted image uploads*/
+				color: var(--secondary-text-color, #536471);
+				font-style: italic;
+				}
+			.divChat .divTweetText li:not(:last-child), .divChat .inputComposer li:not(:last-child), .inputReplyComposer li:not(:last-child) { /*6/29/26 by CC -- #91: a little air between list items, in displayed posts and in both editors, matching wordland's 5px; skip the last item so it doesn't add to the list's own bottom margin*/
+				margin-bottom: 5px;
+				}
+			.divChat .divTweetText blockquote, .divChat .inputComposer blockquote, .inputReplyComposer blockquote, .divReplyParentText blockquote { /*7/6/26 by CC -- #125: the second-opinion recipe, followed exactly -- a thin left rule with real air, quoted text slightly muted; the inherits keep Bootstrap from re-inflating it*/
+				font-family: inherit;
+				font-size: inherit;
+				line-height: inherit;
+				margin-top: 0;
+				margin-right: 0;
+				margin-bottom: 0;
+				margin-left: 0;
+				padding-top: 2px;
+				padding-right: 0;
+				padding-bottom: 2px;
+				padding-left: 14px;
+				border-left: 3px solid #ccc;
+				color: #555;
+				}
+			.divChat .divTweetText blockquote p, .divChat .inputComposer blockquote p, .inputReplyComposer blockquote p, .divReplyParentText blockquote p { /*7/6/26 by CC -- #125: Bootstrap styles the paragraphs INSIDE a quote too (lighter weight, tighter lines) -- undo that so quoted paragraphs read exactly like body text*/
+				font-size: inherit;
+				font-weight: inherit;
+				line-height: inherit;
+				}
+			.divChat .divTweetText :is(h1, h2, h3, h4, h5, h6), .divChat .inputComposer :is(h1, h2, h3, h4, h5, h6), .inputReplyComposer :is(h1, h2, h3, h4, h5, h6), .divReplyParentText :is(h1, h2, h3, h4, h5, h6) { /*7/6/26 by CC -- #95: headings in a post get real hierarchy; they all rendered as plain bold body text*/
+				font-family: inherit;
+				font-weight: 700;
+				line-height: var(--line-spacing, 1.5);
+				margin-top: 10px;
+				margin-right: 0;
+				margin-bottom: 10px;
+				margin-left: 0;
+				}
+			.divChat .divTweetText :is(h1, h2, h3, h4, h5, h6):first-child, .divChat .inputComposer :is(h1, h2, h3, h4, h5, h6):first-child, .inputReplyComposer :is(h1, h2, h3, h4, h5, h6):first-child, .divReplyParentText :is(h1, h2, h3, h4, h5, h6):first-child { /*a heading that opens the post doesn't need air above*/
+				margin-top: 0;
+				}
+			.divChat .divTweetText h1, .divChat .inputComposer h1, .inputReplyComposer h1, .divReplyParentText h1 { /*!important throughout: the displayed post has a deliberate flatten-everything rule (font-size/family inherit !important, protection against foreign HTML); these are the deliberate exceptions, and the more specific selector wins*/
+				font-size: 22px !important;
+				}
+			.divChat .divTweetText h2, .divChat .inputComposer h2, .inputReplyComposer h2, .divReplyParentText h2 {
+				font-size: 20px !important;
+				}
+			.divChat .divTweetText h3, .divChat .inputComposer h3, .inputReplyComposer h3, .divReplyParentText h3 {
+				font-size: 18px !important;
+				}
+			.divChat .divTweetText :is(h4, h5, h6), .divChat .inputComposer :is(h4, h5, h6), .inputReplyComposer :is(h4, h5, h6), .divReplyParentText :is(h4, h5, h6) {
+				font-size: 16px !important;
+				}
+			.divChat .divTweetText :is(code, pre), .divChat .inputComposer :is(code, pre), .inputReplyComposer :is(code, pre), .divReplyParentText :is(code, pre) { /*7/6/26 by CC -- #95: code reads as code -- wordland's recipe: monospace, small, no chip coloring, no box; !important to get past the display's flatten-everything rule*/
+				font-family: Monaco, Menlo, Consolas, "Courier New", monospace !important;
+				font-size: 13px !important;
+				color: inherit;
+				background-color: transparent;
+				border: none;
+				border-radius: 0;
+				padding-top: 0;
+				padding-right: 0;
+				padding-bottom: 0;
+				padding-left: 0;
+				}
+			.divChat .divTweetText pre, .divChat .inputComposer pre, .inputReplyComposer pre, .divReplyParentText pre { /*a code block keeps the paragraph rhythm below it*/
+				margin-top: 0;
+				margin-right: 0;
+				margin-bottom: 10px;
+				margin-left: 0;
+				}
+			.divChat .divMoreButton {
+				font-size: 13px;
+				padding-top: 4px;
+				padding-bottom: 2px;
+				text-align: center;
+				color: #536471;
+				cursor: pointer;
+				display: none;
+				user-select: none;
+				}
+			.divChat .divMoreButton:hover {
+				font-weight: bold;
+				}
+			.divChat .divTweetText a {
+				color: var(--link-color, rgb(30, 104, 166)) !important;
+				}
+
+			.divChat .divTweetActions { /*7/9/26 by CC -- the fade moved off the row onto the icons individually, so the reply wedge can stay full strength on every post; the wedge is a signal the eye scans for, not an action that waits for the cursor*/
+				margin-top: 5px;
+				display: flex;
+				justify-content: space-between;
+				align-items: center;
+				}
+			.divChat .divInsideItemIcon {
+				color: #536471;
+				font-size: 15px;
+				cursor: default;
+				user-select: none;
+				display: flex;
+				align-items: center;
+				gap: 4px;
+				opacity: 0.5;
+				transition: opacity 0.12s ease;
+				}
+			.divChat .divItemMenu {
+				opacity: 0.5;
+				transition: opacity 0.12s ease;
+				}
+			.divChat .divThread.flSelected > .divTweet .divItemMenu {
+				opacity: 1;
+				}
+			.divChat .divThread.flSelected > .divTweet .divInsideItemIcon {
+				opacity: 0.4;
+				}
+			.divChat .divThread.flSelected > .divTweet .divInsideItemIcon.enabled {
+				cursor: pointer;
+				opacity: 1;
+				}
+			.divChat .divThread.flSelected > .divTweet .divInsideItemIcon.enabled:hover {
+				color: #1d9bf0;
+				}
+			.divChat .spanActionCount {
+				font-weight: 400;
+				font-size: 13px;
+				color: #536471;
+				}
+			.divChat .divCommentGroup { /*7/9/26 by CC -- the reply wedge and the comment icon travel as one unit in the icon row*/
+				display: flex;
+				align-items: center;
+				gap: 8px;
+				}
+			.divChat .divWedgeReplies {
+				color: #c8cdd2;
+				font-size: 15px;
+				cursor: default;
+				user-select: none;
+				}
+			.divChat .divWedgeReplies.wedgeDark {
+				color: #536471;
+				}
+			.divChat .divWedgeReplies.wedgeClickable {
+				cursor: pointer;
+				}
+			.divChat .divWedgeReplies.wedgeClickable:hover {
+				color: #1d9bf0;
+				}
+			.divChat .spanReplyCountHint { /*6/27/26 by CC -- #102: in the focused view, "(n)" after a reply's byline showing how many direct replies it has*/
+				font-weight: 400;
+				color: #536471;
+				}
+
+			.divReplyOverlay {
+				display: flex;
+				position: fixed;
+				top: 0;
+				left: 0;
+				width: 100%;
+				height: 100%;
+				background: rgba(0, 0, 0, 0.5);
+				z-index: 1000;
+				align-items: flex-start;
+				justify-content: center;
+				padding-top: 150px;
+				box-sizing: border-box;
+				}
+			.divReplyModal {
+				background: whitesmoke;
+				border-radius: 0;
+				box-shadow: 0 0 30px rgba(255, 255, 255, 0.5);
+				width: 750px; /* 6/1/26 by Claude -- fixed editor width, decoupled from --text-display-width (which now drives only the timeline item boxes) */
+				max-width: 95vw;
+				max-height: 70vh;
+				overflow: hidden;
+				display: flex;
+				flex-direction: column;
+				position: relative;
+				}
+			.divReplyModalTop {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				flex-shrink: 0;
+				padding-top: 0;
+				padding-right: 24px;
+				padding-bottom: 0;
+				padding-left: 24px;
+				gap: 8px;
+				}
+			.divReplyModal.flNoParent .divReplyModalTop {
+				padding-top: 20px;
+				}
+			.divReplyModalTop .divComposerTitle {
+				font-size: 16px;
+				font-weight: 700; /* 7/5/26 by CC -- #103: a title must be bold; the flPlaceholder rule below keeps the Title? prompt light */
+				color: var(--text-color, #0f1419);
+				padding-top: 4px;
+				padding-right: 10px;
+				padding-bottom: 4px;
+				padding-left: 5px;
+				border: 1px solid #cfd9de;
+				border-radius: 4px;
+				background: transparent;
+				min-width: 325px;
+				max-width: 400px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				cursor: pointer;
+				flex-shrink: 0;
+				margin-left: 0;
+				}
+			.divReplyModalTop .divComposerTitle:hover {
+				background: #eff3f4;
+				}
+			.divReplyModalTop .divComposerTitle:focus {
+				outline: none;
+				border-color: #a8c7e8;
+				background: #ffffff;
+				}
+			.divReplyModalTop .divComposerTitle.flPlaceholder {
+				color: #536471;
+				font-weight: 400;
+				opacity: 0.6;
+				}
+			.divModalToolbar {
+				display: flex;
+				align-items: center;
+				gap: 14px;
+				margin-left: auto;
+				}
+			.buttonModalTool,
+			.divModalToolbar .buttonContextMenu {
+				background: transparent;
+				border: none;
+				border-radius: 4px;
+				padding: 6px 8px;
+				color: darkslategray;
+				cursor: pointer;
+				font-size: 16px;
+				opacity: 0.7;
+				}
+			.buttonModalTool:hover,
+			.divModalToolbar .buttonContextMenu:hover {
+				background: #eff3f4;
+				opacity: 1;
+				}
+			.buttonModalTool:disabled,
+			.buttonModalTool:disabled:hover {
+				opacity: 0.3;
+				background: transparent;
+				cursor: default;
+				}
+			.buttonModalTool.spMarkdownOn,
+			.buttonModalTool.spMarkdownOn:hover {
+				color: #2ea44f;
+				opacity: 1;
+				}
+			.divReplyDividerLine {
+				display: none;
+				}
+			.divReplyParent {
+				display: flex;
+				gap: 12px;
+				padding-top: 16px;
+				padding-right: 16px;
+				padding-bottom: 4px;
+				padding-left: 16px;
+				align-items: stretch;
+				min-height: 0;
+				}
+			.divReplyParentAvatar {
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				background: #1d9bf0;
+				color: white;
+				display: flex;
+				align-items: center;
+				justify-content: center;
+				font-weight: 600;
+				font-size: 16px;
+				flex-shrink: 0;
+				align-self: flex-start;
+				overflow: hidden;
+				}
+			.divReplyParentAvatar:has(.imgAvatar) {
+				background: transparent;
+				}
+			.divReplyParentBody {
+				flex: 1;
+				min-width: 0;
+				min-height: 0;
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				}
+			.divReplyParentAuthor {
+				font-weight: 700;
+				font-size: 15px;
+				color: #0f1419;
+				}
+			.divReplyParentTitle {
+				font-weight: 700;
+				font-size: 16px;
+				color: var(--link-color, rgb(30, 104, 166));
+				margin-top: 6px;
+				}
+			.divReplyParentText {
+				font-size: 15px;
+				color: #0f1419;
+				line-height: 1.5;
+				word-break: break-word;
+				display: -webkit-box;
+				-webkit-line-clamp: 3;
+				-webkit-box-orient: vertical;
+				overflow: hidden;
+				user-select: none;
+				}
+			.divReplyParentText.flExpanded { /*7/20/26 by CC -- #155: natural height, so the whole post shows with no scroll bar; the max-height only kicks in for a very long post*/
+				display: block;
+				-webkit-line-clamp: unset;
+				max-height: 30vh;
+				overflow-y: auto;
+				border-bottom: none;
+				margin-bottom: 6px; /*air between the open post and what's below it*/
+				}
+			.divReplyParentSummary { /*7/20/26 by CC -- #155: the wedge and word count, directly under the author's name*/
+				display: flex;
+				align-items: center; /*the wedge sits vertically centered on the text line*/
+				margin-bottom: 10px; /*the gap below the word-count line -- the one knob to twiddle*/
+				font-size: 14px;
+				color: #536471;
+				cursor: pointer;
+				user-select: none;
+				}
+			.divReplyParentSummary .spanReplyWedge {
+				display: inline-block; /*a transform needs a box to rotate*/
+				margin-right: 5px; /*the space between the wedge and the word count*/
+				transition: transform 0.15s;
+				}
+			.divReplyParentSummary.flExpanded .spanReplyWedge {
+				transform: rotate(90deg);
+				}
+			.divReplyComposerRow {
+				display: flex;
+				gap: 12px;
+				padding-top: 3px;
+				padding-right: 24px;
+				padding-bottom: 8px;
+				padding-left: 24px;
+				align-items: stretch;
+				flex: 1;
+				min-height: 0;
+				}
+			.divReplyComposerAvatar {
+				width: 40px;
+				height: 40px;
+				border-radius: 50%;
+				background: #1d9bf0;
+				color: white;
+				display: none;
+				align-items: center;
+				justify-content: center;
+				font-weight: 600;
+				font-size: 16px;
+				flex-shrink: 0;
+				overflow: hidden;
+				}
+			.inputReplyComposer {
+				flex: 1;
+				outline: none;
+				font-size: var(--text-size, 16px);
+				color: var(--text-color, #0f1419);
+				font-family: var(--font, "Ubuntu", -apple-system, "Segoe UI", sans-serif);
+				line-height: var(--line-spacing, 1.5);
+				min-height: 200px;
+				overflow-y: auto;
+				word-break: break-word;
+				border: 2px solid #cfd9de;
+				border-radius: 6px;
+				padding-top: 4px;
+				padding-right: 2px;
+				padding-bottom: 4px;
+				padding-left: 4px;
+				background: #f9f9f9;
+				box-sizing: border-box;
+				}
+			.inputReplyComposer:focus {
+				border-color: #a8d6f0;
+				background: #ffffff;
+				outline: none;
+				}
+			.inputReplyComposer:empty:not(.flUserTouched):before {
+				content: attr(data-placeholder);
+				color: #536471;
+				pointer-events: none;
+				}
+			.inputReplyComposer a {
+				color: var(--link-color, #1d9bf0);
+				}
+			.inputReplyComposer p,
+			.inputReplyComposer div {
+				margin: 0 0 10px 0;
+				}
+			.inputReplyComposer p:last-child,
+			.inputReplyComposer div:last-child {
+				margin-bottom: 0;
+				}
+			.divModalBottom {
+				display: flex;
+				align-items: center;
+				flex-shrink: 0;
+				padding-top: 6px;
+				padding-right: 24px;
+				padding-bottom: 10px;
+				padding-left: 24px;
+				border-top: 1px solid #eff3f4;
+				}
+			.divModalStatusGroup {
+				display: flex;
+				justify-content: space-evenly;
+				flex: 4.5;
+				}
+			.divModalButtonGroup {
+				display: flex;
+				gap: 16px;
+				flex: 2;
+				justify-content: flex-end;
+				align-items: center;
+				}
+			.divModalWhen,
+			.divModalCharCount,
+			.divModalStatus {
+				text-align: center;
+				font-size: 13px;
+				color: slategray;
+				}
+			.divModalWhen {
+				}
+			.divReplyModal .spinner {
+				position: fixed;
+				top: 50%;
+				left: 50%;
+				transform: translate(-50%, -50%);
+				z-index: 1200;
+				width: 50px;
+				pointer-events: none;
+				}
+			.divReplyModal .spinner > svg {
+				width: 50px;
+				height: 50px;
+				color: #1d9bf0;
+				}
+			.inputReplyComposer.flPublishing {
+				opacity: 0.4;
+				}
+			.inputReplyComposer.flMarkdownMode {
+				white-space: pre-wrap;
+				}
+			.textareaMarkdown { /* 7/5/26 by CC -- #107: the markdown text box, dressed to match the wizzy surface */
+				flex: 1;
+				outline: none;
+				font-size: var(--text-size, 16px);
+				color: var(--text-color, #0f1419);
+				font-family: var(--font, "Ubuntu", -apple-system, "Segoe UI", sans-serif);
+				line-height: var(--line-spacing, 1.5);
+				min-height: 200px;
+				overflow-y: auto; /* 7/6/26 by CC -- #159: scroll inside the box instead of growing past the window bottom */
+				word-break: break-word;
+				border: 2px solid #cfd9de;
+				border-radius: 6px;
+				padding-top: 4px;
+				padding-right: 2px;
+				padding-bottom: 4px;
+				padding-left: 4px;
+				background: #f9f9f9;
+				box-sizing: border-box;
+				resize: none;
+				}
+			.textareaMarkdown:focus {
+				border-color: #a8d6f0;
+				background: #ffffff;
+				outline: none;
+				}
+			.textareaMarkdown::placeholder {
+				color: #536471;
+				}
+			.textareaMarkdown.flPublishing {
+				opacity: 0.4;
+				}
+			.divModalCharCount {
+				cursor: pointer;
+				user-select: none;
+				}
+			.divModalCharCount:hover {
+				color: #1d9bf0;
+				}
+			.divModalStatus {
+				letter-spacing: 0.05em;
+				}
+			.buttonReplyCancel {
+				}
+			.buttonReplyPost {
+				}
+			.buttonReplyPost:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+				}
+			.divReplyModal .divContextMenu {
+				position: relative;
+				}
+			.divReplyModal .divContextMenuPopup { /* 6/10/26 by Claude -- match the bootstrap dropdown look of the top Menu */
+				display: none;
+				position: absolute;
+				top: 100%;
+				right: 0;
+				background: #ffffff;
+				border: 1px solid rgba(0, 0, 0, 0.15);
+				border-radius: 4px;
+				box-shadow: 0 6px 12px rgba(0, 0, 0, 0.175);
+				min-width: 160px;
+				padding-top: 5px;
+				padding-right: 0;
+				padding-bottom: 5px;
+				padding-left: 0;
+				z-index: 1100;
+				}
+			.divReplyModal .divContextMenuPopup.flOpen {
+				display: block;
+				}
+			.divReplyModal .divContextMenuItem {
+				padding-top: 3px;
+				padding-right: 20px;
+				padding-bottom: 3px;
+				padding-left: 20px;
+				cursor: pointer;
+				font-size: 14px;
+				line-height: 1.42857143;
+				color: #333333;
+				white-space: nowrap;
+				}
+			.divReplyModal .divContextMenuItem:hover {
+				background: #f5f5f5;
+				color: #262626;
+				}
+			.divReplyModal .divContextMenuItem.flDisabled {
+				color: #bbbbbb;
+				cursor: default;
+				}
+			.divReplyModal .divContextMenuItem.flDisabled:hover {
+				background: transparent;
+				color: #bbbbbb;
+				}
+			.divReplyModal .divContextMenuDivider {
+				height: 1px;
+				background: #e5e5e5;
+				margin-top: 9px;
+				margin-bottom: 9px;
+				}
+
+			.divChat .divReplies {
+				padding-left: 24px;
+				}
+			.divChat .divReplies:empty {
+				display: none;
+				}
+
+			.divChat .divChatRight {
+				width: 60px;
+				flex-shrink: 0;
+				padding: 0;
+				background: transparent;
+				display: block;
+				}
+			.divChat .divThemeVersion {
+				font-size: 12px;
+				color: #8899a6;
+				text-align: right;
+				padding: 0 4px;
+				display: none;
+				}
+
+			.divChat .divCard {
+				background: white;
+				border-radius: 16px;
+				padding: 12px 16px;
+				}
+			.divChat .divCardTitle {
+				font-size: 16px;
+				font-weight: 700;
+				margin-bottom: 8px;
+				color: #0f1419;
+				}
+			.divChat .divCardBody {
+				font-size: 13px;
+				color: #536471;
+				}
+			.divChat .aFeedLink,
+			.divChat .aUsersLink {
+				color: #1d9bf0;
+				font-size: 13px;
+				text-decoration: none;
+				word-break: break-all;
+				}
+			.divChat .aFeedLink:hover,
+			.divChat .aUsersLink:hover {
+				text-decoration: underline;
+				}
+
+			@media (max-width: 900px) {
+				.divChat .divChatRight {
+					display: none;
+					}
+				.divChat .divChatCenter {
+					width: 100%;
+					border: none;
+					padding-bottom: 64px; /* 6/25/26 by CC -- #87: room so the last post isn't hidden behind the fixed bottom icon bar */
+					}
+				.divChat .divChatLeft { /* 6/25/26 by CC -- #87: on phone/tablet the left icon bar becomes a fixed horizontal bar across the bottom of the screen, so there's still a way to post */
+					position: fixed;
+					top: auto;
+					right: 0;
+					bottom: 0;
+					left: 0;
+					width: 100%;
+					height: auto;
+					flex-direction: row;
+					padding-top: 8px;
+					padding-right: 0;
+					padding-bottom: 8px;
+					padding-left: 0;
+					border-top: 1px solid #eff3f4;
+					background: white;
+					overflow-y: visible;
+					z-index: 1000;
+					}
+				.divChat .divIconsContainer {
+					flex-direction: row;
+					align-items: center;
+					justify-content: space-around;
+					width: 100%;
+					padding-top: 0;
+					}
+				.divChat .spanIconLabel { /*7/9/26 by CC -- on the phone the panel folds back into the plain icon bar: no labels, no map*/
+					display: none;
+					}
+				.divChat .divMapOutline {
+					display: none;
+					}
+				.divChat .divIconsContainer .divIcon svg {
+					width: var(--icon-size);
+					height: var(--icon-size);
+					}
+				.divChat .divIconsContainer .divIcon i {
+					font-size: var(--icon-size);
+					line-height: var(--icon-size);
+					width: auto;
+					}
+				}

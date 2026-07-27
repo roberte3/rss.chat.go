@@ -178,7 +178,7 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 		FeedURLEveryone:          fmt.Sprintf("%s/feed", cfg.MyDomain),
 	}
 
-	clientServer := client.NewServer("archive/rss.chat/client/code", clientConfig)
+	clientServer := client.NewServer("client/code", clientConfig)
 	mux.Handle("/", clientServer)
 
 	fmt.Printf("Server is running on http://localhost:%d\n", cfg.HTTPPort)
