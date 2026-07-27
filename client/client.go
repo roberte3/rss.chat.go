@@ -36,6 +36,14 @@ func NewServer(assetPath string, config Config) *Server {
 
 // ServeHTTP serves static files and handles macro substitution for index.html.
 func (s *Server) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	// The sign-in link puts the user's credential in the page URL
+	// (?emailconfirmed=true&code=...). Until the client strips it by
+	// redirecting, anything the page loads cross-origin — a post's image, an
+	// avatar from a URL another user chose — would carry that whole URL in a
+	// Referer header to a third party. no-referrer stops the credential leaving
+	// this origin that way.
+	w.Header().Set("Referrer-Policy", "no-referrer")
+
 	// Normalize path
 	path := r.URL.Path
 	if path == "/" || path == "" {

@@ -36,6 +36,10 @@ RSS Chat Go is a backend service that enables real-time social conversations pow
 - Magic byte verification for uploaded media
 - Content-type whitelist enforcement
 - Parameterized queries (SQL injection protection)
+- Rate limiting on the endpoints that send mail
+
+See [Security model](#security-model) for what the authentication scheme does
+and does not protect against. Read it before running this on a public domain.
 
 ### Scalability
 - Separate media database for independent scaling
@@ -430,6 +434,70 @@ See [todolist.md](todolist.md) for detailed roadmap.
 6. Commit with clear messages
 7. Push to your branch
 8. Open a Pull Request
+
+## Security model
+
+Authentication is inherited from the original rss.chat and is worth
+understanding before you run this on a public domain. None of what follows is a
+bug report — it is the design, written down so you can decide whether it suits
+your deployment.
+
+### How it works
+
+`emailSecret` is a **bearer token**: 32 bytes from `crypto/rand`, mailed to the
+user as a sign-in link. Whoever holds it is the user. There are no sessions and
+no cookies.
+
+Two properties follow, one good and one not:
+
+- **CSRF does not apply.** The credential is an explicit parameter, never
+  ambient like a cookie, so a hostile page cannot make a browser spend it. Do
+  not "fix" this toward cookie sessions without adding CSRF protection.
+- **The token never expires and is never rotated.** The link in the signup
+  email is the permanent credential. An account is as secure as its mailbox and
+  as any copy of that link that still exists. There is no revocation; the only
+  recovery is to change `emailSecret` in the database by hand.
+
+### Credentials travel in the URL
+
+The web client sends `emailaddress` and `emailcode` as query parameters on every
+request, including POSTs. So a credential appears in anything that records
+request URLs: reverse-proxy and CDN access logs, browser history, and the
+address bar during sign-in confirmation.
+
+The server accepts credentials from the query string because its own client
+sends them that way; requiring a request body would break every write from the
+bundled UI. Two mitigations are in place:
+
+- `Referrer-Policy: no-referrer` on client responses, so the confirmation URL
+  cannot leak to a third party through a `Referer` header — which matters
+  because avatar URLs are user-supplied and load cross-origin.
+- `Cache-Control: no-store` on authenticated responses, so neither the URL nor
+  its response is written to a shared or on-disk cache.
+
+**If you deploy this, configure your reverse proxy not to log query strings.**
+That is the remaining exposure and it is outside the server's control.
+
+### What is protected
+
+- Confirmation-mail endpoints are rate-limited per mailbox and per source
+  address, so neither a third party's inbox nor this server's sending
+  reputation can be flooded. Defaults are in `api/handler.go`.
+- The secret is compared in constant time.
+- The secret is never serialized into a response.
+- Post ownership is checked before update and delete.
+
+### What is not
+
+- **No transport security of its own.** Terminate TLS in front of this. Over
+  plain HTTP every request hands the credential to the network.
+- **Account existence is public**, deliberately: `/isuserindatabase` and
+  `/isemailindatabase` are unauthenticated because the signup flow uses them.
+  Authentication errors also distinguish an unknown address from a wrong code.
+- **The client stores the token in `localStorage`**, so any XSS is a permanent
+  account compromise rather than a session hijack. This is why the HTML
+  sanitization matters more here than the feature list suggests.
+- **No admin roles.** `IsUserAdmin` always returns false, as in the original.
 
 ## License
 

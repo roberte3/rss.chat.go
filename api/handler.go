@@ -99,6 +99,8 @@ func (h *Handler) SetEmailSender(sender interface {
 
 // UploadMediaAuth wraps HandleUploadMedia with authentication
 func (h *Handler) UploadMediaAuth(w http.ResponseWriter, r *http.Request) {
+	denyCaching(w)
+
 	email := r.FormValue("emailaddress")
 	code := r.FormValue("emailcode")
 
@@ -503,6 +505,8 @@ func (h *Handler) RobotsTxt(w http.ResponseWriter, r *http.Request) {
 // NewPost creates a new post.
 // Auth required. POST params: jsontext, emailaddress, emailcode
 func (h *Handler) NewPost(w http.ResponseWriter, r *http.Request) {
+	denyCaching(w)
+
 	email := r.FormValue("emailaddress")
 	code := r.FormValue("emailcode")
 
@@ -518,6 +522,8 @@ func (h *Handler) NewPost(w http.ResponseWriter, r *http.Request) {
 // UpdatePost updates an existing post.
 // Auth required. POST params: jsontext, id, emailaddress, emailcode
 func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
+	denyCaching(w)
+
 	email := r.FormValue("emailaddress")
 	code := r.FormValue("emailcode")
 
@@ -533,6 +539,8 @@ func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 // DeletePost deletes a post.
 // Auth required. POST params: id, emailaddress, emailcode
 func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
+	denyCaching(w)
+
 	email := r.FormValue("emailaddress")
 	code := r.FormValue("emailcode")
 
@@ -548,6 +556,8 @@ func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
 // ToggleLike toggles a like on a post.
 // Auth required. POST params: id, emailaddress, emailcode
 func (h *Handler) ToggleLike(w http.ResponseWriter, r *http.Request) {
+	denyCaching(w)
+
 	email := r.FormValue("emailaddress")
 	code := r.FormValue("emailcode")
 
@@ -563,6 +573,8 @@ func (h *Handler) ToggleLike(w http.ResponseWriter, r *http.Request) {
 // SavePrefs saves user preferences.
 // Auth required. POST params: jsontext, emailaddress, emailcode
 func (h *Handler) SavePrefs(w http.ResponseWriter, r *http.Request) {
+	denyCaching(w)
+
 	email := r.FormValue("emailaddress")
 	code := r.FormValue("emailcode")
 

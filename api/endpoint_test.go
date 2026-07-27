@@ -1587,3 +1587,52 @@ func TestRateLimitRejectionHappensBeforeSideEffects(t *testing.T) {
 		t.Error("a rate-limited request still created the account")
 	}
 }
+
+// TestAuthenticatedResponsesAreNotCacheable covers the mitigation for
+// credentials travelling in the request URL: the URL of an authenticated
+// request is itself a secret, so neither it nor its response may be written to
+// a shared or on-disk cache. Applies on the rejection path too — a 503 still
+// echoes back a URL that carried a credential.
+func TestAuthenticatedResponsesAreNotCacheable(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+	insertTestUser(t, conn, "alice", "alice-secret")
+
+	now := time.Now()
+	res, err := conn.Exec(`insert into items (feedUrl, author, title, description, pubDate, whenCreated, whenUpdated)
+		values (?, ?, ?, ?, ?, ?, ?)`,
+		"http://localhost:8081/feed?screenname=alice", "alice", "Post", "body", now, now, now)
+	if err != nil {
+		t.Fatalf("failed to insert item: %v", err)
+	}
+	itemID, _ := res.LastInsertId()
+
+	cases := []struct {
+		path string
+		form url.Values
+	}{
+		{"/newpost", url.Values{"jsontext": {`{"description":"<p>hi</p>"}`}}},
+		{"/updatepost", url.Values{"id": {fmt.Sprint(itemID)}, "jsontext": {`{"description":"<p>edit</p>"}`}}},
+		{"/togglelike", url.Values{"id": {fmt.Sprint(itemID)}}},
+		{"/saveprefs", url.Values{"jsontext": {`{"myFeedTitle":"t"}`}}},
+		{"/deletepost", url.Values{"id": {fmt.Sprint(itemID)}}},
+	}
+
+	for _, tc := range cases {
+		t.Run("authenticated"+tc.path, func(t *testing.T) {
+			w := authedPost(mux, tc.path, "alice", "alice-secret", tc.form)
+			if got := w.Header().Get("Cache-Control"); got != "no-store" {
+				t.Errorf("Cache-Control = %q, want no-store (status was %d)", got, w.Code)
+			}
+		})
+
+		t.Run("rejected"+tc.path, func(t *testing.T) {
+			w := authedPost(mux, tc.path, "alice", "wrong-secret", tc.form)
+			if w.Code == http.StatusOK {
+				t.Fatal("bad credentials were accepted")
+			}
+			if got := w.Header().Get("Cache-Control"); got != "no-store" {
+				t.Errorf("Cache-Control = %q on a rejection, want no-store", got)
+			}
+		})
+	}
+}

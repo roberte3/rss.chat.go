@@ -362,3 +362,43 @@ func TestVendoredClientAssetsPresent(t *testing.T) {
 		}
 	}
 }
+
+// TestClientSetsNoReferrerPolicy covers the credential-in-URL mitigation. The
+// sign-in link lands the user on a page whose URL contains their credential
+// (?emailconfirmed=true&code=...). Before the client strips it by redirecting,
+// anything the page loads cross-origin — including an avatar at a URL another
+// user supplied — would send that whole URL as a Referer to a third party.
+func TestClientSetsNoReferrerPolicy(t *testing.T) {
+	srv := NewServer("code", Config{ProductName: "p", Version: "v"})
+
+	// The confirmation URL shape, plus a plain asset request.
+	for _, target := range []string{
+		"/?emailconfirmed=true&email=a@example.com&code=SECRET&screenname=alice",
+		"/index.html",
+		"/api.js",
+	} {
+		req := httptest.NewRequest("GET", target, nil)
+		rec := httptest.NewRecorder()
+		srv.ServeHTTP(rec, req)
+
+		if got := rec.Header().Get("Referrer-Policy"); got != "no-referrer" {
+			t.Errorf("%s: Referrer-Policy = %q, want no-referrer (status %d)", target, got, rec.Code)
+		}
+	}
+}
+
+// TestClientSetsNoReferrerPolicyOnNotFound checks the header is set before
+// dispatch, so a miss cannot skip it.
+func TestClientSetsNoReferrerPolicyOnNotFound(t *testing.T) {
+	srv := NewServer("code", Config{})
+	req := httptest.NewRequest("GET", "/no-such-asset.js", nil)
+	rec := httptest.NewRecorder()
+	srv.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusNotFound {
+		t.Fatalf("status = %d, want 404 for this test to mean anything", rec.Code)
+	}
+	if got := rec.Header().Get("Referrer-Policy"); got != "no-referrer" {
+		t.Errorf("Referrer-Policy = %q on a 404, want no-referrer", got)
+	}
+}

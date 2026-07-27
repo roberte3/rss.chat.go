@@ -26,6 +26,19 @@ func RespondError(w http.ResponseWriter, message string) {
 	}
 }
 
+// denyCaching marks a response as never storable.
+//
+// The client sends credentials in the request URL rather than a body (see the
+// security notes in README.md), so the URL of an authenticated request is
+// itself a secret. no-store keeps browsers and any intermediary cache from
+// writing that URL, and the response it produced, to disk.
+//
+// Must be called before the first write, since headers are flushed with the
+// status line.
+func denyCaching(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-store")
+}
+
 // RespondTooManyRequests sends a 429 with the same plain-text error shape as
 // RespondError, plus Retry-After. A distinct status from RespondError's 503 so
 // callers can tell "slow down" from "something went wrong"; the client surfaces
