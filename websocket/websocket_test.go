@@ -375,9 +375,9 @@ func TestEventDataPreservation(t *testing.T) {
 
 	// Create event with detailed data
 	eventData := map[string]interface{}{
-		"text":      "Hello world",
+		"text":       "Hello world",
 		"screenname": "alice",
-		"likes":     42,
+		"likes":      42,
 	}
 
 	event := &Event{

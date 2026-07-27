@@ -10,14 +10,14 @@ import (
 
 // Config holds configuration for the client server.
 type Config struct {
-	ProductName              string // "rss.chat"
-	ProductNameForDisplay    string // "rss.chat"
-	Version                  string // "1.0"
-	EnableLogin              bool
-	URLServerForClient       string // "http://localhost:8081"
+	ProductName                 string // "rss.chat"
+	ProductNameForDisplay       string // "rss.chat"
+	Version                     string // "1.0"
+	EnableLogin                 bool
+	URLServerForClient          string // "http://localhost:8081"
 	URLWebsocketServerForClient string // "ws://localhost:8081"
-	WebsocketEnabled         bool
-	FeedURLEveryone          string // Feed URL for autodiscovery
+	WebsocketEnabled            bool
+	FeedURLEveryone             string // Feed URL for autodiscovery
 }
 
 // Server serves static client assets.
@@ -91,15 +91,15 @@ func (s *Server) serveIndexHTML(w http.ResponseWriter, filePath string) {
 func (s *Server) substituteConfig(html string) string {
 	// Build substitution map
 	subs := map[string]string{
-		"[%productName%]":                  s.config.ProductName,
-		"[%productNameForDisplay%]":        s.config.ProductNameForDisplay,
-		"[%version%]":                      s.config.Version,
-		"[%flEnableLogin%]":                boolToString(s.config.EnableLogin),
-		"[%urlServerForClient%]":           s.config.URLServerForClient,
-		"[%urlSocketServer%]":              s.config.URLWebsocketServerForClient,
+		"[%productName%]":                 s.config.ProductName,
+		"[%productNameForDisplay%]":       s.config.ProductNameForDisplay,
+		"[%version%]":                     s.config.Version,
+		"[%flEnableLogin%]":               boolToString(s.config.EnableLogin),
+		"[%urlServerForClient%]":          s.config.URLServerForClient,
+		"[%urlSocketServer%]":             s.config.URLWebsocketServerForClient,
 		"[%urlWebsocketServerForClient%]": s.config.URLWebsocketServerForClient,
-		"[%flWebsocketEnabled%]":           boolToString(s.config.WebsocketEnabled),
-		"[%feedUrlEveryone%]":              s.config.FeedURLEveryone,
+		"[%flWebsocketEnabled%]":          boolToString(s.config.WebsocketEnabled),
+		"[%feedUrlEveryone%]":             s.config.FeedURLEveryone,
 	}
 
 	result := html

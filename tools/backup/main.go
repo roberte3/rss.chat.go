@@ -15,11 +15,11 @@ import (
 
 // BackupData represents the complete database state
 type BackupData struct {
-	ExportedAt string          `json:"exportedAt"`
-	Users      []UserData      `json:"users"`
-	Items      []ItemData      `json:"items"`
-	Likes      []LikeData      `json:"likes"`
-	Media      []MediaData     `json:"media"`
+	ExportedAt string      `json:"exportedAt"`
+	Users      []UserData  `json:"users"`
+	Items      []ItemData  `json:"items"`
+	Likes      []LikeData  `json:"likes"`
+	Media      []MediaData `json:"media"`
 }
 
 // UserData represents a user in the backup
@@ -46,9 +46,9 @@ type ItemData struct {
 
 // LikeData represents a like in the backup
 type LikeData struct {
-	ID         int64  `json:"id"`
-	ItemID     int64  `json:"itemId"`
-	Screenname string `json:"screenname"`
+	ID          int64  `json:"id"`
+	ItemID      int64  `json:"itemId"`
+	Screenname  string `json:"screenname"`
 	WhenCreated string `json:"whenCreated"`
 }
 

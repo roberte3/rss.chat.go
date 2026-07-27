@@ -6,7 +6,6 @@ import (
 	"testing"
 )
 
-
 func TestStoreAndGetMedia(t *testing.T) {
 	tmpDir, err := os.MkdirTemp("", "media_test_*")
 	if err != nil {

@@ -20,8 +20,8 @@ type Settings struct {
 }
 
 type Blocklist struct {
-	Note           string   `json:"note"`
-	BlockedEmails  []string `json:"blockedEmails"`
+	Note          string   `json:"note"`
+	BlockedEmails []string `json:"blockedEmails"`
 }
 
 func CreateDatabase(conn *sql.DB) error {
@@ -154,16 +154,16 @@ func CreateConfig(path string, in io.Reader) error {
 
 	// Build the config
 	cfg := config.Config{
-		ProductNameForDisplay:   productDisplay,
-		MyDomain:                myDomain,
-		URLServerForClient:      urlServerForClient,
-		URLServerForEmail:       urlServerForEmail,
-		MailSender:              mailSender,
-		SMTPHost:                smtpHost,
-		SMTPPort:                smtpPort,
-		SMTPUsername:            smtpUsername,
-		SMTPPassword:            smtpPassword,
-		WebsocketEnabled:        websocketEnabled,
+		ProductNameForDisplay:       productDisplay,
+		MyDomain:                    myDomain,
+		URLServerForClient:          urlServerForClient,
+		URLServerForEmail:           urlServerForEmail,
+		MailSender:                  mailSender,
+		SMTPHost:                    smtpHost,
+		SMTPPort:                    smtpPort,
+		SMTPUsername:                smtpUsername,
+		SMTPPassword:                smtpPassword,
+		WebsocketEnabled:            websocketEnabled,
 		URLWebsocketServerForClient: urlWebsocketServerForClient,
 	}
 

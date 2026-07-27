@@ -14,11 +14,11 @@ import (
 
 // BackupData represents the complete database state from backup
 type BackupData struct {
-	ExportedAt string          `json:"exportedAt"`
-	Users      []UserData      `json:"users"`
-	Items      []ItemData      `json:"items"`
-	Likes      []LikeData      `json:"likes"`
-	Media      []MediaData     `json:"media"`
+	ExportedAt string      `json:"exportedAt"`
+	Users      []UserData  `json:"users"`
+	Items      []ItemData  `json:"items"`
+	Likes      []LikeData  `json:"likes"`
+	Media      []MediaData `json:"media"`
 }
 
 // UserData represents a user in the backup

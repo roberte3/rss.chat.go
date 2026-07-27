@@ -21,7 +21,6 @@ import (
 	"rss.chat.go/websocket"
 )
 
-
 func main() {
 	setupFlag := flag.Bool("setup", false, "initialize the database and exit")
 	configPath := flag.String("config", "config.json", "path to config file")
@@ -168,14 +167,14 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 
 	// Register client server (serves at root, must be last)
 	clientConfig := client.Config{
-		ProductName:              cfg.ProductName,
-		ProductNameForDisplay:    cfg.ProductNameForDisplay,
-		Version:                  "1.0",
-		EnableLogin:              true,
-		URLServerForClient:       cfg.URLServerForClient,
+		ProductName:                 cfg.ProductName,
+		ProductNameForDisplay:       cfg.ProductNameForDisplay,
+		Version:                     "1.0",
+		EnableLogin:                 true,
+		URLServerForClient:          cfg.URLServerForClient,
 		URLWebsocketServerForClient: cfg.URLWebsocketServerForClient,
-		WebsocketEnabled:         cfg.WebsocketEnabled,
-		FeedURLEveryone:          fmt.Sprintf("%s/feed", cfg.MyDomain),
+		WebsocketEnabled:            cfg.WebsocketEnabled,
+		FeedURLEveryone:             fmt.Sprintf("%s/feed", cfg.MyDomain),
 	}
 
 	clientServer := client.NewServer("client/code", clientConfig)

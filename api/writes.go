@@ -13,11 +13,11 @@ import (
 
 // PostRequest holds fields for creating or updating a post.
 type PostRequest struct {
-	Title       string `json:"title,omitempty"`
-	Description string `json:"description,omitempty"`
+	Title        string `json:"title,omitempty"`
+	Description  string `json:"description,omitempty"`
 	MarkdownText string `json:"markdowntext,omitempty"`
-	InReplyTo   *int64 `json:"inReplyTo,omitempty"`
-	ID          *int64 `json:"id,omitempty"` // For updates
+	InReplyTo    *int64 `json:"inReplyTo,omitempty"`
+	ID           *int64 `json:"id,omitempty"` // For updates
 }
 
 // HandleNewPost creates a new post.
@@ -119,9 +119,9 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 			ItemID: itemID,
 			Author: user.Screenname,
 			Data: map[string]interface{}{
-				"title":        item.Title,
-				"description":  item.Description,
-				"inReplyTo":    req.InReplyTo,
+				"title":       item.Title,
+				"description": item.Description,
+				"inReplyTo":   req.InReplyTo,
 			},
 		})
 	}
@@ -336,8 +336,8 @@ func (h *Handler) HandleToggleLike(w http.ResponseWriter, r *http.Request, user 
 			ItemID: itemID,
 			Author: user.Screenname,
 			Data: map[string]interface{}{
-				"liked":    !isLiked,
-				"ctLikes":  item.CtLikes,
+				"liked":   !isLiked,
+				"ctLikes": item.CtLikes,
 			},
 		})
 	}

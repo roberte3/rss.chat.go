@@ -9,7 +9,7 @@ import (
 type MessageType string
 
 const (
-	TypeNewItem    MessageType = "newItem"
+	TypeNewItem     MessageType = "newItem"
 	TypeUpdatedItem MessageType = "updatedItem"
 	TypeToggledLike MessageType = "toggledLike"
 )
@@ -24,10 +24,10 @@ type Event struct {
 
 // Subscriber represents a connected websocket client
 type Subscriber struct {
-	id       string
-	conn     Connection
-	itemsub  chan *Event
-	done     chan struct{}
+	id      string
+	conn    Connection
+	itemsub chan *Event
+	done    chan struct{}
 }
 
 // Connection is the interface for websocket connections

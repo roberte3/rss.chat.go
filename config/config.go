@@ -10,27 +10,27 @@ import (
 // Config holds all application configuration.
 type Config struct {
 	// Required settings
-	ProductName              string `json:"productName"`
-	ProductNameForDisplay    string `json:"productNameForDisplay"`
-	MyDomain                 string `json:"myDomain"`
-	URLServerForClient       string `json:"urlServerForClient"`
-	URLServerForEmail        string `json:"urlServerForEmail"`
+	ProductName           string `json:"productName"`
+	ProductNameForDisplay string `json:"productNameForDisplay"`
+	MyDomain              string `json:"myDomain"`
+	URLServerForClient    string `json:"urlServerForClient"`
+	URLServerForEmail     string `json:"urlServerForEmail"`
 
 	// Database (SQLite in our implementation, not MySQL)
 	DatabasePath string `json:"databasePath"` // Path to SQLite file
 
 	// Feed publishing (filesystem in our implementation, not S3)
-	FeedsPath           string `json:"feedsPath"`            // Local folder to publish feeds
+	FeedsPath            string `json:"feedsPath"`            // Local folder to publish feeds
 	SubscriptionListPath string `json:"subscriptionListPath"` // Path for subs.opml
 
 	// Email configuration
-	MailSender           string `json:"mailSender"`
-	SMTPHost             string `json:"smtpHost"`
-	SMTPPort             int    `json:"smtpPort"`
-	SMTPUsername         string `json:"smtpUsername"`
-	SMTPPassword         string `json:"smtpPassword"`
-	ConfirmEmailSubject  string `json:"confirmEmailSubject"`
-	OperationToConfirm   string `json:"operationToConfirm"`
+	MailSender          string `json:"mailSender"`
+	SMTPHost            string `json:"smtpHost"`
+	SMTPPort            int    `json:"smtpPort"`
+	SMTPUsername        string `json:"smtpUsername"`
+	SMTPPassword        string `json:"smtpPassword"`
+	ConfirmEmailSubject string `json:"confirmEmailSubject"`
+	OperationToConfirm  string `json:"operationToConfirm"`
 
 	// Optional settings with defaults
 	// (ProductName above is already set with sensible default)
@@ -50,16 +50,16 @@ type Config struct {
 	BlocklistPath    string   `json:"blocklistPath"` // Path to separate blocklist.json file
 
 	// Media handling
-	MediaDBPath       string `json:"mediaDBPath"`       // Path to separate media database
-	TempMediaPath     string `json:"tempMediaPath"`     // Temporary storage for uploads
-	MaxMediaUploadBytes int  `json:"maxMediaUploadBytes"` // Max upload size in bytes
+	MediaDBPath         string `json:"mediaDBPath"`         // Path to separate media database
+	TempMediaPath       string `json:"tempMediaPath"`       // Temporary storage for uploads
+	MaxMediaUploadBytes int    `json:"maxMediaUploadBytes"` // Max upload size in bytes
 
 	// Feed storage
-	FeedsInDatabase bool   `json:"flFeedsInDatabase"`  // Store feeds in database (default: false)
-	FeedsDBPath     string `json:"feedsDBPath"`        // Path to feeds database
+	FeedsInDatabase bool   `json:"flFeedsInDatabase"` // Store feeds in database (default: false)
+	FeedsDBPath     string `json:"feedsDBPath"`       // Path to feeds database
 
 	// Post cleanup
-	RemoveBlanksAtEnd bool   `json:"flRemoveBlanksAtEnd"` // Strip trailing empty paragraphs (default: false)
+	RemoveBlanksAtEnd        bool   `json:"flRemoveBlanksAtEnd"`      // Strip trailing empty paragraphs (default: false)
 	TitleForSubscriptionList string `json:"titleForSubscriptionList"` // Custom OPML title
 
 	// SEO and robots
@@ -176,11 +176,11 @@ Disallow: /getiteminfo
 // validate checks that all required fields are set.
 func (c *Config) validate() error {
 	required := map[string]string{
-		"productNameForDisplay":  c.ProductNameForDisplay,
-		"myDomain":               c.MyDomain,
-		"urlServerForClient":     c.URLServerForClient,
-		"urlServerForEmail":      c.URLServerForEmail,
-		"mailSender":             c.MailSender,
+		"productNameForDisplay": c.ProductNameForDisplay,
+		"myDomain":              c.MyDomain,
+		"urlServerForClient":    c.URLServerForClient,
+		"urlServerForEmail":     c.URLServerForEmail,
+		"mailSender":            c.MailSender,
 	}
 
 	for field, value := range required {

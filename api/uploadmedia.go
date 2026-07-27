@@ -130,10 +130,10 @@ func validateMedia(data []byte, contentType string, maxBytes int) error {
 
 	// Validate content type is image
 	validTypes := map[string]bool{
-		"image/jpeg": true,
-		"image/png":  true,
-		"image/gif":  true,
-		"image/webp": true,
+		"image/jpeg":    true,
+		"image/png":     true,
+		"image/gif":     true,
+		"image/webp":    true,
 		"image/svg+xml": true,
 	}
 

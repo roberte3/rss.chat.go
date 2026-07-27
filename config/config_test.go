@@ -294,10 +294,10 @@ func TestFeedsConfig(t *testing.T) {
 	defer os.RemoveAll(tmpDir)
 
 	tests := []struct {
-		name              string
-		configJSON        string
-		wantFeedsInDB     bool
-		wantFeedsDBPath   string
+		name            string
+		configJSON      string
+		wantFeedsInDB   bool
+		wantFeedsDBPath string
 	}{
 		{
 			name: "default feeds config (filesystem mode)",

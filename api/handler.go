@@ -13,25 +13,27 @@ import (
 
 // Handler holds dependencies for HTTP request handling.
 type Handler struct {
-	DB        *sql.DB
-	Publisher *publish.Publisher
-	FeedConfig feed.BuilderConfig
-	Config    *config.Config // Application configuration
-	WebsocketHub *websocket.Hub
-	MediaDB *sql.DB
-	FeedsDB *sql.DB // Nil if feeds are served from filesystem
+	DB                  *sql.DB
+	Publisher           *publish.Publisher
+	FeedConfig          feed.BuilderConfig
+	Config              *config.Config // Application configuration
+	WebsocketHub        *websocket.Hub
+	MediaDB             *sql.DB
+	FeedsDB             *sql.DB // Nil if feeds are served from filesystem
 	MaxMediaUploadBytes int
-	TempMediaPath string
-	RobotsContent string
-	blocklistMtime int64 // Last modification time of blocklist file
-	EmailSender interface{ SendConfirmationEmail(string, string, string) error } // Email sender interface
+	TempMediaPath       string
+	RobotsContent       string
+	blocklistMtime      int64 // Last modification time of blocklist file
+	EmailSender         interface {
+		SendConfirmationEmail(string, string, string) error
+	} // Email sender interface
 }
 
 // NewHandler creates a new API handler.
 func NewHandler(db *sql.DB, pub *publish.Publisher, cfg feed.BuilderConfig) *Handler {
 	return &Handler{
-		DB:        db,
-		Publisher: pub,
+		DB:         db,
+		Publisher:  pub,
 		FeedConfig: cfg,
 	}
 }
@@ -42,7 +44,9 @@ func (h *Handler) SetWebsocketHub(hub *websocket.Hub) {
 }
 
 // SetEmailSender sets the email sender for sending confirmation emails.
-func (h *Handler) SetEmailSender(sender interface{ SendConfirmationEmail(string, string, string) error }) {
+func (h *Handler) SetEmailSender(sender interface {
+	SendConfirmationEmail(string, string, string) error
+}) {
 	h.EmailSender = sender
 }
 

@@ -116,7 +116,7 @@ func TestSanitizePostHTML(t *testing.T) {
 			expected: "<p>Line 1<br>Line 2</p>",
 		},
 		{
-			name:     "complex legitimate content",
+			name: "complex legitimate content",
 			input: `<p>Here's a <b>great</b> example:</p>
 <blockquote>
 <p>This is <strong>important</strong></p>
@@ -139,7 +139,7 @@ func TestSanitizePostHTML(t *testing.T) {
 <p><img src="/media/123" alt="photo"></p>`,
 		},
 		{
-			name:     "complex attack attempt",
+			name: "complex attack attempt",
 			input: `<p>Click <a href="javascript:alert('xss')">here</a></p>
 <img src=x onerror="alert('xss')">
 <script>steal_data()</script>

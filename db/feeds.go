@@ -12,10 +12,10 @@ import (
 // FeedRecord represents a stored feed in the database.
 type FeedRecord struct {
 	ID          int64
-	FeedType    string    // 'global', 'user', 'opml'
-	Screenname  *string   // NULL for global feed
-	ContentType string    // 'text/xml', 'application/xml'
-	Content     []byte    // XML/OPML blob
+	FeedType    string  // 'global', 'user', 'opml'
+	Screenname  *string // NULL for global feed
+	ContentType string  // 'text/xml', 'application/xml'
+	Content     []byte  // XML/OPML blob
 	WhenCreated time.Time
 	WhenUpdated time.Time
 }
