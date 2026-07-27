@@ -54,7 +54,7 @@ func TestPublishUserFeed(t *testing.T) {
 
 	// Create publisher
 	config := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -124,7 +124,7 @@ func TestPublishEveryoneFeed(t *testing.T) {
 	}
 
 	config := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -179,7 +179,7 @@ func TestPublishSubscriptionList(t *testing.T) {
 	}
 
 	config := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -310,7 +310,7 @@ func TestPublishUserFeedDatabase(t *testing.T) {
 
 	// Create publisher in database mode
 	config := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -381,7 +381,7 @@ func TestPublishEveryoneFeedDatabase(t *testing.T) {
 	}
 
 	config := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -438,7 +438,7 @@ func TestPublishSubscriptionListDatabase(t *testing.T) {
 	}
 
 	config := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -498,7 +498,7 @@ func TestBackfillMissingFeeds(t *testing.T) {
 	}
 
 	config := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -588,7 +588,7 @@ func TestBothModesSameContent(t *testing.T) {
 	}
 
 	config := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",

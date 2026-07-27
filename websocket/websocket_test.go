@@ -404,14 +404,24 @@ func TestEventDataPreservation(t *testing.T) {
 		t.Errorf("type = %v, want %v", msgType, TypeNewItem)
 	}
 
+	// itemId and author are top-level identity fields, mirroring Event's
+	// dedicated struct fields. data carries only the event-specific payload,
+	// so a payload key can never shadow them.
+	if itemID := msgMap["itemId"]; itemID != int64(123) {
+		t.Errorf("itemId = %v, want 123", itemID)
+	}
+	if author := msgMap["author"]; author != "alice" {
+		t.Errorf("author = %v, want alice", author)
+	}
+
 	if data, ok := msgMap["data"].(map[string]interface{}); !ok {
 		t.Error("data is not a map")
 	} else {
-		if itemID := data["itemId"]; itemID != int64(123) {
-			t.Errorf("itemId = %v, want 123", itemID)
+		if text := data["text"]; text != "Hello world" {
+			t.Errorf("data.text = %v, want Hello world", text)
 		}
-		if author := data["author"]; author != "alice" {
-			t.Errorf("author = %v, want alice", author)
+		if likes := data["likes"]; likes != 42 {
+			t.Errorf("data.likes = %v, want 42", likes)
 		}
 	}
 }

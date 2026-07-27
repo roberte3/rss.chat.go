@@ -53,7 +53,7 @@ func setupTestServer(t *testing.T) (*http.ServeMux, *sql.DB, *Handler) {
 
 	// Create publisher
 	feedConfig := feed.BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -1042,7 +1042,7 @@ func TestCustomOPMLTitle(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			cfg := feed.BuilderConfig{
-				BaseURL:                  "localhost:8081",
+				BaseURL:                  "http://localhost:8081",
 				ProductName:              "rss.chat",
 				MaxFeedItems:             100,
 				Language:                 "en",
@@ -1050,7 +1050,7 @@ func TestCustomOPMLTitle(t *testing.T) {
 				TitleForSubscriptionList: tt.customTitle,
 			}
 
-			opml, err := feed.BuildSubscriptionList(testDB, "localhost:8081", cfg)
+			opml, err := feed.BuildSubscriptionList(testDB, "http://localhost:8081", cfg)
 			if err != nil {
 				t.Fatalf("failed to build subscription list: %v", err)
 			}

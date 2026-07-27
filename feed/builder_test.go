@@ -12,7 +12,7 @@ import (
 func TestBuildSubscriptionList(t *testing.T) {
 	// This is a minimal test that verifies the function can build OPML
 	config := BuilderConfig{
-		BaseURL:     "localhost:8081",
+		BaseURL:     "http://localhost:8081",
 		ProductName: "rss.chat",
 	}
 
@@ -58,7 +58,7 @@ func TestBuildSubscriptionList(t *testing.T) {
 
 func TestBuildFeedForUser(t *testing.T) {
 	config := BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -122,7 +122,7 @@ func TestBuildFeedForUser(t *testing.T) {
 
 func TestBuildFeedForUserJSON(t *testing.T) {
 	config := BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -192,7 +192,7 @@ func TestBuildFeedForUserJSON(t *testing.T) {
 
 func TestBuildFeedForEveryoneJSON(t *testing.T) {
 	config := BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -249,7 +249,7 @@ func TestBuildFeedForEveryoneJSON(t *testing.T) {
 
 func TestRSSToJSONConversion(t *testing.T) {
 	config := BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",
@@ -317,7 +317,7 @@ func TestRSSToJSONConversion(t *testing.T) {
 
 func TestJSONVsXMLContentParity(t *testing.T) {
 	config := BuilderConfig{
-		BaseURL:      "localhost:8081",
+		BaseURL:      "http://localhost:8081",
 		ProductName:  "rss.chat",
 		MaxFeedItems: 100,
 		Language:     "en",

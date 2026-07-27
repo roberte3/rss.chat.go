@@ -14,6 +14,10 @@ import (
 
 // BuilderConfig holds configuration for feed generation.
 type BuilderConfig struct {
+	// BaseURL is the server's public root, including the scheme and with no
+	// trailing slash, e.g. "https://glurpglurp.app". It comes from
+	// config.myDomain. Never prepend a scheme to it — doing so both
+	// double-prefixes the result and forces http:// on https:// deployments.
 	BaseURL                  string
 	ProductName              string
 	MaxFeedItems             int
@@ -132,7 +136,7 @@ func BuildSubscriptionList(conn *sql.DB, baseURL string, config BuilderConfig) (
 func buildRSSFeed(user *db.User, items []*db.Item, feedURL string, config BuilderConfig, sourceAttribution bool) (string, error) {
 	channel := &Channel{
 		Title:       user.Screenname + " on rss.network",
-		Link:        "http://" + config.BaseURL + "/",
+		Link:        config.BaseURL + "/",
 		Description: "Posts by " + user.Screenname + " on rss.network",
 		Language:    config.Language,
 		Docs:        config.DocsURL,
@@ -202,7 +206,7 @@ func buildRSSFeedForEveryone(items []*db.Item, config BuilderConfig) (string, er
 
 	channel := &Channel{
 		Title:       "Everyone on rss.network",
-		Link:        "http://" + config.BaseURL + "/",
+		Link:        config.BaseURL + "/",
 		Description: "All posts on rss.network",
 		Language:    config.Language,
 		Docs:        config.DocsURL,

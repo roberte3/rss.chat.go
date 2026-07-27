@@ -125,18 +125,6 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 		log.Fatalf("failed to create temp media directory: %v", err)
 	}
 
-	// Create email sender from config
-	emailSender := email.NewSender(email.Config{
-		SMTPHost:     cfg.SMTPHost,
-		SMTPPort:     cfg.SMTPPort,
-		SMTPUsername: cfg.SMTPUsername,
-		SMTPPassword: cfg.SMTPPassword,
-		FromAddress:  cfg.MailSender,
-		FromName:     cfg.ProductNameForDisplay,
-		Provider:     "smtp",
-	})
-	_ = emailSender // TODO: wire into API endpoints
-
 	// Create and start websocket hub
 	wsHub := websocket.NewHub()
 	go wsHub.Start(ctx)
@@ -151,19 +139,21 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	handler.TempMediaPath = cfg.TempMediaPath
 	handler.RobotsContent = cfg.RobotsTxt
 
-	// Set up email sender if SMTP is configured
+	// Set up email sender if SMTP is configured. Without it the server still
+	// runs; confirmation links are logged instead of mailed.
 	if cfg.SMTPHost != "" {
-		emailCfg := email.Config{
+		handler.SetEmailSender(email.NewSender(email.Config{
 			SMTPHost:     cfg.SMTPHost,
 			SMTPPort:     cfg.SMTPPort,
 			SMTPUsername: cfg.SMTPUsername,
 			SMTPPassword: cfg.SMTPPassword,
 			FromAddress:  cfg.MailSender,
+			FromName:     cfg.ProductNameForDisplay,
 			Provider:     "smtp",
-		}
-		emailSender := email.NewSender(emailCfg)
-		handler.SetEmailSender(emailSender)
-		fmt.Printf("Email sender configured: %s:%d\n", cfg.SMTPHost, cfg.SMTPPort)
+		}))
+		log.Printf("email sender configured: %s:%d", cfg.SMTPHost, cfg.SMTPPort)
+	} else {
+		log.Printf("email sending disabled (no smtpHost configured)")
 	}
 
 	handler.RegisterRoutes(mux)

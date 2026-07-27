@@ -105,10 +105,12 @@ func TestCreateConfig(t *testing.T) {
 
 	configPath := filepath.Join(tmpDir, "config.json")
 
-	// Simulate user input with custom values
+	// Simulate user input with custom values. The blank-looking line after the
+	// mail sender is the "enable email sending?" answer.
 	input := `test-app
 http://example.com:8080
 sender@example.com
+y
 smtp.example.com
 465
 custom-smtp-user
@@ -218,6 +220,51 @@ func TestCreateConfigDefaults(t *testing.T) {
 
 	if cfg.SMTPPort != 587 {
 		t.Errorf("smtpPort = %d, expected 587 (default)", cfg.SMTPPort)
+	}
+}
+
+// TestCreateConfigEmailDisabled covers answering "n" to the email prompt: the
+// SMTP questions are skipped entirely and no SMTP settings are written, which
+// is what makes the server start up with email sending switched off.
+func TestCreateConfigEmailDisabled(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "setup_test")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	configPath := filepath.Join(tmpDir, "config.json")
+
+	// product name, domain, mail sender, "n" to email, then websocket answer.
+	// If the SMTP prompts were still being read, "y" would be consumed as the
+	// SMTP host and websocket would end up disabled.
+	input := "test-app\nhttp://example.com:8080\nsender@example.com\nn\ny\n"
+	reader := strings.NewReader(input)
+	if err := CreateConfig(configPath, reader); err != nil {
+		t.Fatalf("CreateConfig failed: %v", err)
+	}
+
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		t.Fatalf("config.Load failed: %v", err)
+	}
+
+	if cfg.SMTPHost != "" {
+		t.Errorf("smtpHost = %q, expected empty when email is disabled", cfg.SMTPHost)
+	}
+	if cfg.SMTPUsername != "" {
+		t.Errorf("smtpUsername = %q, expected empty when email is disabled", cfg.SMTPUsername)
+	}
+	if cfg.SMTPPassword != "" {
+		t.Errorf("smtpPassword = %q, expected empty when email is disabled", cfg.SMTPPassword)
+	}
+
+	// The prompts after the email block must still line up.
+	if !cfg.WebsocketEnabled {
+		t.Error("websocketEnabled should be true; the SMTP prompts likely consumed the wrong input")
+	}
+	if cfg.MailSender != "sender@example.com" {
+		t.Errorf("mailSender = %q, expected sender@example.com", cfg.MailSender)
 	}
 }
 
