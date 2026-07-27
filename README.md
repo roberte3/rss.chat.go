@@ -477,6 +477,8 @@ For issues, questions, or suggestions:
 - ✅ Backup/restore tools
 
 ### Phase 2 (In Progress)
+- 🔄 HTMX based front end
+- 🔄 Bluesky (ATProtocol) Bridge 
 - 🔄 Email notifications
 - 🔄 Feed format negotiation
 - 🔄 Configurable ports and domains
