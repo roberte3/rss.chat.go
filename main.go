@@ -150,6 +150,22 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	handler.MaxMediaUploadBytes = cfg.MaxMediaUploadBytes
 	handler.TempMediaPath = cfg.TempMediaPath
 	handler.RobotsContent = cfg.RobotsTxt
+
+	// Set up email sender if SMTP is configured
+	if cfg.SMTPHost != "" {
+		emailCfg := email.Config{
+			SMTPHost:     cfg.SMTPHost,
+			SMTPPort:     cfg.SMTPPort,
+			SMTPUsername: cfg.SMTPUsername,
+			SMTPPassword: cfg.SMTPPassword,
+			FromAddress:  cfg.MailSender,
+			Provider:     "smtp",
+		}
+		emailSender := email.NewSender(emailCfg)
+		handler.SetEmailSender(emailSender)
+		fmt.Printf("Email sender configured: %s:%d\n", cfg.SMTPHost, cfg.SMTPPort)
+	}
+
 	handler.RegisterRoutes(mux)
 
 	// Register websocket endpoint

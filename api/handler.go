@@ -24,6 +24,7 @@ type Handler struct {
 	TempMediaPath string
 	RobotsContent string
 	blocklistMtime int64 // Last modification time of blocklist file
+	EmailSender interface{ SendConfirmationEmail(string, string, string) error } // Email sender interface
 }
 
 // NewHandler creates a new API handler.
@@ -38,6 +39,11 @@ func NewHandler(db *sql.DB, pub *publish.Publisher, cfg feed.BuilderConfig) *Han
 // SetWebsocketHub sets the websocket hub for broadcasting updates.
 func (h *Handler) SetWebsocketHub(hub *websocket.Hub) {
 	h.WebsocketHub = hub
+}
+
+// SetEmailSender sets the email sender for sending confirmation emails.
+func (h *Handler) SetEmailSender(sender interface{ SendConfirmationEmail(string, string, string) error }) {
+	h.EmailSender = sender
 }
 
 // UploadMediaAuth wraps HandleUploadMedia with authentication

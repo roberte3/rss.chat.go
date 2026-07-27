@@ -199,12 +199,20 @@ func buildConfirmationURL(urlRedirect string, userEmail string, screenname strin
 }
 
 // sendConfirmationEmail sends a confirmation email via the email sender.
-// For now, this is stubbed and will be called with a configured sender.
 func (h *Handler) sendConfirmationEmail(recipient string, confirmationURL string, operationType string) error {
-	// TODO: Wire up email.Sender from config in Phase 7
-	// For now, we'll just log and return success
-	fmt.Printf("Would send confirmation email to %s for %s\n", recipient, operationType)
-	fmt.Printf("Confirmation URL: %s\n", confirmationURL)
+	if h.EmailSender == nil {
+		// Email sender not configured, just log
+		fmt.Printf("Email sender not configured - would send to %s for %s\n", recipient, operationType)
+		return nil
+	}
+
+	err := h.EmailSender.SendConfirmationEmail(recipient, confirmationURL, operationType)
+	if err != nil {
+		fmt.Printf("Error sending confirmation email to %s: %v\n", recipient, err)
+		return err
+	}
+
+	fmt.Printf("Sent confirmation email to %s for %s\n", recipient, operationType)
 	return nil
 }
 
