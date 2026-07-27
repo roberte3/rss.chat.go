@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/roberte3/rss.chat.go/config"
 	"github.com/roberte3/rss.chat.go/db"
@@ -30,15 +31,58 @@ type Handler struct {
 	EmailSender         interface {
 		SendConfirmationEmail(string, string, string) error
 	} // Email sender interface
+
+	// Limiters for the two unauthenticated endpoints that send mail. Both are
+	// consulted: the per-email one keeps a single mailbox from being flooded
+	// however many addresses the sender comes from, and the per-IP one caps
+	// what any one source can spend of the server's SMTP quota and sending
+	// reputation.
+	authLimitByEmail *rateLimiter
+	authLimitByIP    *rateLimiter
 }
+
+// Defaults for the mail-sending endpoints. Sized to be invisible to someone
+// clicking "sign in" a few times in a row, while capping sustained abuse:
+// 3 immediately per mailbox then one per 5 minutes, and 10 immediately per
+// source address then one per minute — enough headroom for an office behind
+// one NAT. Buckets idle for an hour are forgotten.
+const (
+	authBurstPerEmail  = 3
+	authRefillPerEmail = 1.0 / 300.0 // one per 5 minutes
+	authBurstPerIP     = 10
+	authRefillPerIP    = 1.0 / 60.0 // one per minute
+	authLimiterIdleTTL = time.Hour
+	authRetryAfterHint = 5 * time.Minute
+)
 
 // NewHandler creates a new API handler.
 func NewHandler(db *sql.DB, pub *publish.Publisher, cfg feed.BuilderConfig) *Handler {
 	return &Handler{
-		DB:         db,
-		Publisher:  pub,
-		FeedConfig: cfg,
+		DB:               db,
+		Publisher:        pub,
+		FeedConfig:       cfg,
+		authLimitByEmail: newRateLimiter(authRefillPerEmail, authBurstPerEmail, authLimiterIdleTTL),
+		authLimitByIP:    newRateLimiter(authRefillPerIP, authBurstPerIP, authLimiterIdleTTL),
 	}
+}
+
+// allowAuthRequest applies both limiters to a mail-sending request, writing a
+// 429 and reporting false when either is exhausted. Limiters may be nil on a
+// Handler built as a bare struct literal, in which case nothing is limited.
+func (h *Handler) allowAuthRequest(w http.ResponseWriter, r *http.Request, email, operation string) bool {
+	if h.authLimitByIP != nil && !h.authLimitByIP.allow(clientIP(r)) {
+		RespondTooManyRequests(w, authRetryAfterHint,
+			"Can't "+operation+" because too many requests have come from your address recently, please wait a few minutes")
+		return false
+	}
+	// Checked second so a flood aimed at one mailbox from many sources still
+	// trips, and so the per-IP budget is spent first by the noisier case.
+	if h.authLimitByEmail != nil && !h.authLimitByEmail.allow(limitKeyForEmail(email)) {
+		RespondTooManyRequests(w, authRetryAfterHint,
+			"Can't "+operation+" because too many requests have been made for this email address recently, please wait a few minutes")
+		return false
+	}
+	return true
 }
 
 // SetWebsocketHub sets the websocket hub for broadcasting updates.
@@ -95,7 +139,9 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	register("GET", "/checkwhitelist", h.CheckWhitelist)
 	register("GET", "/robots.txt", h.RobotsTxt)
 
-	// Auth endpoints (no auth required, but rate-limited in production)
+	// Auth endpoints. Unauthenticated by nature — they are how a caller gets a
+	// credential — so both are rate-limited per email and per source address;
+	// see allowAuthRequest.
 	register("GET", "/sendconfirmingemail", h.SendConfirmingEmail)
 	register("GET", "/createnewuser", h.CreateNewUser)
 

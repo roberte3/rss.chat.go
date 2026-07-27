@@ -8,13 +8,19 @@ import (
 // User mirrors the users table, plus prefs decoded from its JSON column.
 // Ported from convertUser in archive/rss.chat/server/code/rssnetwork.js.
 type User struct {
-	Screenname   string          `json:"screenname"`
-	EmailAddress string          `json:"emailAddress,omitempty"`
-	EmailSecret  string          `json:"emailSecret,omitempty"`
-	ImageURL     string          `json:"imageUrl,omitempty"`
-	WhenCreated  time.Time       `json:"whenCreated"`
-	WhenUpdated  time.Time       `json:"whenUpdated"`
-	Prefs        json.RawMessage `json:"prefs,omitempty"`
+	Screenname   string `json:"screenname"`
+	EmailAddress string `json:"emailAddress,omitempty"`
+	// EmailSecret is the user's bearer credential. It is never serialized:
+	// /saveprefs used to echo it back in its response, writing a permanent
+	// credential into devtools, client logs, and anything that records response
+	// bodies. Marshalling is the wrong channel for it — the confirmation link
+	// is built by hand in buildConfirmationURL, and the backup tools declare
+	// their own structs — so nothing legitimate needs it on the wire.
+	EmailSecret string          `json:"-"`
+	ImageURL    string          `json:"imageUrl,omitempty"`
+	WhenCreated time.Time       `json:"whenCreated"`
+	WhenUpdated time.Time       `json:"whenUpdated"`
+	Prefs       json.RawMessage `json:"prefs,omitempty"`
 }
 
 // ActiveUser is one row of GetMostActiveToday's ranked-by-activity result.

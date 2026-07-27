@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 // RespondJSON sends a 200 OK response with JSON data.
@@ -18,6 +20,20 @@ func RespondJSON(w http.ResponseWriter, data interface{}) {
 func RespondError(w http.ResponseWriter, message string) {
 	w.Header().Set("Content-Type", "text/plain")
 	w.WriteHeader(http.StatusServiceUnavailable)
+	fmt.Fprint(w, message)
+	if message[len(message)-1] != '.' {
+		fmt.Fprint(w, ".")
+	}
+}
+
+// RespondTooManyRequests sends a 429 with the same plain-text error shape as
+// RespondError, plus Retry-After. A distinct status from RespondError's 503 so
+// callers can tell "slow down" from "something went wrong"; the client surfaces
+// the message either way.
+func RespondTooManyRequests(w http.ResponseWriter, retryAfter time.Duration, message string) {
+	w.Header().Set("Content-Type", "text/plain")
+	w.Header().Set("Retry-After", strconv.Itoa(int(retryAfter.Seconds())))
+	w.WriteHeader(http.StatusTooManyRequests)
 	fmt.Fprint(w, message)
 	if message[len(message)-1] != '.' {
 		fmt.Fprint(w, ".")

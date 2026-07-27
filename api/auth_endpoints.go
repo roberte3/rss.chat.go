@@ -31,6 +31,13 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Before any mail is sent: this endpoint will deliver to an address the
+	// caller names, so unthrottled it is a way to flood someone else's mailbox
+	// and burn this server's sending reputation.
+	if !h.allowAuthRequest(w, r, email, "send confirmation email") {
+		return
+	}
+
 	// Check blocklist
 	if !h.checkBlocklist(email) {
 		RespondError(w, "Can't send confirmation email because this email is not allowed")
@@ -113,6 +120,12 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 
 	if urlRedirect == "" {
 		RespondError(w, "Can't create new user because urlredirect is required")
+		return
+	}
+
+	// Creates an account and sends mail, so it carries the same abuse potential
+	// as /sendconfirmingemail and shares its limits.
+	if !h.allowAuthRequest(w, r, email, "create new user") {
 		return
 	}
 

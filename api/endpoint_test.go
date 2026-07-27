@@ -1439,3 +1439,151 @@ func TestCommentsFeedRejectsBadPaths(t *testing.T) {
 		}
 	}
 }
+
+// TestSavePrefsDoesNotLeakEmailSecret pins the response shape. /saveprefs
+// re-fetched the user and returned it directly, and db.User serialised
+// EmailSecret, so every successful call wrote the caller's permanent bearer
+// credential into the response body — devtools, client-side logging, and any
+// intermediary recording bodies.
+func TestSavePrefsDoesNotLeakEmailSecret(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+	const secret = "super-secret-value-not-for-the-wire"
+	insertTestUser(t, conn, "alice", secret)
+
+	w := authedPost(mux, "/saveprefs", "alice", secret, url.Values{
+		"jsontext": {`{"myFeedTitle":"Alice"}`},
+	})
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want 200; body: %s", w.Code, w.Body.String())
+	}
+
+	body := w.Body.String()
+	if strings.Contains(body, secret) {
+		t.Errorf("response leaks the caller's emailSecret:\n%s", body)
+	}
+	if strings.Contains(body, "emailSecret") {
+		t.Errorf("response still carries an emailSecret field:\n%s", body)
+	}
+	// The response must still be useful, or the check above proves nothing.
+	if !strings.Contains(body, "Alice") {
+		t.Errorf("response lost the saved prefs:\n%s", body)
+	}
+}
+
+// TestSendConfirmingEmailRateLimitedPerEmail covers the mailbox-flooding case:
+// the endpoint delivers to an address the caller names, so unthrottled it lets
+// anyone bomb a third party through this server's SMTP credentials.
+func TestSendConfirmingEmailRateLimitedPerEmail(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+	insertTestUser(t, conn, "alice", "alice-secret")
+
+	// Tight limits, and a generous per-IP budget so this test isolates the
+	// per-email one.
+	handler.authLimitByEmail = newRateLimiter(1.0/300.0, 2, time.Hour)
+	handler.authLimitByIP = newRateLimiter(1, 1000, time.Hour)
+
+	send := func(from string) int {
+		req := httptest.NewRequest("GET",
+			"/sendconfirmingemail?email=alice@example.com&urlredirect=http://localhost/", nil)
+		req.RemoteAddr = from
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	for i := 1; i <= 2; i++ {
+		if code := send("203.0.113.1:1000"); code == http.StatusTooManyRequests {
+			t.Fatalf("request %d limited, want the first 2 through", i)
+		}
+	}
+	if code := send("203.0.113.1:1000"); code != http.StatusTooManyRequests {
+		t.Errorf("status = %d, want 429 once the per-email burst is spent", code)
+	}
+	// Rotating source addresses must not reset a mailbox's budget.
+	if code := send("198.51.100.77:2000"); code != http.StatusTooManyRequests {
+		t.Errorf("status = %d from a new IP, want 429: the limit is per mailbox", code)
+	}
+}
+
+// TestSendConfirmingEmailRateLimitedPerIP covers the other direction: one
+// source spraying many addresses.
+func TestSendConfirmingEmailRateLimitedPerIP(t *testing.T) {
+	mux, _, handler := setupTestServer(t)
+
+	handler.authLimitByIP = newRateLimiter(1.0/60.0, 2, time.Hour)
+	handler.authLimitByEmail = newRateLimiter(1, 1000, time.Hour)
+
+	send := func(email string) int {
+		req := httptest.NewRequest("GET",
+			"/sendconfirmingemail?email="+email+"&urlredirect=http://localhost/", nil)
+		req.RemoteAddr = "203.0.113.5:9999"
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec.Code
+	}
+
+	for i := 1; i <= 2; i++ {
+		if code := send(fmt.Sprintf("victim%d@example.com", i)); code == http.StatusTooManyRequests {
+			t.Fatalf("request %d limited, want the first 2 through", i)
+		}
+	}
+	if code := send("victim3@example.com"); code != http.StatusTooManyRequests {
+		t.Errorf("status = %d, want 429 once the per-IP burst is spent", code)
+	}
+}
+
+// TestCreateNewUserRateLimited checks the second mail-sending endpoint shares
+// the limits, so it cannot be used to route around them.
+func TestCreateNewUserRateLimited(t *testing.T) {
+	mux, _, handler := setupTestServer(t)
+
+	handler.authLimitByIP = newRateLimiter(1.0/60.0, 1, time.Hour)
+	handler.authLimitByEmail = newRateLimiter(1, 1000, time.Hour)
+
+	send := func(name string) *httptest.ResponseRecorder {
+		req := httptest.NewRequest("GET",
+			"/createnewuser?email="+name+"@example.com&name="+name+"&urlredirect=http://localhost/", nil)
+		req.RemoteAddr = "203.0.113.8:4444"
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		return rec
+	}
+
+	if code := send("first").Code; code == http.StatusTooManyRequests {
+		t.Fatal("first request limited")
+	}
+	rec := send("second")
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429", rec.Code)
+	}
+	if ra := rec.Header().Get("Retry-After"); ra == "" {
+		t.Error("429 has no Retry-After header")
+	}
+}
+
+// TestRateLimitRejectionHappensBeforeSideEffects checks the limiter runs early
+// enough to matter: a rejected /createnewuser must not have created the account.
+func TestRateLimitRejectionHappensBeforeSideEffects(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+
+	handler.authLimitByIP = newRateLimiter(1.0/60.0, 0, time.Hour) // nothing allowed
+	handler.authLimitByEmail = newRateLimiter(1, 1000, time.Hour)
+
+	req := httptest.NewRequest("GET",
+		"/createnewuser?email=ghost@example.com&name=ghost&urlredirect=http://localhost/", nil)
+	req.RemoteAddr = "203.0.113.11:5555"
+	rec := httptest.NewRecorder()
+	mux.ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusTooManyRequests {
+		t.Fatalf("status = %d, want 429", rec.Code)
+	}
+
+	var count int
+	if err := conn.QueryRow(`select count(*) from users where screenname = ?`, "ghost").Scan(&count); err != nil {
+		t.Fatalf("query failed: %v", err)
+	}
+	if count != 0 {
+		t.Error("a rate-limited request still created the account")
+	}
+}
