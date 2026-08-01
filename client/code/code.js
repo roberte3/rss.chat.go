@@ -1,3 +1,90 @@
+//scripts menu -- 7/30/26 by DW
+	function scriptsMenuCommand (atts) { //a command was chosen; branch on the node's attributes
+		if ((atts.type == "link") && (atts.url !== undefined)) {
+			window.open (atts.url, "_blank");
+			}
+		else { //deal with other types later
+			}
+		}
+	function buildScriptsMenus (opmltext) {
+		var xdoc; //assigned in the try below
+		try {
+			xdoc = $.parseXML (opmltext);
+			}
+		catch (err) {
+			console.log ("buildScriptsMenus: can't build the menus because the opml didn't parse.");
+			}
+		if (xdoc !== undefined) {
+			function getNodeAtts (xmlNode) {
+				const theAtts = new Object ();
+				var i;
+				for (i = 0; i < xmlNode.attributes.length; i++) {
+					theAtts [xmlNode.attributes [i].name] = xmlNode.attributes [i].value;
+					}
+				return (theAtts);
+				}
+			function addMenuItems (xmlParent, ulMenu) {
+				$(xmlParent).children ("outline").each (function () {
+					const xmlNode = this;
+					const theAtts = getNodeAtts (xmlNode);
+					if (!getBoolean (theAtts.isComment)) { //comment nodes and everything under them stay invisible
+						if (theAtts.text === "-") {
+							ulMenu.append ($("<li class=\"divider\"></li>"));
+							}
+						else {
+							const liMenuItem = $("<li></li>");
+							const aMenuItem = $("<a href=\"#\" tabindex=\"-1\"></a>");
+							aMenuItem.text (theAtts.text);
+							liMenuItem.append (aMenuItem);
+							if ($(xmlNode).children ("outline").length > 0) { //subs make a submenu
+								liMenuItem.addClass ("dropdown-submenu");
+								const ulSubMenu = $("<ul class=\"dropdown-menu\"></ul>");
+								liMenuItem.append (ulSubMenu);
+								addMenuItems (xmlNode, ulSubMenu);
+								}
+							else {
+								aMenuItem.click (function (event) {
+									event.preventDefault ();
+									scriptsMenuCommand (theAtts);
+									});
+								}
+							ulMenu.append (liMenuItem);
+							}
+						}
+					});
+				}
+			var elementToInsertAfter = $("#idDocsMenu");
+			$(xdoc).find ("body").first ().children ("outline").each (function () {
+				const xmlNode = this;
+				const theAtts = getNodeAtts (xmlNode);
+				if (!getBoolean (theAtts.isComment)) {
+					const liMenu = $("<li class=\"dropdown\"></li>");
+					const aMenuName = $("<a href=\"#\" class=\"dropdown-toggle\" data-toggle=\"dropdown\"></a>");
+					aMenuName.text (theAtts.text);
+					aMenuName.append ("\u00A0<b class=\"caret\"></b>"); //non-breaking space, then the caret
+					const ulMenu = $("<ul class=\"dropdown-menu\"></ul>");
+					liMenu.append (aMenuName);
+					liMenu.append (ulMenu);
+					addMenuItems (xmlNode, ulMenu);
+					elementToInsertAfter.after (liMenu);
+					elementToInsertAfter = liMenu;
+					}
+				});
+			}
+		}
+	function startScriptsMenus () {
+		const urlMenuOpml = settingsFromServer.urlMenuOpml;
+		if ((urlMenuOpml !== undefined) && (urlMenuOpml.length > 0) && (!beginsWith (urlMenuOpml, "[%"))) { //empty means the server has no menu; [% means an older server didn't fill the value in
+			globals.myRssNetwork.readHttpFile (urlMenuOpml, function (err, opmltext) {
+				if (err) {
+					console.log ("startScriptsMenus: err.message == " + err.message);
+					}
+				else {
+					buildScriptsMenus (opmltext);
+					}
+				});
+			}
+		}
 //commands -- 6/5/26 by DW
 	function createAccountCommand () {
 		console.log ("createAccountCommand");
@@ -668,6 +755,8 @@ function startup () {
 		updateForLogin ();
 		
 		startTurndown ();  //5/19/26 by DW
+		
+		startScriptsMenus (); //7/30/26; PM by CC
 		
 		runEveryMinute (everyMinute);
 		self.setInterval (everySecond, 1000);

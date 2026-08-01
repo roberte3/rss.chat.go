@@ -180,6 +180,7 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 		URLWebsocketServerForClient: cfg.URLWebsocketServerForClient,
 		WebsocketEnabled:            cfg.WebsocketEnabled,
 		FeedURLEveryone:             fmt.Sprintf("%s/feed", cfg.MyDomain),
+		URLMenuOpml:                 cfg.URLMenuOpml,
 	}
 
 	clientServer := client.NewServer("client/code", clientConfig)

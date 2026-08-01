@@ -133,3 +133,15 @@ When fixing a bug, confirm the new test fails against the old behaviour before c
   `urlWebsocketServerForClient`, so in-browser real-time updates connect to a dead address.
 - `/version` is called by the client's debug helpers but not implemented.
 - `IsUserAdmin` always returns false, as in the original.
+- `/readhttpfile` is not implemented, so the client's Scripts menu cannot work. `urlMenuOpml`
+  is wired through to `[%urlMenuOpml%]` and defaults to empty, which is how the client is
+  told there is no menu — leave it empty and nothing calls the endpoint. Setting it without
+  implementing `/readhttpfile` is not fatal: the fetch fails and `startScriptsMenus` logs to
+  the console, so the menu simply never appears.
+
+  Upstream's version takes a `url` parameter and returns whatever it fetches, with no
+  authentication, scheme check, host check or size limit — an unauthenticated SSRF that would
+  let any caller use the server to reach cloud metadata endpoints and private-network hosts.
+  Porting it faithfully is the one place where following `rssnetwork.js` is the wrong call.
+  If it gets built, it needs http/https only, resolved addresses checked against loopback,
+  private and link-local ranges, revalidation on every redirect hop, plus size and time caps.

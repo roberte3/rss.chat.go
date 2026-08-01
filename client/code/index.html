@@ -16,6 +16,7 @@
 				urlSocketServer: "[%urlWebsocketServerForClient%]",
 				flSocketsEnabled: "[%flWebsocketEnabled%]",
 				feedUrlEveryone: "[%feedUrlEveryone%]",
+				urlMenuOpml: "[%urlMenuOpml%]",
 				};
 			</script>
 		
@@ -76,16 +77,16 @@
 	<div class="divTabsFromOutline">
 	<div class="tabbable">
 		<ul class="nav nav-tabs" data-tabs="tabs">
-			<li class="active" ><a href="#idFeed130"  data-toggle="tab">Feed</a></li>
-			<li><a href="#idPrompts130"  data-toggle="tab">Prompts</a></li>
+			<li class="active" ><a href="#idFeed471"  data-toggle="tab">Feed</a></li>
+			<li><a href="#idPrompts471"  data-toggle="tab">Prompts</a></li>
 			</ul>
 		<div id="my-tab-content" class="tab-content">
-			<div class="active tab-pane" id="idFeed130">
+			<div class="active tab-pane" id="idFeed471">
 				<fieldset>
 					<div class="divPrefs">	<p>You can set the title, link and description for the feed that we maintain for you.</p><div class="clearfix">	<label for="myFeedTitle">TItle:</label>	<div class="input">		<input class="xlarge prefsInput" id="myFeedTitle" name="myFeedTitle" size="50" type="text" value="" placeholder="Your feed's title." />		</div>	</div><div class="clearfix">	<label for="myFeedLink">Link:</label>	<div class="input">		<input class="xlarge prefsInput" id="myFeedLink" name="myFeedLink" size="50" type="text" value="" placeholder="Link to your home page or profile site." />		</div>	</div><div class="clearfix">	<label for="myFeedDescription">Description:</label>	<div class="input">		<textarea class="xxlarge" id="myFeedDescription" name="myFeedDescription" cols="70" rows="3"placeholder="A short description of your feed." ></textarea>		</div>	</div><div class="clearfix">	<label for="myAvatarImageUrl">Avatar URL:</label>	<div class="input">		<input class="xlarge prefsInput" id="myAvatarImageUrl" name="myAvatarImageUrl" size="50" type="text" value="" placeholder="A square image that represents you on the net." />		</div>	</div>	</div>
 					</fieldset>
 						</div>
-					<div class="tab-pane" id="idPrompts130">
+					<div class="tab-pane" id="idPrompts471">
 						<fieldset>
 							<div class="divPrefs">	<div class="clearfix">	<label for="placeholderSignedIn">New post:</label>	<div class="input">		<input class="xlarge prefsInput" id="placeholderSignedIn" name="placeholderSignedIn" size="50" type="text" value="" placeholder="What's happening?" />		</div>	</div><div class="clearfix">	<label for="placeholderReply">Reply:</label>	<div class="input">		<input class="xlarge prefsInput" id="placeholderReply" name="placeholderReply" size="50" type="text" value="" placeholder="Post your reply" />		</div>	</div>	</div>
 							</fieldset>
@@ -131,6 +132,12 @@
 									<ul class="dropdown-menu">
 										<li><a href="https://demo.rss.chat/" target="_blank">Demo site...</a></li>
 										<li class="divider"></li>
+										<li class="dropdown-submenu">
+											<a href="#" tabindex="-1">News</a>
+												<ul class="dropdown-menu">
+													<li><a href="https://news.rss.chat/worknotes/rss.xml" target="_blank">Worknotes feed</a></li>
+													</ul>
+											</li>
 										<li class="dropdown-submenu">
 											<a href="#" tabindex="-1">Blog posts</a>
 												<ul class="dropdown-menu">

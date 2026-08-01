@@ -62,6 +62,12 @@ type Config struct {
 	RemoveBlanksAtEnd        bool   `json:"flRemoveBlanksAtEnd"`      // Strip trailing empty paragraphs (default: false)
 	TitleForSubscriptionList string `json:"titleForSubscriptionList"` // Custom OPML title
 
+	// Client menus
+	// URLMenuOpml points at an OPML outline the client turns into extra
+	// menubar menus. Empty — the default — means the client shows no Scripts
+	// menu, which is how upstream signals the feature is off.
+	URLMenuOpml string `json:"urlMenuOpml"`
+
 	// SEO and robots
 	RobotsTxt string `json:"robotsTxt"` // Content for robots.txt file
 

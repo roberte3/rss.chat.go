@@ -18,6 +18,7 @@ type Config struct {
 	URLWebsocketServerForClient string // "ws://localhost:8081"
 	WebsocketEnabled            bool
 	FeedURLEveryone             string // Feed URL for autodiscovery
+	URLMenuOpml                 string // OPML outline driving the Scripts menu; empty means no menu
 }
 
 // Server serves static client assets.
@@ -108,6 +109,7 @@ func (s *Server) substituteConfig(html string) string {
 		"[%urlWebsocketServerForClient%]": s.config.URLWebsocketServerForClient,
 		"[%flWebsocketEnabled%]":          boolToString(s.config.WebsocketEnabled),
 		"[%feedUrlEveryone%]":             s.config.FeedURLEveryone,
+		"[%urlMenuOpml%]":                 s.config.URLMenuOpml,
 	}
 
 	result := html

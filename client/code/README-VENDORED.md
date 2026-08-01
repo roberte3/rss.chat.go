@@ -5,7 +5,7 @@ web client from Dave Winer's rss.chat, vendored here so that `git clone` plus
 `go run . -setup` gives you a working site with no extra steps.
 
 - **Upstream:** https://github.com/scripting/rss.chat
-- **Commit:** `bb8bf31e9d0d7598a03b1a9ec7d951927e71a270`
+- **Commit:** `124487cb6008296396a1d8d176dc951466cd7d96`
 - **License:** MIT, Copyright (c) 2026 Dave Winer — see `LICENSE` in this
   directory. That license covers everything here; the Go server's own license
   does not.
@@ -33,7 +33,7 @@ placeholders in `index.html` only. The server must supply every macro
     [%productName%]  [%productNameForDisplay%]  [%version%]
     [%flEnableLogin%]  [%urlServerForClient%]
     [%urlWebsocketServerForClient%]  [%flWebsocketEnabled%]
-    [%feedUrlEveryone%]
+    [%feedUrlEveryone%]  [%urlMenuOpml%]
 
 `TestVendoredClientMacrosAreSatisfied` in `client/client_test.go` fails if
 `index.html` ever references a macro the server does not define, which is the

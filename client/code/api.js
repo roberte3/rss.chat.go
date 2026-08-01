@@ -284,6 +284,16 @@ function rssNetworkServer (userOptions) {
 			callback ({message});
 			}
 		}
+	function readHttpFile (url, callback) { //7/30/26 by DW
+		servercall ("readhttpfile", {url}, false, "GET", function (err, jstruct) {
+			if (err) {
+				callback (err);
+				}
+			else {
+				callback (undefined, jstruct.filetext);
+				}
+			});
+		}
 	
 	function start (callback) { //async stuff we do at start -- 4/22/26 by DW
 		console.log ("rssNetworkServer.start");
@@ -338,6 +348,8 @@ function rssNetworkServer (userOptions) {
 	this.getMostActiveToday = getMostActiveToday; //7/1/26 by DW
 	this.getSocketGreeting = getSocketGreeting; //7/17/26 by CC
 		this.uploadMedia = uploadMedia; //7/22/26 by CC -- #188
+	
+	this.readHttpFile = readHttpFile; //7/30/26 by DW
 	
 	this.signOut = signOut;
 	this.start = start; //4/22/26 by DW
