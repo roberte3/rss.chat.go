@@ -138,6 +138,79 @@ func TestSanitizePostHTML(t *testing.T) {
 <p>Check <a href="https://example.com" rel="nofollow">this link</a>.</p>
 <p><img src="/media/123" alt="photo"></p>`,
 		},
+		// The cases below pin the allowlist to config.legalTags in
+		// rssnetwork.js. Each output was checked against sanitize-html 2.17.1
+		// (the version upstream pins) driven with that same config.
+		{
+			name:     "unwraps tables, keeping cell text",
+			input:    `<table><tr><td>cell</td></tr></table>`,
+			expected: "cell",
+		},
+		{
+			name:     "unwraps headings other than h3",
+			input:    "<h1>h1</h1><h2>h2</h2><h4>h4</h4>",
+			expected: "h1h2h4",
+		},
+		{
+			name:     "unwraps pre and code",
+			input:    "<pre>pre</pre><code>code</code>",
+			expected: "precode",
+		},
+		{
+			name:     "unwraps div and span",
+			input:    "<div>div</div><span>span</span>",
+			expected: "divspan",
+		},
+		{
+			name:     "drops hr",
+			input:    "<hr>",
+			expected: "",
+		},
+		{
+			name:     "unwraps underline, strike, sub and sup",
+			input:    "<u>u</u><s>s</s><sub>sub</sub><sup>sup</sup>",
+			expected: "ussubsup",
+		},
+		{
+			name:     "drops img attributes other than src and alt",
+			input:    `<img src="https://x.com/a.png" alt="a" title="t" width="10">`,
+			expected: `<img src="https://x.com/a.png" alt="a">`,
+		},
+		{
+			name:     "drops anchor attributes other than href",
+			input:    `<a href="https://x.com" target="_blank" title="ti">x</a>`,
+			expected: `<a href="https://x.com" rel="nofollow">x</a>`,
+		},
+		{
+			name:     "drops paragraph attributes",
+			input:    `<p id="x" class="y" dir="ltr">p</p>`,
+			expected: "<p>p</p>",
+		},
+		{
+			name:     "drops textarea and option along with their text",
+			input:    "<textarea>ta</textarea><option>op</option>",
+			expected: "",
+		},
+		{
+			name:     "allows ftp links",
+			input:    `<a href="ftp://e.com/f">ftp</a>`,
+			expected: `<a href="ftp://e.com/f" rel="nofollow">ftp</a>`,
+		},
+		{
+			name:     "allows tel links",
+			input:    `<a href="tel:+15551234">tel</a>`,
+			expected: `<a href="tel:+15551234" rel="nofollow">tel</a>`,
+		},
+		{
+			name:     "allows mailto links",
+			input:    `<a href="mailto:a@b.com">mail</a>`,
+			expected: `<a href="mailto:a@b.com" rel="nofollow">mail</a>`,
+		},
+		{
+			name:     "drops comments",
+			input:    "<!-- comment --><p>after</p>",
+			expected: "<p>after</p>",
+		},
 		{
 			name: "complex attack attempt",
 			input: `<p>Click <a href="javascript:alert('xss')">here</a></p>

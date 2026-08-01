@@ -186,6 +186,15 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 		log.Printf("warning: failed to publish subscription list after creating %s: %v", screenname, err)
 	}
 
+	// Publish the new user's feed straight away, so it answers with a valid
+	// empty feed instead of a 404 from the moment the account exists. Without
+	// this, anyone subscribing off the subscription list above gets a 404
+	// until the user's first post triggers UpdateFeedsOnPostWrite. Ports the
+	// addEmailToUserInDatabase change of 7/25/26 (server v0.6.5).
+	if err := h.Publisher.PublishUserFeed(h.DB, screenname); err != nil {
+		log.Printf("warning: failed to publish feed for new user %s: %v", screenname, err)
+	}
+
 	// Build confirmation URL
 	confirmationURL := buildConfirmationURL(urlRedirect, email, screenname, emailSecret)
 

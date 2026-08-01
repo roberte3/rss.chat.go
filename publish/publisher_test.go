@@ -506,14 +506,26 @@ func TestBackfillMissingFeeds(t *testing.T) {
 	pub := NewPublisher(tmpDir, config)
 	pub.SetDatabaseMode(feedsDB)
 
-	// Backfill should generate: global + opml + 3 user feeds = 5 feeds
+	// None of the three users has a feed yet, so all three get filled in.
+	// The count is user feeds only; global and OPML are always regenerated.
 	count, err := pub.BackfillMissingFeeds(mainDB)
 	if err != nil {
 		t.Fatalf("failed to backfill feeds: %v", err)
 	}
 
-	if count != 5 {
-		t.Errorf("expected 5 feeds, got %d", count)
+	if count != 3 {
+		t.Errorf("expected 3 user feeds, got %d", count)
+	}
+
+	// Running again must be a no-op: feeds that already exist are left alone,
+	// rather than every user feed being rebuilt on every startup.
+	count, err = pub.BackfillMissingFeeds(mainDB)
+	if err != nil {
+		t.Fatalf("failed to re-run backfill: %v", err)
+	}
+
+	if count != 0 {
+		t.Errorf("expected 0 user feeds on second run, got %d", count)
 	}
 
 	// Verify all feeds exist
@@ -630,5 +642,79 @@ func TestBothModesSameContent(t *testing.T) {
 	// Both should be identical
 	if string(fsContent) != string(dbContent) {
 		t.Error("filesystem and database feed content differs")
+	}
+}
+
+// TestBackfillMissingFeedsFilesystemMode covers the default storage mode.
+// Backfill used to return early unless the publisher was in database mode, so
+// on a filesystem server every account that had not yet posted kept serving a
+// 404 for its feed, no matter how many times the server restarted.
+func TestBackfillMissingFeedsFilesystemMode(t *testing.T) {
+	tmpDir, err := os.MkdirTemp("", "feeds_fs_backfill")
+	if err != nil {
+		t.Fatalf("failed to create temp dir: %v", err)
+	}
+	defer os.RemoveAll(tmpDir)
+
+	mainDB, err := sql.Open("sqlite", ":memory:")
+	if err != nil {
+		t.Fatalf("failed to create main db: %v", err)
+	}
+	defer mainDB.Close()
+
+	if err := initTestDB(mainDB); err != nil {
+		t.Fatalf("failed to init main db: %v", err)
+	}
+
+	now := time.Now()
+	for _, name := range []string{"alice", "bob"} {
+		_, err = mainDB.Exec(`insert into users (screenname, emailAddress, emailSecret, imageUrl, prefs, ctHits, ctHitsToday, whenLastHit, whenCreated, whenUpdated)
+			values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			name, name+"@example.com", "secret", "", `{}`, 0, 0, now, now, now)
+		if err != nil {
+			t.Fatalf("failed to insert user %s: %v", name, err)
+		}
+	}
+
+	config := feed.BuilderConfig{
+		BaseURL:      "http://localhost:8081",
+		ProductName:  "rss.chat",
+		MaxFeedItems: 100,
+		Language:     "en",
+		DocsURL:      "http://www.rssboard.org/rss-specification",
+	}
+	pub := NewPublisher(tmpDir, config) // filesystem mode, the default
+	if err := pub.EnsureDir(); err != nil {
+		t.Fatalf("failed to ensure dirs: %v", err)
+	}
+
+	count, err := pub.BackfillMissingFeeds(mainDB)
+	if err != nil {
+		t.Fatalf("failed to backfill feeds: %v", err)
+	}
+
+	if count != 2 {
+		t.Errorf("expected 2 user feeds, got %d", count)
+	}
+
+	// Both users must now have a feed file on disk, with real content in it.
+	for _, name := range []string{"alice", "bob"} {
+		path := filepath.Join(tmpDir, name, "rss.xml")
+		content, err := os.ReadFile(path)
+		if err != nil {
+			t.Fatalf("no feed on disk for %s: %v", name, err)
+		}
+		if !contains(string(content), "<rss") {
+			t.Errorf("feed for %s is not an RSS document: %q", name, string(content))
+		}
+	}
+
+	// Second run leaves the existing files alone.
+	count, err = pub.BackfillMissingFeeds(mainDB)
+	if err != nil {
+		t.Fatalf("failed to re-run backfill: %v", err)
+	}
+	if count != 0 {
+		t.Errorf("expected 0 user feeds on second run, got %d", count)
 	}
 }

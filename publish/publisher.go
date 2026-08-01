@@ -226,26 +226,47 @@ func (p *Publisher) BackfillCommentFeeds(conn *sql.DB) (int, error) {
 	return count, nil
 }
 
-// BackfillMissingFeeds regenerates feeds in database mode.
-// Called on startup when FeedsInDatabase is enabled.
-// Regenerates: global feed, OPML list, and user feeds for all users.
-func (p *Publisher) BackfillMissingFeeds(conn *sql.DB) (int, error) {
-	if p.StorageMode != "database" || p.FeedsDB == nil {
-		return 0, nil // Not in database mode, nothing to backfill
+// UserFeedExists reports whether a user's feed has already been published,
+// looking wherever the current storage mode puts it.
+func (p *Publisher) UserFeedExists(screenname string) (bool, error) {
+	if p.StorageMode == "database" {
+		if p.FeedsDB == nil {
+			return false, nil
+		}
+		return db.FeedExists(p.FeedsDB, "user", screenname)
 	}
 
+	_, err := os.Stat(filepath.Join(p.baseDir, screenname, "rss.xml"))
+	if err == nil {
+		return true, nil
+	}
+	if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, fmt.Errorf("stat feed for %s: %w", screenname, err)
+}
+
+// BackfillMissingFeeds publishes a feed for every user who does not have one
+// yet, so that a user is a feed from the day the account is created rather
+// than from their first post. Called on startup in both storage modes — the
+// filesystem is the default, and skipping it there was leaving every
+// pre-existing account with a 404 feed.
+//
+// Users whose feed already exists are left alone, matching
+// backfillMissingFeeds in rssnetwork.js; the everyone feed and the
+// subscription list are always regenerated, as upstream does alongside it.
+// The count returned is the number of user feeds filled in.
+func (p *Publisher) BackfillMissingFeeds(conn *sql.DB) (int, error) {
 	count := 0
 
 	// Always generate global feed and OPML
 	if err := p.PublishEveryoneFeed(conn); err != nil {
 		return count, fmt.Errorf("publish everyone feed: %w", err)
 	}
-	count++
 
 	if err := p.PublishSubscriptionList(conn); err != nil {
 		return count, fmt.Errorf("publish subscription list: %w", err)
 	}
-	count++
 
 	// Get all user screennames
 	query := `SELECT screenname FROM users WHERE screenname IS NOT NULL ORDER BY screenname`
@@ -268,8 +289,15 @@ func (p *Publisher) BackfillMissingFeeds(conn *sql.DB) (int, error) {
 		return count, fmt.Errorf("rows error: %w", err)
 	}
 
-	// Regenerate user feeds
+	// Publish a feed for anyone missing one, leaving existing feeds untouched
 	for _, screenname := range screennames {
+		exists, err := p.UserFeedExists(screenname)
+		if err != nil {
+			return count, err
+		}
+		if exists {
+			continue
+		}
 		if err := p.PublishUserFeed(conn, screenname); err != nil {
 			return count, fmt.Errorf("publish user feed for %s: %w", screenname, err)
 		}

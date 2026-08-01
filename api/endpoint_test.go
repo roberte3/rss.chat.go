@@ -1636,3 +1636,47 @@ func TestAuthenticatedResponsesAreNotCacheable(t *testing.T) {
 		})
 	}
 }
+
+// TestNewUserHasFeedImmediately pins the 7/25/26 upstream change: a user is a
+// feed from the moment the account exists. Before this, /feed answered 404
+// until the user's first post triggered UpdateFeedsOnPostWrite — so anyone who
+// subscribed off the subscription list, which already listed the new account,
+// got a 404.
+func TestNewUserHasFeedImmediately(t *testing.T) {
+	mux, _, handler := setupTestServer(t)
+
+	req := httptest.NewRequest("GET",
+		"/createnewuser?email=fresh@example.com&name=freshuser&urlredirect=http://localhost/", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("createnewuser status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// The feed must have been published, without the user posting anything.
+	exists, err := handler.Publisher.UserFeedExists("freshuser")
+	if err != nil {
+		t.Fatalf("failed to check for feed: %v", err)
+	}
+	if !exists {
+		t.Error("no feed was published for the new user")
+	}
+
+	// And it must actually serve, as a valid feed naming the user.
+	req = httptest.NewRequest("GET", "/feed?screenname=freshuser", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("feed status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	body := w.Body.String()
+	if !strings.Contains(body, "<rss") {
+		t.Errorf("feed is not an RSS document: %q", body)
+	}
+	if !strings.Contains(body, "freshuser") {
+		t.Errorf("feed does not name the user: %q", body)
+	}
+}

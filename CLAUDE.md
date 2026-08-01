@@ -53,8 +53,12 @@ global and OPML publishers which call `db.StoreFeed` in database mode.
 
 Serving is deliberately split:
 
-- **User and everyone feeds** are served from what was published. They 404 until the first
-  write triggers `UpdateFeedsOnPostWrite`. Tests that read `/feed` must publish first.
+- **User and everyone feeds** are served from what was published, so nothing serves them
+  until something writes them. `/createnewuser` publishes the new user's feed, and
+  `BackfillMissingFeeds` fills in anyone missing one at startup, in both storage modes — so
+  in a running server a user has a feed from the moment the account exists. A user inserted
+  straight into the database, which is what `insertTestUser` does, has no feed until
+  something publishes one: tests that read `/feed` for such a user must publish first.
 - **Subscription list (OPML) and comments feeds** are built from the database per request.
   They were previously served from published artifacts and 404'd permanently in the default
   configuration; generating them per request is what fixes that. Keep it that way.
@@ -117,7 +121,8 @@ Two traps that have produced falsely-passing tests here:
 
 - Asserting a *substring is absent* from a response that 404s passes for the wrong reason.
   Assert the positive case too, or check the status.
-- Filesystem-mode feeds must be published before they can be read.
+- Filesystem-mode feeds must be published before they can be read. `insertTestUser` writes
+  the row directly and publishes nothing, so a user it creates has no feed yet.
 
 When fixing a bug, confirm the new test fails against the old behaviour before committing.
 

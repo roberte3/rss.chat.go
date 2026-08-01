@@ -112,15 +112,20 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	pub := publish.NewPublisher(cfg.FeedsPath, feedConfig)
 	if cfg.FeedsInDatabase && feedsDB != nil {
 		pub.SetDatabaseMode(feedsDB)
-		if count, err := pub.BackfillMissingFeeds(conn); err != nil {
-			log.Fatalf("failed to backfill feeds: %v", err)
-		} else {
-			log.Printf("backfilled %d feeds in database", count)
-		}
 	} else if !cfg.FeedsInDatabase {
 		if err := pub.EnsureDir(); err != nil {
 			log.Fatalf("failed to ensure feed directories: %v", err)
 		}
+	}
+
+	// Fill in feeds for users who signed up before they were published at
+	// creation time. Runs in both storage modes: the filesystem is the
+	// default, so restricting this to database mode left the common case
+	// serving 404s for anyone who had not yet posted.
+	if count, err := pub.BackfillMissingFeeds(conn); err != nil {
+		log.Fatalf("failed to backfill feeds: %v", err)
+	} else if count > 0 {
+		log.Printf("backfilled %d missing user feed(s)", count)
 	}
 
 	// Create temporary media directory
