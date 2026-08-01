@@ -35,5 +35,8 @@ blocklist.json
 /notes/
 /.claude/
 
+# Unsent correspondence. Kept local; must not travel with the repo.
+/dave-draft-email.md
+
 # macOS
 .DS_Store
