@@ -1,0 +1,4 @@
+[
+    "wario64.bsky.social",
+    { "handle": "roberte3-dev.bsky.social", "initialBackfillDays": 30 }
+]

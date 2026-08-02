@@ -147,6 +147,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	register("GET", "/sendconfirmingemail", h.SendConfirmingEmail)
 	register("GET", "/createnewuser", h.CreateNewUser)
 
+	// Local-only account bootstrap. No rate limiting or whitelist/blocklist
+	// check -- access is gated by isLoopbackRequest instead, see LocalNewUser.
+	register("GET", "/localnewuser", h.LocalNewUser)
+
 	// Write endpoints (authenticated)
 	register("POST", "/newpost", h.NewPost)
 	register("POST", "/updatepost", h.UpdatePost)

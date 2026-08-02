@@ -128,6 +128,82 @@ The posts span 10 hours and are immediately available through:
 - `/feed?screenname=testuser` — user's personal RSS feed
 - `/api/getrecentuseritems?name=testuser` — user's recent posts
 
+## Bluesky Subscribe Tool
+
+Backfills a curated list of Bluesky accounts and forwards their top-level
+posts into rss.chat as real posts, one synthetic rss.chat user per tracked
+handle. Design details: `notes/feature-bluesky-bridge-utility.md` (gitignored
+locally).
+
+### Usage
+
+```bash
+cp tools/bluesky-subscribe/handles.example.json handles.json
+# edit handles.json to the accounts you want to track
+
+./bluesky-subscribe -handles handles.json -rss-chat-url http://localhost:8081
+```
+
+Run it again (e.g. from cron) to pick up new posts — it only backfills since
+the last run per handle, and both provisioning and forwarding are safe to
+repeat.
+
+### Options
+
+- `-handles string` — path to the JSON array of Bluesky handles to track
+  (default: `handles.json`). Each entry is either a bare handle string or an
+  object with an `initialBackfillDays` override, and the two forms can be
+  mixed freely:
+  ```json
+  [
+      "wario64.bsky.social",
+      { "handle": "roberte3-dev.bsky.social", "initialBackfillDays": 30 }
+  ]
+  ```
+  The override only affects a handle's *first* backfill (before it has a
+  stored watermark) — see `-since` below for what applies without one, and
+  every run after the first.
+- `-state string` — path to this tool's own sqlite state: dedup index and a
+  cache of everything pulled from Bluesky (default: `bluesky-subscribe.db`)
+- `-rss-chat-url string` — base URL of the rss.chat server (default: `http://localhost:8081`)
+- `-since duration` — how far back to backfill a handle the *first* time it's
+  tracked, unless overridden per-handle in `-handles` (default: `24h`)
+- `-resolver string` — AT Protocol entryway used to resolve handles to DIDs (default: `https://bsky.social`)
+- `-plc-directory string` — PLC directory used to resolve `did:plc` documents (default: `https://plc.directory`)
+- `-appview string` — AppView used to fetch profile info (avatar) for tracked handles (default: `https://public.api.bsky.app`)
+- `-timeout duration` — per-request HTTP timeout (default: `30s`)
+- `-dry-run` — fetch and log without provisioning users or posting
+
+### Requires running on the same host as the rss.chat server
+
+User provisioning calls `/localnewuser`, which is gated to loopback requests
+only (see the README's Security model section). Run this tool on the same
+machine as the rss.chat server, or through an SSH tunnel/loopback forward if
+not — pointing `-rss-chat-url` at a remote server directly will fail
+provisioning with a 503.
+
+### What it does
+
+1. **Provision**: for each handle not yet tracked, derives a screenname
+   (`wario64.bsky.social` → `bsky_wario64`) and calls `/localnewuser` to
+   create or fetch that account's credential.
+2. **Backfill**: resolves each handle to a DID and PDS, then pages
+   `com.atproto.repo.listRecords` for posts newer than the last run (or
+   `-since`/`initialBackfillDays` on a handle's first run). Replies are
+   skipped — v1 only forwards top-level posts. Each run logs one summary
+   line per handle (`N records since <window> (R replies skipped, M
+   unparseable, K top-level)`) — read that first if a handle seems to be
+   fetching fewer posts than expected.
+3. **Forward**: posts new items to rss.chat via `/newpost`, as the tracked
+   handle's synthetic account. Each post's text is followed by a permalink
+   back to the original on bsky.app.
+4. **Avatar sync**: each run, fetches the handle's current Bluesky avatar
+   (`app.bsky.actor.getProfile`) and, if it's changed since last synced,
+   merges it into the account's `prefs.myAvatarImageUrl` via `/getuserdata` +
+   `/saveprefs` — the same key rss.chat's feed/item rendering already reads
+   avatars from. Skipped when the account has no avatar; left stale (not
+   cleared) if an avatar is later removed on Bluesky.
+
 ## Reset Tool
 
 Clears all databases and settings files for a fresh start. Useful for testing, resetting development state, or preparing for a clean deployment.
@@ -189,6 +265,7 @@ go build -o restore ./tools/restore
 go build -o websocket-status ./tools/websocket-status
 go build -o testdata ./tools/testdata
 go build -o reset ./tools/reset
+go build -o bluesky-subscribe ./tools/bluesky-subscribe
 ```
 
 ## Testing

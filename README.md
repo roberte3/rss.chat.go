@@ -163,6 +163,7 @@ GET /checkwhitelist            # Check email whitelist status
 ```
 GET /sendconfirmingemail       # Send confirmation email
 GET /createnewuser             # Create new user account
+GET /localnewuser              # Local-only bootstrap; see Security model
 ```
 
 ### Write Endpoints (Authenticated)
@@ -417,6 +418,9 @@ See [todolist.md](todolist.md) for detailed roadmap.
 - Parameterized SQL queries
 - CORS headers for API endpoints
 - WAL mode with foreign key constraints
+- `/localnewuser` gated to loopback requests only, for scripted account
+  provisioning without an email round trip — see Security model below,
+  **`/localnewuser` is a deliberate exception**, before relying on it
 
 ### Recommended Deployment
 - Use HTTPS in production (reverse proxy)
@@ -425,6 +429,11 @@ See [todolist.md](todolist.md) for detailed roadmap.
 - Monitor disk usage (media database growth)
 - Configure SMTP for real email delivery
 - Rate limit authentication endpoints
+- If a reverse proxy runs on the same host as this server, confirm it always
+  sets `X-Forwarded-For` on what it forwards — `/localnewuser` trusts the
+  absence of that header to mean "not proxied," and a proxy that talks to the
+  backend over loopback without setting it would let anyone on the internet
+  reach a bootstrap endpoint meant only for the local operator
 
 ## Contributing
 
@@ -486,7 +495,8 @@ That is the remaining exposure and it is outside the server's control.
   address, so neither a third party's inbox nor this server's sending
   reputation can be flooded. Defaults are in `api/handler.go`.
 - The secret is compared in constant time.
-- The secret is never serialized into a response.
+- The secret is never serialized into a response — except by `/localnewuser`,
+  deliberately; see below.
 - Post ownership is checked before update and delete.
 
 ### What is not
@@ -500,6 +510,41 @@ That is the remaining exposure and it is outside the server's control.
   account compromise rather than a session hijack. This is why the HTML
   sanitization matters more here than the feature list suggests.
 - **No admin roles.** `IsUserAdmin` always returns false, as in the original.
+
+### `/localnewuser` is a deliberate exception
+
+Every other account-creation path (`/createnewuser`) is built so `emailSecret`
+can only ever reach its owner's mailbox — the field is `json:"-"` specifically
+so it can't be serialized into an HTTP response. `/localnewuser`
+(`api/localnewuser.go`) breaks that invariant on purpose: it returns
+`{screenname, email, emailSecret}` as plain JSON, so a script running on the
+same machine as the server can provision an account and get a working
+credential back without an email round trip. It exists for local tooling
+(e.g. bootstrapping the per-account synthetic users a Bluesky-forwarding
+utility would post as), ported from upstream `rssnetwork.js`'s endpoint of
+the same name.
+
+Because it hands back a bearer token in the clear, its entire security model
+rests on one check: `isLoopbackRequest` requires the connection's `RemoteAddr`
+to parse as a loopback address, and rejects the request outright if
+`X-Forwarded-For` is present at all. It does **not** consult the email
+whitelist, the blocklist, or either rate limiter — those protect the public
+signup path, and this isn't it. That means:
+
+- **This endpoint has no other line of defense.** If something on the same
+  host proxies internet traffic to this server over loopback without setting
+  `X-Forwarded-For`, `/localnewuser` will treat that traffic as a trusted
+  local operator and hand out credentials to anyone who asks. Confirm your
+  reverse proxy setup before deploying this publicly.
+- **It is unlimited.** No rate limit and no whitelist means anyone who does
+  satisfy the loopback check can mint accounts as fast as they can make
+  requests. That is fine for a trusted local script; it is not a defense
+  against a compromised process running on the same box.
+- **The response contract is a local deviation from upstream.** Upstream's
+  `/localnewuser` returns a redirect with the code embedded in the URL; the
+  Go port returns JSON instead, since nothing in the vendored client depends
+  on the redirect shape. Keep that in mind if this is ever exposed to
+  anything expecting byte-for-byte parity with the reference implementation.
 
 ## License
 
