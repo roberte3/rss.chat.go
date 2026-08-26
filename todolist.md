@@ -269,7 +269,7 @@ See Tier 2 item above.
 | Client Hosting | `client/` | ✅ Complete |
 | Email | `email/` | ✅ Complete |
 | CLI Tools | `tools/` | ✅ Complete (backup/restore/ws-monitor) |
-| Tests | `*_test.go` | ✅ 110 tests passing |
+| Tests | `*_test.go` | ✅ 110 tests passing
 
 ---
 
@@ -308,5 +308,39 @@ See Tier 2 item above.
 
 ---
 
-**Last Updated**: 2026-07-27  
-**Project Status**: v1.0 core complete, v1.1 complete (security hardening, bug fixes, testing infrastructure), v2.0 frontend work in planning phase
+## 📋 Recent API Changes from Dave Winer's RSS.Chat (as of 2026-08-05)
+
+Based on analysis of changes in the upstream repository, the following API and configuration changes have been made by Dave Winer since our last update:
+
+### New Features
+
+1. **WebSub Support**
+   - Added `flWebsubEnabled` configuration flag
+   - Added `urlWebsubHub` configuration for WebSub hub URL
+   - Added `pingWebsubHub` function to notify WebSub hubs when feeds are updated
+   - Modified feed update logic to ping both RSS Cloud and WebSub hubs
+   - Added WebSub headers to feed responses when enabled
+
+2. **New API Endpoint: `/readhttpfile`**
+   - Added a new endpoint that allows reading HTTP files (used for Scripts menu functionality)
+   - This endpoint was previously implemented inline but now uses a dedicated handler function
+   - Designed to fetch OPML files for the Scripts menu functionality
+
+### Configuration Changes
+
+1. Updated RSS documentation URL from HTTP to HTTPS
+2. Changed feed link construction to use `config.urlServerForClient` instead of hardcoded domain
+3. Added new configuration parameters for WebSub support
+4. Improved feed URL construction consistency
+
+### Impact on Go Implementation
+
+The Go implementation remains largely unaffected by these changes since:
+- The Go port doesn't currently implement the `/readhttpfile` endpoint
+- The Go port doesn't implement WebSub support (it only has RSS Cloud support)
+- The core API endpoints (newpost, getitembyguid, etc.) remain unchanged
+- The changes are mostly related to feed publishing and discovery mechanisms
+
+The most significant change is the addition of WebSub support, which is a new feature that would require additional implementation in the Go version if desired, but doesn't break existing functionality.
+
+This update does not affect the Go port's compatibility or existing functionality.
