@@ -9,10 +9,10 @@ import (
 
 // Pinger sends WebSub notifications to a hub when feeds are updated.
 type Pinger struct {
-	hubURL    string
-	client    *http.Client
-	enabled   bool
-	debugLog  *log.Logger
+	hubURL   string
+	client   *http.Client
+	enabled  bool
+	debugLog *log.Logger
 }
 
 // NewPinger creates a new WebSub pinger.

@@ -227,7 +227,7 @@ All tests:
 ## Protocol Compliance
 
 Tests verify compliance with:
-- **RFC 6685**: WebSub (Web Push) specification
+- **W3C WebSub Recommendation** (https://www.w3.org/TR/websub/)
 - **HTTP/1.1**: POST method, Content-Type headers
 - **Form Data**: `application/x-www-form-urlencoded` encoding
 

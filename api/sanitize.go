@@ -39,6 +39,8 @@ func newPostPolicy() *bluemonday.Policy {
 	// Every other disallowed tag is unwrapped, keeping its text.
 	p.SkipElementsContent("script", "style", "textarea", "option")
 
+	p.RequireNoFollowOnLinks(true)
+
 	return p
 }
 

@@ -432,14 +432,14 @@ func TestPingerMultipleHubURLs(t *testing.T) {
 // TestPingerFeedURLVariety verifies handling of diverse feed URL formats.
 func TestPingerFeedURLVariety(t *testing.T) {
 	feedURLs := []string{
-		"https://example.com/feed",                          // Simple
-		"http://example.com/feed?screenname=alice",          // Query param
-		"https://example.com:8080/feed",                     // Custom port
-		"https://subdomain.example.com/feed",                // Subdomain
-		"https://example.com/path/to/feed",                  // Path
-		"https://example.com/comments/alice/123.xml",        // Comments feed
-		"https://example.com/getsubscriptionlist",           // OPML
-		"https://example.com/feed?screenname=test%2Buser",   // Encoded chars
+		"https://example.com/feed",                        // Simple
+		"http://example.com/feed?screenname=alice",        // Query param
+		"https://example.com:8080/feed",                   // Custom port
+		"https://subdomain.example.com/feed",              // Subdomain
+		"https://example.com/path/to/feed",                // Path
+		"https://example.com/comments/alice/123.xml",      // Comments feed
+		"https://example.com/getsubscriptionlist",         // OPML
+		"https://example.com/feed?screenname=test%2Buser", // Encoded chars
 	}
 
 	for _, feedURL := range feedURLs {

@@ -535,7 +535,7 @@ Detailed documentation in [`websub/TESTING.md`](websub/TESTING.md):
 - 14 API integration tests
 - URL encoding, HTTP compliance, error handling
 - Concurrency and load testing
-- RFC 6685 compliance verification
+- W3C WebSub Recommendation compliance
 
 ### Running Full WebSub Suite
 

@@ -143,4 +143,3 @@ func TestPingerIsEnabled(t *testing.T) {
 		})
 	}
 }
-

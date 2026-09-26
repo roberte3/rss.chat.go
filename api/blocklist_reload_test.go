@@ -1,325 +1,160 @@
 package api
 
 import (
-	"encoding/json"
-	"io/ioutil"
+	"database/sql"
 	"os"
+	"path/filepath"
+	"sync"
 	"testing"
 	"time"
 
 	"github.com/roberte3/rss.chat.go/config"
+	"github.com/roberte3/rss.chat.go/db"
 )
 
-// TestBlocklistReloadFromConfigJSON tests using blocklist from config.json.
-func TestBlocklistReloadFromConfigJSON(t *testing.T) {
-	// Create handler
-	_, conn, handler := setupTestServer(t)
-	defer conn.Close()
-
-	// Create config with blocklist in BlockedUsersList
-	cfg := &config.Config{
-		ProductName:        "test",
-		ProductNameForDisplay: "Test",
-		MyDomain:           "http://localhost:8080",
-		URLServerForClient: "http://localhost:8080",
-		DatabasePath:       ":memory:",
-		BlocklistPath:      "",
-		BlockedUsersList:   []string{"blocked@example.com", "spam@example.com"},
+func writeBlocklistFile(t *testing.T, path string, mtime time.Time, emails ...string) {
+	t.Helper()
+	body := `{"blockedEmails": [`
+	for i, e := range emails {
+		if i > 0 {
+			body += ","
+		}
+		body += `"` + e + `"`
 	}
-	handler.Config = cfg
-
-	// Get merged blocklist
-	emails, err := handler.getMergedBlocklist()
-	if err != nil {
-		t.Fatalf("Failed to get merged blocklist: %v", err)
+	body += `]}`
+	if err := os.WriteFile(path, []byte(body), 0644); err != nil {
+		t.Fatalf("write blocklist: %v", err)
 	}
-
-	// Check that blocklist includes emails from config
-	if len(emails) != 2 {
-		t.Errorf("Expected 2 blocked emails, got %d", len(emails))
-	}
-
-	found := make(map[string]bool)
-	for _, email := range emails {
-		found[email] = true
-	}
-
-	if !found["blocked@example.com"] {
-		t.Error("blocked@example.com not in blocklist")
-	}
-	if !found["spam@example.com"] {
-		t.Error("spam@example.com not in blocklist")
+	// Set mtime explicitly: filesystem timestamp granularity varies, and a
+	// rewrite within the same tick would otherwise look unchanged.
+	if err := os.Chtimes(path, mtime, mtime); err != nil {
+		t.Fatalf("chtimes: %v", err)
 	}
 }
 
-// TestBlocklistReloadFromSeparateFile tests loading blocklist from separate blocklist.json file.
-func TestBlocklistReloadFromSeparateFile(t *testing.T) {
-	// Create a temporary blocklist.json file
-	blocklistPath := "test_blocklist.json"
-	blocklist := map[string]interface{}{
-		"blockedEmails": []string{"file-blocked@example.com", "file-spam@example.com"},
-	}
-
-	data, err := json.Marshal(blocklist)
+func blocklistRows(t *testing.T, conn *sql.DB) map[string]bool {
+	t.Helper()
+	emails, err := db.GetBlocklistEmails(conn)
 	if err != nil {
-		t.Fatalf("Failed to marshal blocklist: %v", err)
+		t.Fatalf("GetBlocklistEmails: %v", err)
 	}
-
-	if err := ioutil.WriteFile(blocklistPath, data, 0644); err != nil {
-		t.Fatalf("Failed to write blocklist file: %v", err)
+	m := make(map[string]bool, len(emails))
+	for _, e := range emails {
+		m[e] = true
 	}
-	defer os.Remove(blocklistPath)
+	return m
+}
 
-	// Create handler
-	_, conn, handler := setupTestServer(t)
-	defer conn.Close()
-
-	// Create config with blocklist path
-	cfg := &config.Config{
-		MyDomain:      "http://localhost:8080",
-		BlocklistPath: blocklistPath,
-	}
-	handler.Config = cfg
-
-	// Get merged blocklist
-	emails, err := handler.getMergedBlocklist()
-	if err != nil {
-		t.Fatalf("Failed to get merged blocklist: %v", err)
-	}
-
-	// Check that blocklist includes emails from file
-	if len(emails) != 2 {
-		t.Errorf("Expected 2 blocked emails, got %d: %v", len(emails), emails)
-	}
-
-	found := make(map[string]bool)
-	for _, email := range emails {
-		found[email] = true
-	}
-
-	if !found["file-blocked@example.com"] {
-		t.Error("file-blocked@example.com not in blocklist")
-	}
-	if !found["file-spam@example.com"] {
-		t.Error("file-spam@example.com not in blocklist")
+func assertAllowed(t *testing.T, h *Handler, email string, want bool) {
+	t.Helper()
+	if got := h.checkBlocklist(email); got != want {
+		t.Errorf("checkBlocklist(%q) = %v, want %v", email, got, want)
 	}
 }
 
-// TestBlocklistReloadMergesBothSources tests that blocklist merges from both config.json and blocklist.json.
-func TestBlocklistReloadMergesBothSources(t *testing.T) {
-	// Create blocklist.json
-	blocklistPath := "test_merged_blocklist.json"
-	blocklist := map[string]interface{}{
-		"blockedEmails": []string{"file-blocked@example.com"},
+func TestBlocklistConfigListEnforcedWithoutFile(t *testing.T) {
+	_, _, handler := setupTestServer(t)
+	handler.Config = &config.Config{
+		BlocklistPath:    filepath.Join(t.TempDir(), "missing.json"),
+		BlockedUsersList: []string{"Blocked@EXAMPLE.com", "  spam@example.com  "},
 	}
 
-	data, err := json.Marshal(blocklist)
-	if err != nil {
-		t.Fatalf("Failed to marshal blocklist: %v", err)
-	}
+	assertAllowed(t, handler, "blocked@example.com", false)
+	assertAllowed(t, handler, "SPAM@example.com", false)
+	assertAllowed(t, handler, "fine@example.com", true)
+}
 
-	if err := ioutil.WriteFile(blocklistPath, data, 0644); err != nil {
-		t.Fatalf("Failed to write blocklist file: %v", err)
-	}
-	defer os.Remove(blocklistPath)
-
-	// Create handler
+func TestBlocklistMergesConfigAndFile(t *testing.T) {
 	_, conn, handler := setupTestServer(t)
-	defer conn.Close()
-
-	// Create config with both sources
-	cfg := &config.Config{
-		MyDomain:         "http://localhost:8080",
-		BlocklistPath:    blocklistPath,
-		BlockedUsersList: []string{"config-blocked@example.com"},
-	}
-	handler.Config = cfg
-
-	// Get merged blocklist
-	emails, err := handler.getMergedBlocklist()
-	if err != nil {
-		t.Fatalf("Failed to get merged blocklist: %v", err)
+	path := filepath.Join(t.TempDir(), "blocklist.json")
+	writeBlocklistFile(t, path, time.Now(), "file@example.com", "both@example.com")
+	handler.Config = &config.Config{
+		BlocklistPath:    path,
+		BlockedUsersList: []string{"config@example.com", "BOTH@example.com"},
 	}
 
-	// Should have 2 unique emails from both sources
-	if len(emails) != 2 {
-		t.Errorf("Expected 2 blocked emails, got %d: %v", len(emails), emails)
-	}
+	assertAllowed(t, handler, "file@example.com", false)
+	assertAllowed(t, handler, "config@example.com", false)
+	assertAllowed(t, handler, "both@example.com", false)
+	assertAllowed(t, handler, "fine@example.com", true)
 
-	found := make(map[string]bool)
-	for _, email := range emails {
-		found[email] = true
-	}
-
-	if !found["config-blocked@example.com"] {
-		t.Error("config-blocked@example.com not in merged blocklist")
-	}
-	if !found["file-blocked@example.com"] {
-		t.Error("file-blocked@example.com not in merged blocklist")
+	if rows := blocklistRows(t, conn); len(rows) != 3 {
+		t.Errorf("expected 3 de-duplicated rows, got %v", rows)
 	}
 }
 
-// TestBlocklistReloadMtimeCache tests that blocklist is only reloaded when file mtime changes.
-func TestBlocklistReloadMtimeCache(t *testing.T) {
-	// Create blocklist.json
-	blocklistPath := "test_mtime_blocklist.json"
-	blocklist := map[string]interface{}{
-		"blockedEmails": []string{"initial@example.com"},
+func TestBlocklistHotReloadsOnFileChange(t *testing.T) {
+	_, _, handler := setupTestServer(t)
+	path := filepath.Join(t.TempDir(), "blocklist.json")
+	base := time.Now().Add(-time.Hour)
+	writeBlocklistFile(t, path, base, "old@example.com")
+	handler.Config = &config.Config{BlocklistPath: path}
+
+	assertAllowed(t, handler, "old@example.com", false)
+	assertAllowed(t, handler, "new@example.com", true)
+
+	writeBlocklistFile(t, path, base.Add(time.Minute), "new@example.com")
+
+	assertAllowed(t, handler, "old@example.com", true)
+	assertAllowed(t, handler, "new@example.com", false)
+}
+
+func TestBlocklistFileRemovalFallsBackToConfigList(t *testing.T) {
+	_, _, handler := setupTestServer(t)
+	path := filepath.Join(t.TempDir(), "blocklist.json")
+	writeBlocklistFile(t, path, time.Now(), "file@example.com")
+	handler.Config = &config.Config{
+		BlocklistPath:    path,
+		BlockedUsersList: []string{"config@example.com"},
 	}
 
-	data, err := json.Marshal(blocklist)
-	if err != nil {
-		t.Fatalf("Failed to marshal blocklist: %v", err)
+	assertAllowed(t, handler, "file@example.com", false)
+
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
 	}
 
-	if err := ioutil.WriteFile(blocklistPath, data, 0644); err != nil {
-		t.Fatalf("Failed to write blocklist file: %v", err)
-	}
-	defer os.Remove(blocklistPath)
+	assertAllowed(t, handler, "file@example.com", true)
+	assertAllowed(t, handler, "config@example.com", false)
+}
 
-	// Create handler
+// The table is only rewritten when blocklist.json changes, not per request.
+func TestBlocklistDoesNotResyncWhenUnchanged(t *testing.T) {
 	_, conn, handler := setupTestServer(t)
-	defer conn.Close()
+	path := filepath.Join(t.TempDir(), "blocklist.json")
+	writeBlocklistFile(t, path, time.Now(), "file@example.com")
+	handler.Config = &config.Config{BlocklistPath: path}
 
-	cfg := &config.Config{
-		MyDomain:      "http://localhost:8080",
-		BlocklistPath: blocklistPath,
-	}
-	handler.Config = cfg
+	assertAllowed(t, handler, "file@example.com", false)
 
-	// First load
-	emails1, err := handler.getMergedBlocklist()
-	if err != nil {
-		t.Fatalf("Failed first load: %v", err)
+	// Overwrite the table behind the handler's back. A per-request resync
+	// would wipe this sentinel out.
+	if err := db.SyncBlocklistToDB(conn, []string{"sentinel@example.com"}); err != nil {
+		t.Fatal(err)
 	}
 
-	if len(emails1) != 1 || emails1[0] != "initial@example.com" {
-		t.Errorf("First load failed: got %v", emails1)
-	}
+	assertAllowed(t, handler, "anyone@example.com", true)
 
-	// Second load (file unchanged, should use cache)
-	emails2, err := handler.getMergedBlocklist()
-	if err != nil {
-		t.Fatalf("Failed second load: %v", err)
-	}
-
-	if len(emails2) != 1 || emails2[0] != "initial@example.com" {
-		t.Errorf("Second load failed: got %v", emails2)
-	}
-
-	// Wait for mtime to change (Unix mtime has 1-second granularity)
-	time.Sleep(1100 * time.Millisecond)
-
-	// Update blocklist file
-	newBlocklist := map[string]interface{}{
-		"blockedEmails": []string{"initial@example.com", "new@example.com"},
-	}
-
-	newData, err := json.Marshal(newBlocklist)
-	if err != nil {
-		t.Fatalf("Failed to marshal updated blocklist: %v", err)
-	}
-
-	if err := ioutil.WriteFile(blocklistPath, newData, 0644); err != nil {
-		t.Fatalf("Failed to write updated blocklist file: %v", err)
-	}
-
-	// Third load (file changed, should reload)
-	emails3, err := handler.getMergedBlocklist()
-	if err != nil {
-		t.Fatalf("Failed third load: %v", err)
-	}
-
-	if len(emails3) != 2 {
-		t.Errorf("Third load failed, expected 2 emails, got %d: %v", len(emails3), emails3)
-	}
-
-	found := make(map[string]bool)
-	for _, email := range emails3 {
-		found[email] = true
-	}
-
-	if !found["new@example.com"] {
-		t.Error("new@example.com not in reloaded blocklist")
+	if rows := blocklistRows(t, conn); !rows["sentinel@example.com"] || len(rows) != 1 {
+		t.Errorf("blocklist was resynced despite unchanged file: %v", rows)
 	}
 }
 
-// TestBlocklistReloadNormalizeEmail tests that email normalization works correctly.
-func TestBlocklistReloadNormalizeEmail(t *testing.T) {
-	// Create handler
-	_, conn, handler := setupTestServer(t)
-	defer conn.Close()
+func TestBlocklistConcurrentChecks(t *testing.T) {
+	_, _, handler := setupTestServer(t)
+	path := filepath.Join(t.TempDir(), "blocklist.json")
+	writeBlocklistFile(t, path, time.Now(), "blocked@example.com")
+	handler.Config = &config.Config{BlocklistPath: path}
 
-	// Create config with mixed-case emails
-	cfg := &config.Config{
-		MyDomain:         "http://localhost:8080",
-		BlocklistPath:    "",
-		BlockedUsersList: []string{"Blocked@EXAMPLE.COM", "  SPAM@example.com  "},
+	var wg sync.WaitGroup
+	for i := 0; i < 20; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			if handler.checkBlocklist("blocked@example.com") {
+				t.Error("blocked address was allowed")
+			}
+		}()
 	}
-	handler.Config = cfg
-
-	// Get blocklist
-	emails, err := handler.getMergedBlocklist()
-	if err != nil {
-		t.Fatalf("Failed to get merged blocklist: %v", err)
-	}
-
-	// Check normalization
-	if len(emails) != 2 {
-		t.Errorf("Expected 2 emails, got %d", len(emails))
-	}
-
-	found := make(map[string]bool)
-	for _, email := range emails {
-		found[email] = true
-	}
-
-	// All should be lowercase
-	if !found["blocked@example.com"] {
-		t.Error("blocked@example.com not found (normalization failed)")
-	}
-	if !found["spam@example.com"] {
-		t.Error("spam@example.com not found (normalization failed)")
-	}
-}
-
-// TestCheckBlocklistWithReload tests the full checkBlocklist flow with reload.
-func TestCheckBlocklistWithReload(t *testing.T) {
-	// Create blocklist.json
-	blocklistPath := "test_check_blocklist.json"
-	blocklist := map[string]interface{}{
-		"blockedEmails": []string{"blocked@example.com"},
-	}
-
-	data, err := json.Marshal(blocklist)
-	if err != nil {
-		t.Fatalf("Failed to marshal blocklist: %v", err)
-	}
-
-	if err := ioutil.WriteFile(blocklistPath, data, 0644); err != nil {
-		t.Fatalf("Failed to write blocklist file: %v", err)
-	}
-	defer os.Remove(blocklistPath)
-
-	// Create handler
-	_, conn, handler := setupTestServer(t)
-	defer conn.Close()
-
-	cfg := &config.Config{
-		MyDomain:      "http://localhost:8080",
-		BlocklistPath: blocklistPath,
-	}
-	handler.Config = cfg
-
-	// Check blocked email - should return false (not allowed)
-	isAllowed := handler.checkBlocklist("blocked@example.com")
-	if isAllowed {
-		t.Error("blocked@example.com should not be allowed")
-	}
-
-	// Check unblocked email - should return true (allowed)
-	isAllowed = handler.checkBlocklist("allowed@example.com")
-	if !isAllowed {
-		t.Error("allowed@example.com should be allowed")
-	}
+	wg.Wait()
 }

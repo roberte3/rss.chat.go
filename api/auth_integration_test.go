@@ -18,9 +18,9 @@ type MockEmailSender struct {
 
 // EmailRecord represents a sent email.
 type EmailRecord struct {
-	Recipient        string
-	ConfirmationURL  string
-	OperationType    string
+	Recipient       string
+	ConfirmationURL string
+	OperationType   string
 }
 
 // SendConfirmationEmail records the email.

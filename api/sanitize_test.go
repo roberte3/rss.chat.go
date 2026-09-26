@@ -28,7 +28,7 @@ func TestSanitizePostHTML(t *testing.T) {
 		{
 			name:     "preserves links",
 			input:    `<a href="https://example.com">click here</a>`,
-			expected: `<a href="https://example.com">click here</a>`,
+			expected: `<a href="https://example.com" rel="nofollow">click here</a>`,
 		},
 		{
 			name:     "preserves bold and italic",
@@ -135,7 +135,7 @@ func TestSanitizePostHTML(t *testing.T) {
 <li>Point 2</li>
 </ul>
 </blockquote>
-<p>Check <a href="https://example.com">this link</a>.</p>
+<p>Check <a href="https://example.com" rel="nofollow">this link</a>.</p>
 <p><img src="/media/123" alt="photo"></p>`,
 		},
 		// The cases below pin the allowlist to config.legalTags in
@@ -179,7 +179,7 @@ func TestSanitizePostHTML(t *testing.T) {
 		{
 			name:     "drops anchor attributes other than href",
 			input:    `<a href="https://x.com" target="_blank" title="ti">x</a>`,
-			expected: `<a href="https://x.com">x</a>`,
+			expected: `<a href="https://x.com" rel="nofollow">x</a>`,
 		},
 		{
 			name:     "drops paragraph attributes",
@@ -194,17 +194,17 @@ func TestSanitizePostHTML(t *testing.T) {
 		{
 			name:     "allows ftp links",
 			input:    `<a href="ftp://e.com/f">ftp</a>`,
-			expected: `<a href="ftp://e.com/f">ftp</a>`,
+			expected: `<a href="ftp://e.com/f" rel="nofollow">ftp</a>`,
 		},
 		{
 			name:     "allows tel links",
 			input:    `<a href="tel:+15551234">tel</a>`,
-			expected: `<a href="tel:+15551234">tel</a>`,
+			expected: `<a href="tel:+15551234" rel="nofollow">tel</a>`,
 		},
 		{
 			name:     "allows mailto links",
 			input:    `<a href="mailto:a@b.com">mail</a>`,
-			expected: `<a href="mailto:a@b.com">mail</a>`,
+			expected: `<a href="mailto:a@b.com" rel="nofollow">mail</a>`,
 		},
 		{
 			name:     "drops comments",
