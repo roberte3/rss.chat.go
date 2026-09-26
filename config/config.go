@@ -62,6 +62,12 @@ type Config struct {
 	WebsubEnabled bool   `json:"flWebsubEnabled"` // Enable WebSub protocol support (default: false)
 	URLWebsubHub  string `json:"urlWebsubHub"`    // WebSub hub URL to ping (e.g., https://rpc.rsscloud.io/websub)
 
+	// Mentions configuration
+	URLTemplateForMention string `json:"urlTemplateForMention"` // URL template with {screenname} placeholder
+
+	// Hashtags configuration
+	URLTemplateForHashtag string `json:"urlTemplateForHashtag"` // URL template with {tag} placeholder (lowercased)
+
 	// Post cleanup
 	RemoveBlanksAtEnd        bool   `json:"flRemoveBlanksAtEnd"`      // Strip trailing empty paragraphs (default: false)
 	TitleForSubscriptionList string `json:"titleForSubscriptionList"` // Custom OPML title
@@ -162,6 +168,14 @@ func (c *Config) applyDefaults() {
 
 	if c.URLWebsubHub == "" {
 		c.URLWebsubHub = "https://rpc.rsscloud.io/websub"
+	}
+
+	if c.URLTemplateForMention == "" {
+		c.URLTemplateForMention = c.MyDomain + "/?screenname={screenname}"
+	}
+
+	if c.URLTemplateForHashtag == "" {
+		c.URLTemplateForHashtag = c.MyDomain + "/?tag={tag}"
 	}
 
 	if c.BlocklistPath == "" {
