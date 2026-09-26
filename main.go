@@ -179,7 +179,7 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	clientConfig := client.Config{
 		ProductName:                 cfg.ProductName,
 		ProductNameForDisplay:       cfg.ProductNameForDisplay,
-		Version:                     "1.0",
+		Version:                     "0.6.14",
 		EnableLogin:                 true,
 		URLServerForClient:          cfg.URLServerForClient,
 		URLWebsocketServerForClient: cfg.URLWebsocketServerForClient,

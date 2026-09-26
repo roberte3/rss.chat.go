@@ -363,7 +363,7 @@ go build ./...
 go build -o server .
 
 # Build with version info
-go build -ldflags="-X main.Version=1.0.0" .
+go build -ldflags="-X main.Version=0.6.14" .
 ```
 
 ### Running Tests During Development

@@ -162,9 +162,8 @@ When fixing a bug, confirm the new test fails against the old behaviour before c
   implementing `/readhttpfile` is not fatal: the fetch fails and `startScriptsMenus` logs to
   the console, so the menu simply never appears.
 
-  Upstream's version takes a `url` parameter and returns whatever it fetches, with no
-  authentication, scheme check, host check or size limit — an unauthenticated SSRF that would
-  let any caller use the server to reach cloud metadata endpoints and private-network hosts.
-  Porting it faithfully is the one place where following `rssnetwork.js` is the wrong call.
-  If it gets built, it needs http/https only, resolved addresses checked against loopback,
-  private and link-local ranges, revalidation on every redirect hop, plus size and time caps.
+  Upstream's version originally took a `url` parameter and returned whatever it fetched, with no
+  authentication, scheme check, host check or size limit — an unauthenticated SSRF risk.
+  Dave Winer fixed this (August 1, 2026, v0.6.14) by restricting `/readhttpfile` to only
+  fetch from `config.urlMenuOpml`, eliminating the SSRF surface. If this endpoint is ever
+  implemented in Go, include that same authorization check from the start.
