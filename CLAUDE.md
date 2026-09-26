@@ -17,7 +17,7 @@ reference is gitignored, so clone it separately when you need it:
     go build ./...                       # build
     go run . -setup                      # create config.json, databases, settings, blocklist
     go run .                             # run (requires config.json)
-    go test ./...                        # full suite (~139 tests, 10 packages)
+    go test ./...                        # full suite (~170+ tests, 12 packages)
     go test -race ./...                  # what CI runs; always check before pushing
     go test ./api/ -run TestDeletePost -v # single test
     gofmt -l .                           # must be empty; CI fails otherwise
@@ -111,6 +111,36 @@ global feed, comments feed, OPML) include this header when WebSub is configured.
 
 Hub ping failures (network errors, 4xx/5xx responses) are logged but do not block the user's
 operation. The pinger runs asynchronously to avoid latency impact on feed writes.
+
+### @Mentions & #Hashtags (v1.2 Features)
+
+**Text Transformations** (v1.2 in progress): Both mentions and hashtags use a generic text-node
+transformer that processes URLs, @mentions, and #hashtags in a single HTML parse pass for efficiency.
+
+**Phase 0: Generic Transformer** (`api/textnodes.go`)
+- `TransformTextNodes` applies multiple matchers in one parse
+- Each matcher is a regex + callback that produces nodes to splice into the DOM
+- Skips transformation in `<a>`, `<pre>`, `<code>`, `<script>`, `<style>` tags
+- Handles remaining text (e.g., trimmed trailing punctuation)
+
+**@Mentions** (Phases 1-2 complete, Phase 3 🔄)
+- **Phase 1 - Rendering**: `MentionMatcher` in `api/mentions.go` converts `@screenname` to links
+  - Case-insensitive user lookup (displays original casing, links canonical name)
+  - Boundary detection prevents email false matches (`user@example.com` stays plain)
+  - Config: `urlTemplateForMention` with `{screenname}` placeholder
+- **Phase 2 - Storage**: `mentions` table in database with CASCADE delete
+  - `db.StoreMentions(db, itemID, screennames)` atomically updates mentions
+  - `db.GetMentionsForItem(db, itemID)` and `db.GetItemsForMention` for queries
+- **Phase 3 - Discovery** (planned): `/getmentions` endpoint, websocket `mention` events
+
+**#Hashtags** (Planned for v1.2)
+- Extraction & storage: hashtags table with tag/itemId primary key
+- Rendering: link to configurable `urlTemplateForHashtag` with `{tag}` placeholder
+- Discovery API: `/gethashtagitems`, `/gettrendinghashtags`, `/feed?tag=` RSS feed
+- Key feature: Every hashtag can be an RSS feed for topic-based subscriptions
+
+**Integration**: Mention extraction will be integrated into `HandleNewPost`/`HandleUpdatePost` in
+`api/writes.go` after URL linkification, running all transforms in one pass via `TransformTextNodes`.
 
 ### The web client is vendored, not ours
 
