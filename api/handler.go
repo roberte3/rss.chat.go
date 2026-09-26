@@ -137,6 +137,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	register("GET", "/getrecentitems", h.GetRecentItems)
 	register("GET", "/getrecentuseritems", h.GetRecentUserItems)
 	register("GET", "/getmentions", h.GetMentions)
+	register("GET", "/gethashtagitems", h.GetHashtagItems)
+	register("GET", "/gettrendinghashtags", h.GetTrendingHashtags)
 	register("GET", "/getitembyguid", h.GetItemByGuid)
 	register("GET", "/getitemandreplies", h.GetItemAndReplies)
 	register("GET", "/getiteminfo", h.GetItemInfo)
@@ -350,6 +352,49 @@ func (h *Handler) GetMentions(w http.ResponseWriter, r *http.Request) {
 	}
 
 	RespondJSON(w, items)
+}
+
+// GetHashtagItems returns items tagged with a specific hashtag.
+// Query params: tag (required), ct (optional), maxct (optional, default 100)
+func (h *Handler) GetHashtagItems(w http.ResponseWriter, r *http.Request) {
+	tag := r.URL.Query().Get("tag")
+	if tag == "" {
+		RespondError(w, "Can't get hashtag items because tag is required")
+		return
+	}
+
+	ct := r.URL.Query().Get("ct")
+	maxCt := parseIntParam(r, "maxct", 100)
+
+	items, err := getHashtagItems(h.DB, tag, ct, maxCt, h.FeedConfig.BaseURL)
+	if err != nil {
+		RespondError(w, "Can't get hashtag items because "+err.Error())
+		return
+	}
+
+	RespondJSON(w, items)
+}
+
+// GetTrendingHashtags returns trending hashtags.
+// Query params: days (optional, default 7), limit (optional, default 50)
+func (h *Handler) GetTrendingHashtags(w http.ResponseWriter, r *http.Request) {
+	days := parseIntParam(r, "days", 7)
+	limit := parseIntParam(r, "limit", 50)
+
+	tags, err := db.GetTrendingHashtags(h.DB, days, limit)
+	if err != nil {
+		RespondError(w, "Can't get trending hashtags because "+err.Error())
+		return
+	}
+
+	if tags == nil {
+		tags = []struct {
+			Tag   string
+			Count int
+		}{}
+	}
+
+	RespondJSON(w, tags)
 }
 
 // GetItemByGuid returns a post by its guid.

@@ -41,6 +41,26 @@ func getMentions(conn *sql.DB, screenname, ct string, maxCt int, baseURL string)
 	return result, nil
 }
 
+// getHashtagItems fetches items tagged with a specific hashtag.
+func getHashtagItems(conn *sql.DB, tag, ct string, maxCt int, baseURL string) ([]db.Item, error) {
+	// GetItemsForHashtag already returns full items
+	// We just need to filter out deleted items
+	items, err := db.GetItemsForHashtag(conn, tag, ct, maxCt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter out deleted items
+	var result []db.Item
+	for _, item := range items {
+		if !item.FlDeleted {
+			result = append(result, item)
+		}
+	}
+
+	return result, nil
+}
+
 // getItemByGuid fetches a post by its GUID.
 func getItemByGuid(conn *sql.DB, guid, viewerScreenname, baseURL string) (*db.Item, error) {
 	// Parse the guid to get the item ID

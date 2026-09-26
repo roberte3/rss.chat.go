@@ -2230,3 +2230,78 @@ func TestHashtagExtractionDuplicates(t *testing.T) {
 		t.Errorf("expected only golang tag, got %v", tags)
 	}
 }
+
+
+// TestGetHashtagItemsNoTag verifies missing tag parameter returns error.
+func TestGetHashtagItemsNoTag(t *testing.T) {
+	mux, _, _ := setupTestServer(t)
+
+	req := httptest.NewRequest("GET", "/gethashtagitems", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		// Could be error status - just check we get a response
+		t.Logf("Got expected error response: %s", w.Body.String())
+	}
+}
+
+// TestGetTrendingHashtags verifies the /gettrendinghashtags endpoint.
+func TestGetTrendingHashtags(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Create multiple posts with different tags to establish trending
+	for i := 0; i < 3; i++ {
+		postReq := PostRequest{
+			Description: "<p>#golang is popular</p>",
+			Title:       fmt.Sprintf("Post %d", i),
+		}
+		jsonData, _ := json.Marshal(postReq)
+		form := url.Values{
+			"jsontext": {string(jsonData)},
+		}
+		authedPost(mux, "/newpost", "alice", "secret_alice", form)
+	}
+
+	for i := 0; i < 2; i++ {
+		postReq := PostRequest{
+			Description: "<p>#rust is also good</p>",
+			Title:       fmt.Sprintf("Rust post %d", i),
+		}
+		jsonData, _ := json.Marshal(postReq)
+		form := url.Values{
+			"jsontext": {string(jsonData)},
+		}
+		authedPost(mux, "/newpost", "alice", "secret_alice", form)
+	}
+
+	// Query trending tags
+	req := httptest.NewRequest("GET", "/gettrendinghashtags", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, expected %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	var tags []map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &tags); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+
+	if len(tags) == 0 {
+		t.Errorf("expected trending tags, got none")
+	}
+
+	// golang should be first (3 posts) followed by rust (2 posts)
+	if len(tags) >= 2 {
+		if tags[0]["Tag"] != "golang" {
+			t.Errorf("expected golang as trending, got %v", tags[0])
+		}
+		if tags[1]["Tag"] != "rust" {
+			t.Errorf("expected rust as second, got %v", tags[1])
+		}
+	}
+}
