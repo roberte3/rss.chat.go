@@ -38,6 +38,12 @@ type Config struct {
 	// Server ports
 	HTTPPort int `json:"httpPort"` // HTTP server port (default: 8081)
 
+	// Logging configuration
+	LogLevel           string `json:"logLevel"`           // debug, info, warn, error (default: info)
+	LogFormat          string `json:"logFormat"`          // json or console (default: console)
+	LogIncludeSource   bool   `json:"flLogIncludeSource"` // Include file:line in logs (default: false)
+	LogRequestIDHeader string `json:"logRequestIDHeader"` // HTTP header for request ID (default: X-Request-ID)
+
 	// WebSocket configuration
 	WebsocketEnabled            bool   `json:"flWebsocketEnabled"`
 	WebsocketPort               int    `json:"websocketPort"`
@@ -191,6 +197,19 @@ func (c *Config) applyDefaults() {
 Disallow: /getitembyguid
 Disallow: /getiteminfo
 `
+	}
+
+	// Logging defaults
+	if c.LogLevel == "" {
+		c.LogLevel = "info"
+	}
+
+	if c.LogFormat == "" {
+		c.LogFormat = "console"
+	}
+
+	if c.LogRequestIDHeader == "" {
+		c.LogRequestIDHeader = "X-Request-ID"
 	}
 
 	// Normalize URLs to have trailing slashes

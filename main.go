@@ -7,6 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"log/slog"
 	"net/http"
 	"os"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/roberte3/rss.chat.go/db"
 	"github.com/roberte3/rss.chat.go/email"
 	"github.com/roberte3/rss.chat.go/feed"
+	applog "github.com/roberte3/rss.chat.go/log"
 	"github.com/roberte3/rss.chat.go/publish"
 	"github.com/roberte3/rss.chat.go/setup"
 	"github.com/roberte3/rss.chat.go/websocket"
@@ -73,6 +75,16 @@ func main() {
 }
 
 func runHttpSvr(conn *sql.DB, cfg *config.Config) {
+	// Initialize structured logging
+	if err := applog.Init(applog.Config{
+		Level:           cfg.LogLevel,
+		Format:          cfg.LogFormat,
+		IncludeSource:   cfg.LogIncludeSource,
+		RequestIDHeader: cfg.LogRequestIDHeader,
+	}); err != nil {
+		slog.Error("failed to initialize logging", "err", err)
+	}
+
 	mux := http.NewServeMux()
 	ctx := context.Background()
 
@@ -196,8 +208,12 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 	if cfg.WebsocketEnabled {
 		fmt.Println("WebSocket enabled at:", cfg.URLWebsocketServerForClient)
 	}
+
+	// Wrap mux with request logging middleware
+	loggedMux := api.NewRequestLogger(mux, cfg.LogRequestIDHeader)
+
 	addr := fmt.Sprintf(":%d", cfg.HTTPPort)
-	if err := http.ListenAndServe(addr, mux); err != nil {
+	if err := http.ListenAndServe(addr, loggedMux); err != nil {
 		panic(err)
 	}
 }
