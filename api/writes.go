@@ -90,6 +90,14 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		return
 	}
 
+	// Extract and store mentions from the post
+	if mentions, err := ExtractMentions(h.DB, sanitized); err == nil && len(mentions) > 0 {
+		if err := db.StoreMentions(h.DB, int(itemID), mentions); err != nil {
+			// Log but don't fail the request - mentions are secondary feature
+			fmt.Printf("Warning: failed to store mentions: %v\n", err)
+		}
+	}
+
 	// Fetch the created item
 	item, err := db.GetItemByID(h.DB, user.Screenname, itemID, h.FeedConfig.BaseURL)
 	if err != nil {
@@ -203,6 +211,16 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 	if err != nil {
 		RespondError(w, "Can't update post because "+err.Error())
 		return
+	}
+
+	// Extract and store mentions from the updated post (if description was updated)
+	if description != "" {
+		if mentions, err := ExtractMentions(h.DB, description); err == nil {
+			if err := db.StoreMentions(h.DB, int(itemID), mentions); err != nil {
+				// Log but don't fail the request
+				fmt.Printf("Warning: failed to update mentions: %v\n", err)
+			}
+		}
 	}
 
 	// Fetch the updated item

@@ -167,6 +167,13 @@ func createTestSchema(conn *sql.DB) error {
 			email TEXT PRIMARY KEY,
 			whenAdded DATETIME DEFAULT CURRENT_TIMESTAMP
 		)`,
+		`CREATE TABLE mentions (
+			itemId INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+			screenname TEXT NOT NULL REFERENCES users(screenname),
+			whenCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (itemId, screenname)
+		)`,
+		`CREATE INDEX idx_mentions_screenname ON mentions(screenname)`,
 	}
 
 	for _, query := range queries {
@@ -1845,5 +1852,182 @@ func TestWebSubOPMLHeader(t *testing.T) {
 
 	if !strings.Contains(link, "getsubscriptionlist") {
 		t.Errorf("Link header missing OPML URL: %s", link)
+	}
+}
+
+// TestMentionExtractionOnNewPost verifies mentions are extracted and stored when creating a post.
+func TestMentionExtractionOnNewPost(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	// Create users
+	insertTestUser(t, conn, "alice", "secret_alice")
+	insertTestUser(t, conn, "bob", "secret_bob")
+
+	// Alice creates a post mentioning Bob
+	postReq := PostRequest{
+		Description: "hello <p>@bob this is great!</p>",
+		Title:       "Test post",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form := url.Values{
+		"jsontext": {string(jsonData)},
+	}
+
+	w := authedPost(mux, "/newpost", "alice", "secret_alice", form)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, expected %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// Parse response to get item ID
+	var result map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	itemID := int(result["id"].(float64))
+
+	// Verify mention was stored
+	mentions, err := db.GetMentionsForItem(conn, itemID)
+	if err != nil {
+		t.Fatalf("failed to get mentions: %v", err)
+	}
+
+	if len(mentions) != 1 || mentions[0] != "bob" {
+		t.Errorf("expected mention of bob, got %v", mentions)
+	}
+}
+
+// TestMentionExtractionOnUpdatePost verifies mentions are updated when editing a post.
+func TestMentionExtractionOnUpdatePost(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	// Create users
+	insertTestUser(t, conn, "alice", "secret_alice")
+	insertTestUser(t, conn, "bob", "secret_bob")
+	insertTestUser(t, conn, "charlie", "secret_charlie")
+
+	// Alice creates a post mentioning Bob
+	postReq := PostRequest{
+		Description: "<p>@bob check this out</p>",
+		Title:       "Test post",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form := url.Values{
+		"jsontext": {string(jsonData)},
+	}
+
+	w := authedPost(mux, "/newpost", "alice", "secret_alice", form)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("failed to create post: %s", w.Body.String())
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &result)
+	itemID := int64(result["id"].(float64))
+
+	// Verify initial mention
+	mentions, _ := db.GetMentionsForItem(conn, int(itemID))
+	if len(mentions) != 1 || mentions[0] != "bob" {
+		t.Fatalf("initial mention check failed: got %v", mentions)
+	}
+
+	// Alice updates post to mention Charlie instead
+	updateReq := PostRequest{
+		Description: "<p>@charlie this is updated</p>",
+	}
+	updateData, _ := json.Marshal(updateReq)
+	updateForm := url.Values{
+		"id":       {fmt.Sprintf("%d", itemID)},
+		"jsontext": {string(updateData)},
+	}
+
+	w = authedPost(mux, "/updatepost", "alice", "secret_alice", updateForm)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("failed to update post: %s", w.Body.String())
+	}
+
+	// Verify mentions were updated (Bob gone, Charlie added)
+	updatedMentions, _ := db.GetMentionsForItem(conn, int(itemID))
+	if len(updatedMentions) != 1 || updatedMentions[0] != "charlie" {
+		t.Errorf("expected mention of charlie after update, got %v", updatedMentions)
+	}
+}
+
+// TestMentionExtractionCaseInsensitive verifies case-insensitive mention matching.
+func TestMentionExtractionCaseInsensitive(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	// Create users
+	insertTestUser(t, conn, "alice", "secret_alice")
+	insertTestUser(t, conn, "bob", "secret_bob")
+
+	// Bob creates a post with mention in different case
+	postReq := PostRequest{
+		Description: "<p>hello @BOB and @Alice!</p>",
+		Title:       "Test case",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form := url.Values{
+		"jsontext": {string(jsonData)},
+	}
+
+	w := authedPost(mux, "/newpost", "bob", "secret_bob", form)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("failed to create post: %s", w.Body.String())
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &result)
+	itemID := int(result["id"].(float64))
+
+	// Verify both case-insensitive mentions were stored with canonical names
+	mentions, _ := db.GetMentionsForItem(conn, itemID)
+	if len(mentions) != 2 {
+		t.Errorf("expected 2 mentions, got %d: %v", len(mentions), mentions)
+	}
+
+	mentionMap := make(map[string]bool)
+	for _, m := range mentions {
+		mentionMap[m] = true
+	}
+
+	if !mentionMap["bob"] || !mentionMap["alice"] {
+		t.Errorf("expected mentions of bob and alice, got %v", mentions)
+	}
+}
+
+// TestMentionExtractionNonexistentUser verifies non-existent users aren't stored as mentions.
+func TestMentionExtractionNonexistentUser(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Alice creates a post mentioning non-existent users
+	postReq := PostRequest{
+		Description: "<p>@nonexistent @alice @alsobaduser</p>",
+		Title:       "Test invalid mentions",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form := url.Values{
+		"jsontext": {string(jsonData)},
+	}
+
+	w := authedPost(mux, "/newpost", "alice", "secret_alice", form)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("failed to create post: %s", w.Body.String())
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &result)
+	itemID := int(result["id"].(float64))
+
+	// Verify only alice was stored (the only existing user)
+	mentions, _ := db.GetMentionsForItem(conn, itemID)
+	if len(mentions) != 1 || mentions[0] != "alice" {
+		t.Errorf("expected only alice mention, got %v", mentions)
 	}
 }
