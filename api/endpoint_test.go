@@ -62,12 +62,31 @@ func setupTestServer(t *testing.T) (*http.ServeMux, *sql.DB, *Handler) {
 	}
 	pub := publish.NewPublisher(feedsDir, feedConfig)
 
+	// Create media database
+	mediaDBPath := filepath.Join(tmpDir, "media.db")
+	mediaDB, err := db.OpenMediaDB(mediaDBPath)
+	if err != nil {
+		t.Fatalf("failed to open media database: %v", err)
+	}
+	t.Cleanup(func() {
+		mediaDB.Close()
+	})
+
+	// Create temp media path
+	tempMediaPath := filepath.Join(tmpDir, "temp_media")
+	if err := os.MkdirAll(tempMediaPath, 0755); err != nil {
+		t.Fatalf("failed to create temp media dir: %v", err)
+	}
+
 	// Create handler
 	handler := NewHandler(conn, pub, feedConfig)
 	handler.RobotsContent = `User-agent: *
 Disallow: /getitembyguid
 Disallow: /getiteminfo
 `
+	handler.MediaDB = mediaDB
+	handler.MaxMediaUploadBytes = 2 * 1024 * 1024 // 2MB limit
+	handler.TempMediaPath = tempMediaPath
 
 	// Set up config with WebSub defaults
 	handler.Config = &config.Config{

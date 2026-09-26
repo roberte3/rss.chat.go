@@ -88,6 +88,22 @@ func UpdateUserPrefs(conn *sql.DB, screenname string, prefs []byte) error {
 	return nil
 }
 
+// UpdateUserImageURL updates a user's avatar URL.
+func UpdateUserImageURL(conn *sql.DB, screenname, imageURL string) error {
+	result, err := conn.Exec(`update users set imageUrl = ? where screenname = ?`, imageURL, screenname)
+	if err != nil {
+		return err
+	}
+	ct, err := result.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if ct == 0 {
+		return fmt.Errorf("Can't update imageUrl because there is no user with screenname %q.", screenname)
+	}
+	return nil
+}
+
 // GetAllScreennames ports getAllScreennames.
 func GetAllScreennames(conn *sql.DB) ([]string, error) {
 	rows, err := conn.Query(`select screenname from users`)

@@ -120,6 +120,22 @@ func (h *Handler) UploadMediaAuth(w http.ResponseWriter, r *http.Request) {
 	h.HandleUploadMedia(w, r, user)
 }
 
+// UploadAvatarAuth wraps HandleUploadAvatar with authentication
+func (h *Handler) UploadAvatarAuth(w http.ResponseWriter, r *http.Request) {
+	denyCaching(w)
+
+	email := r.FormValue("emailaddress")
+	code := r.FormValue("emailcode")
+
+	user, err := AuthenticateUser(h.DB, email, code)
+	if err != nil {
+		RespondError(w, "Can't upload avatar because "+err.Error())
+		return
+	}
+
+	h.HandleUploadAvatar(w, r, user)
+}
+
 // RegisterRoutes registers all API endpoints with the mux at both root and /api/ paths.
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	// Helper to register each route at both /route and /api/route
@@ -168,6 +184,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	register("POST", "/togglelike", h.ToggleLike)
 	register("POST", "/saveprefs", h.SavePrefs)
 	register("POST", "/uploadmedia", h.UploadMediaAuth)
+	register("POST", "/uploadavatar", h.UploadAvatarAuth)
 
 	// Media serving (public)
 	register("GET", "/media/{id}", h.HandleGetMedia)
