@@ -257,40 +257,81 @@ func (h *Handler) checkWhitelist(email string) bool {
 	return h.Config.IsEmailWhitelisted(email)
 }
 
+// getMergedBlocklist returns the combined blocklist from config.BlockedUsersList and blocklist.json file.
+// It only reloads the separate blocklist.json file if its mtime has changed (hot-reload support).
+// The config.BlockedUsersList is always used from the currently loaded config.
+// File-sourced emails are cached locally to avoid losing them on cache-hit calls.
+func (h *Handler) getMergedBlocklist() ([]string, error) {
+	mergedEmails := make(map[string]bool)
+
+	// Add blockedUsersList from config.json (always from current config)
+	if h.Config != nil {
+		for _, email := range h.Config.BlockedUsersList {
+			email = strings.ToLower(strings.TrimSpace(email))
+			if email != "" {
+				mergedEmails[email] = true
+			}
+		}
+	}
+
+	// Check if blocklist.json file has been modified (hot-reload)
+	// and reload if needed. Cache the file-sourced emails to avoid losing them
+	// on cache-hit calls (important since SyncBlocklistToDB does a full replace).
+	if h.Config != nil && h.Config.BlocklistPath != "" {
+		fi, err := os.Stat(h.Config.BlocklistPath)
+		if err == nil {
+			currentMtime := fi.ModTime().Unix()
+			if currentMtime != h.blocklistMtime {
+				h.blocklistMtime = currentMtime
+
+				// Reload blocklist from JSON file
+				emails, err := config.LoadBlocklist(h.Config.BlocklistPath)
+				if err != nil {
+					fmt.Printf("Warning: failed to load blocklist: %v\n", err)
+				} else {
+					// Cache the file-sourced emails
+					h.cachedBlocklistEmails = emails
+				}
+			}
+		}
+
+		// Add cached file-sourced emails to merged list
+		for _, email := range h.cachedBlocklistEmails {
+			mergedEmails[email] = true
+		}
+	}
+
+	// Convert merged map to slice
+	result := make([]string, 0, len(mergedEmails))
+	for email := range mergedEmails {
+		result = append(result, email)
+	}
+
+	return result, nil
+}
+
 // checkBlocklist checks if an email is NOT blocked.
 // Returns true if email is allowed, false if blocked.
-// Uses mtime cache to avoid expensive reloads when file hasn't changed.
+// Merges blocklist from both config.json (BlockedUsersList) and separate blocklist.json file.
+// The config.BlockedUsersList is read from the current config.
+// The separate blocklist.json file supports hot-reload (checks mtime).
 func (h *Handler) checkBlocklist(email string) bool {
 	if h.Config == nil || h.DB == nil {
 		return true // No config, allow all
 	}
 
-	// Check if blocklist file has been modified
-	fi, err := os.Stat(h.Config.BlocklistPath)
+	// Get merged blocklist from both sources
+	emails, err := h.getMergedBlocklist()
 	if err != nil {
-		// File doesn't exist or can't be read, allow all
+		// Log error but allow access if blocklist can't be read
+		fmt.Printf("Warning: failed to get blocklist: %v\n", err)
 		return true
 	}
 
-	currentMtime := fi.ModTime().Unix()
-
-	// Only reload if file has been modified since last check
-	if currentMtime != h.blocklistMtime {
-		h.blocklistMtime = currentMtime
-
-		// Reload blocklist from JSON file
-		emails, err := config.LoadBlocklist(h.Config.BlocklistPath)
-		if err != nil {
-			// Log error but allow access if file can't be read
-			fmt.Printf("Warning: failed to load blocklist: %v\n", err)
-			return true
-		}
-
-		// Sync to database for backup
-		if err := db.SyncBlocklistToDB(h.DB, emails); err != nil {
-			fmt.Printf("Warning: failed to sync blocklist to database: %v\n", err)
-			// Continue even if sync fails
-		}
+	// Sync to database for backup
+	if err := db.SyncBlocklistToDB(h.DB, emails); err != nil {
+		fmt.Printf("Warning: failed to sync blocklist to database: %v\n", err)
+		// Continue even if sync fails
 	}
 
 	// Check if email is blocked

@@ -26,9 +26,10 @@ type Handler struct {
 	FeedsDB             *sql.DB // Nil if feeds are served from filesystem
 	MaxMediaUploadBytes int
 	TempMediaPath       string
-	RobotsContent       string
-	blocklistMtime      int64 // Last modification time of blocklist file
-	EmailSender         interface {
+	RobotsContent          string
+	blocklistMtime         int64    // Last modification time of blocklist file
+	cachedBlocklistEmails  []string // Cached emails from blocklist.json (hot-reload)
+	EmailSender            interface {
 		SendConfirmationEmail(string, string, string) error
 	} // Email sender interface
 
@@ -95,6 +96,21 @@ func (h *Handler) SetEmailSender(sender interface {
 	SendConfirmationEmail(string, string, string) error
 }) {
 	h.EmailSender = sender
+}
+
+// ReloadConfig reloads the configuration from the specified path.
+// This allows updating the config and blocklist without restarting the server.
+// Returns error if config file cannot be loaded or is invalid.
+func (h *Handler) ReloadConfig(configPath string) error {
+	cfg, err := config.Load(configPath)
+	if err != nil {
+		return err
+	}
+	h.Config = cfg
+	// Reset mtime cache to force reload of blocklist.json file on next check
+	h.blocklistMtime = 0
+	h.cachedBlocklistEmails = nil
+	return nil
 }
 
 // UploadMediaAuth wraps HandleUploadMedia with authentication
