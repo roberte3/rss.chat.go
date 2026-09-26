@@ -16,7 +16,7 @@ const DefaultMaxItems = 100
 
 const itemColumns = `items.id, items.feedUrl, items.author, items.inReplyTo, items.title, items.link, items.description, items.pubDate, items.enclosureUrl, items.enclosureType, items.enclosureLength, items.whenCreated, items.whenUpdated, items.markdowntext, items.outlineJsontext, items.flDeleted`
 
-const itemAuthorColumns = `json_extract (users.prefs, '$.myAvatarImageUrl') as imageUrl, json_extract (users.prefs, '$.myFeedTitle') as feedTitle, json_extract (users.prefs, '$.myFeedLink') as feedLink, json_extract (users.prefs, '$.myFeedDescription') as feedDescription`
+const itemAuthorColumns = `users.imageUrl as imageUrl, json_extract (users.prefs, '$.myFeedTitle') as feedTitle, json_extract (users.prefs, '$.myFeedLink') as feedLink, json_extract (users.prefs, '$.myFeedDescription') as feedDescription`
 
 // itemComputedColumns's first "?" binds the viewer's screenname (for
 // flLiked); callers must pass it as the first query argument.

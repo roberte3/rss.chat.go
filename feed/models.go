@@ -89,8 +89,9 @@ type Source struct {
 
 // Account represents the source:account element.
 type Account struct {
-	Service string `xml:"service,attr"`
-	Name    string `xml:"name,attr"`
+	Service  string `xml:"service,attr"`
+	Name     string `xml:"name,attr"`
+	ImageURL string `xml:"imageUrl,attr,omitempty"`
 }
 
 // OPMLFeed represents an OPML document for subscription lists.

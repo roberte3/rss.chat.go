@@ -332,6 +332,11 @@ func buildFeedItems(items []*db.Item, config BuilderConfig, sourceAttribution bo
 			}
 		}
 
+		// Include author avatar if available
+		if dbItem.ImageURL != "" {
+			feedItem.Account.ImageURL = dbItem.ImageURL
+		}
+
 		feedItems = append(feedItems, feedItem)
 	}
 

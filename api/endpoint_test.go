@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	_ "modernc.org/sqlite"
@@ -2322,5 +2323,157 @@ func TestGetTrendingHashtags(t *testing.T) {
 		if tags[1]["Tag"] != "rust" {
 			t.Errorf("expected rust as second, got %v", tags[1])
 		}
+	}
+}
+
+// TestAvatarDisplayInUserData verifies avatar URL is returned in /getuserdata response.
+func TestAvatarDisplayInUserData(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Upload avatar
+	pngData := []byte{
+		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+		0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE,
+	}
+	form := url.Values{
+		"data":        {base64.StdEncoding.EncodeToString(pngData)},
+		"contentType": {"image/png"},
+	}
+	w := authedPost(mux, "/uploadavatar", "alice", "secret_alice", form)
+	var avatarResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &avatarResp)
+	avatarURL := avatarResp["avatarUrl"].(string)
+
+	// Get user data
+	req := httptest.NewRequest("GET", "/getuserdata?screenname=alice", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, expected 200", w.Code)
+	}
+
+	var user db.User
+	json.Unmarshal(w.Body.Bytes(), &user)
+
+	if user.ImageURL != avatarURL {
+		t.Errorf("expected imageUrl=%q, got %q", avatarURL, user.ImageURL)
+	}
+}
+
+// TestAvatarDisplayInRecentItems verifies avatars show up in /getrecentitems.
+func TestAvatarDisplayInRecentItems(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Upload avatar
+	pngData := []byte{
+		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+		0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE,
+	}
+	form := url.Values{
+		"data":        {base64.StdEncoding.EncodeToString(pngData)},
+		"contentType": {"image/png"},
+	}
+	w := authedPost(mux, "/uploadavatar", "alice", "secret_alice", form)
+	var avatarResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &avatarResp)
+	avatarURL := avatarResp["avatarUrl"].(string)
+
+	// Create a post from alice
+	postReq := PostRequest{
+		Description: "<p>Hello world</p>",
+		Title:       "My first post",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form = url.Values{
+		"jsontext": {string(jsonData)},
+	}
+	w = authedPost(mux, "/newpost", "alice", "secret_alice", form)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("failed to create post: %s", w.Body.String())
+	}
+
+	// Get recent items
+	req := httptest.NewRequest("GET", "/getrecentitems", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, expected 200", w.Code)
+	}
+
+	var items []db.Item
+	json.Unmarshal(w.Body.Bytes(), &items)
+
+	if len(items) != 1 {
+		t.Fatalf("expected 1 item, got %d", len(items))
+	}
+
+	if items[0].ImageURL != avatarURL {
+		t.Errorf("expected item imageUrl=%q, got %q", avatarURL, items[0].ImageURL)
+	}
+}
+
+// TestAvatarDisplayInUserFeed verifies avatars show up in RSS feeds.
+func TestAvatarDisplayInUserFeed(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Upload avatar
+	pngData := []byte{
+		0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A,
+		0x00, 0x00, 0x00, 0x0D, 0x49, 0x48, 0x44, 0x52,
+		0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x01,
+		0x08, 0x02, 0x00, 0x00, 0x00, 0x90, 0x77, 0x53, 0xDE,
+	}
+	form := url.Values{
+		"data":        {base64.StdEncoding.EncodeToString(pngData)},
+		"contentType": {"image/png"},
+	}
+	w := authedPost(mux, "/uploadavatar", "alice", "secret_alice", form)
+	var avatarResp map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &avatarResp)
+	avatarURL := avatarResp["avatarUrl"].(string)
+
+	// Create a post
+	postReq := PostRequest{
+		Description: "<p>Hello world</p>",
+		Title:       "My first post",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form = url.Values{
+		"jsontext": {string(jsonData)},
+	}
+	authedPost(mux, "/newpost", "alice", "secret_alice", form)
+
+	// Get user feed (RSS XML)
+	req := httptest.NewRequest("GET", "/feed?screenname=alice", nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, expected 200", w.Code)
+	}
+
+	feedXML := w.Body.String()
+
+	// Check that avatar URL is in the feed
+	if !strings.Contains(feedXML, avatarURL) {
+		t.Errorf("expected avatarUrl=%q in feed, feed was: %s", avatarURL, feedXML[:500])
+	}
+
+	// Check that it's in the source:account imageUrl attribute
+	if !strings.Contains(feedXML, fmt.Sprintf(`imageUrl="%s"`, avatarURL)) {
+		t.Errorf("expected imageUrl attribute in source:account")
 	}
 }
