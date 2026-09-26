@@ -20,11 +20,11 @@ go test -cover ./...
 
 ## Complete Test Suite Overview
 
-The project includes **154+ tests** across 12 packages:
+The project includes **170+ tests** across 12 packages:
 
 | Package | Tests | Focus | Time |
 |---------|-------|-------|------|
-| `api/` | 49+ | HTTP endpoints, auth, E2E workflows, headers | 2-5s |
+| `api/` | 65+ | HTTP endpoints, auth, E2E workflows, mentions, text transform | 2-5s |
 | `websub/` | 38 | WebSub protocol, hub pinging | 4-5s |
 | `websocket/` | 10+ | Real-time updates, broadcasting | 0.8s |
 | `db/` | 20+ | Database operations, CRUD | 1-2s |
@@ -36,7 +36,7 @@ The project includes **154+ tests** across 12 packages:
 | `tools/backup/` | 8+ | Backup/restore operations | 1-2s |
 | `tools/bluesky-subscribe/` | 15+ | Bluesky integration | 0.3s |
 | `tools/restore/` | 2 | Restore operations | 0.2s |
-| **Total** | **154+** | **All subsystems** | **~30s** |
+| **Total** | **170+** | **All subsystems** | **~35s** |
 
 ## Running Tests by Category
 
@@ -175,6 +175,27 @@ go test ./feed -run "Markdown" -v
 
 # Linkify tests
 go test ./feed -run "Linkify" -v
+
+# Text transformation (URLs, mentions, hashtags)
+go test ./api -run "TransformTextNodes" -v
+
+# Mention rendering and extraction
+go test ./api -run "Mention" -v
+```
+
+### 5b. Mentions & Hashtags (v1.2 Feature Development)
+
+Tests for @mentions and #hashtags features:
+
+```bash
+# Generic text node transformer (Phase 0 refactor)
+go test ./api -run "TransformTextNodes" -v
+
+# Mention matcher, rendering, and extraction (Phase 1-2)
+go test ./api -run "Mention" -v
+
+# Mention database operations
+go test ./db -run "Mention" -v
 ```
 
 ### 6. Configuration Tests

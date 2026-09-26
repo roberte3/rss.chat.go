@@ -31,6 +31,8 @@ The overall longer term goals of this fork are to make a backend that is easily 
 - **Likes**: Like/unlike posts with aggregated counts
 - **Media Upload**: Image support (JPEG, PNG, GIF, WebP, SVG) with validation
 - **Real-time Updates**: WebSocket broadcasts for likes, posts, and deletions
+- **@Mentions** (v1.2): Link to user profiles with case-insensitive lookup
+- **#Hashtags** (v1.2): Tag-based discovery with RSS feeds per hashtag
 
 ### Security
 - Email-based authentication with confirmation codes
@@ -153,6 +155,8 @@ Configuration is stored in `config.json`. Create or modify this file to customiz
 | `flFeedsInDatabase` | Store generated feeds in SQLite instead of `feedsPath` | `false` |
 | `flWebsubEnabled` | Announce and ping a WebSub hub (see [WebSub](#websub)) | `false` |
 | `urlWebsubHub` | WebSub hub URL | `https://rpc.rsscloud.io/websub` |
+| `urlTemplateForMention` | URL template for @mention links with `{screenname}` placeholder | `domain/?screenname={screenname}` |
+| `urlTemplateForHashtag` | URL template for #hashtag links with `{tag}` placeholder (lowercased) | `domain/?tag={tag}` |
 
 ### WebSub
 
@@ -682,6 +686,10 @@ For issues, questions, or suggestions:
 - ✅ Hot-reloadable blocklist
 
 ### Phase 2 (In Progress)
+- 🔄 Advanced user features
+  - 🔄 @Mentions: rendering ✅, storage ✅, discovery API 🔄
+  - 🔄 #Hashtags: extraction, rendering, discovery API, tag-based feeds
+  - ⏳ User avatars
 - 🔄 HTMX based front end
 - 🔄 Mobile based front end
 - 🔄 Bluesky (ATProtocol) Bridge: inbound import ✅ (`bluesky-subscribe`), outbound posting 🔄
