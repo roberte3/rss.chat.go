@@ -3,7 +3,6 @@ package api
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"strings"
 	"time"
@@ -23,24 +22,30 @@ type PostRequest struct {
 
 // HandleNewPost creates a new post.
 func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db.User) {
+	LogOperationStart(r.Context(), "create_post", map[string]interface{}{"screenname": user.Screenname})
+
 	if err := r.ParseForm(); err != nil {
+		LogValidationError(r, "form", err.Error())
 		RespondError(w, "Can't create post because "+err.Error())
 		return
 	}
 
 	jsonText := r.FormValue("jsontext")
 	if jsonText == "" {
+		LogValidationError(r, "jsontext", "required parameter missing")
 		RespondError(w, "Can't create post because jsontext is required")
 		return
 	}
 
 	var req PostRequest
 	if err := json.Unmarshal([]byte(jsonText), &req); err != nil {
+		LogValidationError(r, "jsontext", "invalid JSON: "+err.Error())
 		RespondError(w, "Can't create post because "+err.Error())
 		return
 	}
 
 	if req.Description == "" {
+		LogValidationError(r, "description", "required field missing")
 		RespondError(w, "Can't create post because description is required")
 		return
 	}
@@ -86,6 +91,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 
 	itemID, err := db.AddItem(h.DB, newItem)
 	if err != nil {
+		LogOperationError(r.Context(), "add_item", err, map[string]interface{}{})
 		RespondError(w, "Can't create post because "+err.Error())
 		return
 	}
@@ -94,7 +100,9 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 	if mentions, err := ExtractMentions(h.DB, sanitized); err == nil && len(mentions) > 0 {
 		if err := db.StoreMentions(h.DB, int(itemID), mentions); err != nil {
 			// Log but don't fail the request - mentions are secondary feature
-			fmt.Printf("Warning: failed to store mentions: %v\n", err)
+			LogWarning(r.Context(), "failed to store mentions", "err", err)
+		} else {
+			LogFeatureUsage(r.Context(), "mentions_extracted", len(mentions))
 		}
 	}
 
@@ -102,13 +110,16 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 	if hashtags := ExtractHashtags(sanitized); len(hashtags) > 0 {
 		if err := db.StoreHashtags(h.DB, int(itemID), hashtags); err != nil {
 			// Log but don't fail the request - hashtags are secondary feature
-			fmt.Printf("Warning: failed to store hashtags: %v\n", err)
+			LogWarning(r.Context(), "failed to store hashtags", "err", err)
+		} else {
+			LogFeatureUsage(r.Context(), "hashtags_extracted", len(hashtags))
 		}
 	}
 
 	// Fetch the created item
 	item, err := db.GetItemByID(h.DB, user.Screenname, itemID, h.FeedConfig.BaseURL)
 	if err != nil {
+		LogOperationError(r.Context(), "get_item_by_id", err, map[string]interface{}{})
 		RespondError(w, "Can't create post because "+err.Error())
 		return
 	}
@@ -116,7 +127,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 	// Republish feeds
 	if err := h.Publisher.UpdateFeedsOnPostWrite(h.DB, user.Screenname); err != nil {
 		// Log but don't fail the request
-		fmt.Printf("Warning: failed to republish feeds: %v\n", err)
+		LogWarning(r.Context(), "failed to republish feeds", "err", err)
 	}
 
 	// If this is a reply, also update parent feeds
@@ -124,7 +135,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		parent, err := db.GetItemByID(h.DB, "", *req.InReplyTo, h.FeedConfig.BaseURL)
 		if err == nil && parent != nil {
 			if err := h.Publisher.UpdateFeedsOnReply(h.DB, parent.Screenname, *req.InReplyTo); err != nil {
-				fmt.Printf("Warning: failed to republish reply feeds: %v\n", err)
+				LogWarning(r.Context(), "failed to republish reply feeds", "err", err)
 			}
 		}
 	}
@@ -143,24 +154,30 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		})
 	}
 
+	LogOperationComplete(r.Context(), "create_post", map[string]interface{}{"itemID": itemID})
 	RespondJSON(w, item)
 }
 
 // HandleUpdatePost updates an existing post.
 func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user *db.User) {
+	LogOperationStart(r.Context(), "update_post", map[string]interface{}{"screenname": user.Screenname})
+
 	if err := r.ParseForm(); err != nil {
+		LogValidationError(r, "form", err.Error())
 		RespondError(w, "Can't update post because "+err.Error())
 		return
 	}
 
 	idStr := r.FormValue("id")
 	if idStr == "" {
+		LogValidationError(r, "id", "required parameter missing")
 		RespondError(w, "Can't update post because id is required")
 		return
 	}
 
 	var itemID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &itemID); err != nil {
+		LogValidationError(r, "id", "invalid format")
 		RespondError(w, "Can't update post because invalid id")
 		return
 	}
@@ -168,18 +185,21 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 	// Verify user owns the post
 	existing, err := db.GetItemByID(h.DB, "", itemID, h.FeedConfig.BaseURL)
 	if err != nil || existing == nil || existing.Screenname != user.Screenname {
+		LogAuthFailure(r, "user does not own post")
 		RespondError(w, "Can't update post because you don't own this post")
 		return
 	}
 
 	jsonText := r.FormValue("jsontext")
 	if jsonText == "" {
+		LogValidationError(r, "jsontext", "required parameter missing")
 		RespondError(w, "Can't update post because jsontext is required")
 		return
 	}
 
 	var req PostRequest
 	if err := json.Unmarshal([]byte(jsonText), &req); err != nil {
+		LogValidationError(r, "jsontext", "invalid JSON: "+err.Error())
 		RespondError(w, "Can't update post because "+err.Error())
 		return
 	}
@@ -217,16 +237,19 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 
 	err = db.UpdateItem(h.DB, patch)
 	if err != nil {
+		LogOperationError(r.Context(), "update_item", err, map[string]interface{}{"itemID": itemID})
 		RespondError(w, "Can't update post because "+err.Error())
 		return
 	}
 
 	// Extract and store mentions from the updated post (if description was updated)
 	if description != "" {
-		if mentions, err := ExtractMentions(h.DB, description); err == nil {
+		if mentions, err := ExtractMentions(h.DB, description); err == nil && len(mentions) > 0 {
 			if err := db.StoreMentions(h.DB, int(itemID), mentions); err != nil {
 				// Log but don't fail the request
-				fmt.Printf("Warning: failed to update mentions: %v\n", err)
+				LogWarning(r.Context(), "failed to update mentions", "err", err)
+			} else {
+				LogFeatureUsage(r.Context(), "mentions_updated", len(mentions))
 			}
 		}
 	}
@@ -236,7 +259,9 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 		if hashtags := ExtractHashtags(description); len(hashtags) > 0 {
 			if err := db.StoreHashtags(h.DB, int(itemID), hashtags); err != nil {
 				// Log but don't fail the request
-				fmt.Printf("Warning: failed to update hashtags: %v\n", err)
+				LogWarning(r.Context(), "failed to update hashtags", "err", err)
+			} else {
+				LogFeatureUsage(r.Context(), "hashtags_updated", len(hashtags))
 			}
 		}
 	}
@@ -244,13 +269,14 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 	// Fetch the updated item
 	updatedItem, err := db.GetItemByID(h.DB, user.Screenname, itemID, h.FeedConfig.BaseURL)
 	if err != nil {
+		LogOperationError(r.Context(), "get_item_by_id", err, map[string]interface{}{})
 		RespondError(w, "Can't update post because "+err.Error())
 		return
 	}
 
 	// Republish feeds
 	if err := h.Publisher.UpdateFeedsOnPostWrite(h.DB, user.Screenname); err != nil {
-		fmt.Printf("Warning: failed to republish feeds: %v\n", err)
+		LogWarning(r.Context(), "failed to republish feeds", "err", err)
 	}
 
 	// Broadcast updated item event to websocket subscribers
@@ -266,24 +292,30 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 		})
 	}
 
+	LogOperationComplete(r.Context(), "update_post", map[string]interface{}{"itemID": itemID})
 	RespondJSON(w, updatedItem)
 }
 
 // HandleDeletePost deletes a post (soft delete).
 func (h *Handler) HandleDeletePost(w http.ResponseWriter, r *http.Request, user *db.User) {
+	LogOperationStart(r.Context(), "delete_post", map[string]interface{}{"screenname": user.Screenname})
+
 	if err := r.ParseForm(); err != nil {
+		LogValidationError(r, "form", err.Error())
 		RespondError(w, "Can't delete post because "+err.Error())
 		return
 	}
 
 	idStr := r.FormValue("id")
 	if idStr == "" {
+		LogValidationError(r, "id", "required parameter missing")
 		RespondError(w, "Can't delete post because id is required")
 		return
 	}
 
 	var itemID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &itemID); err != nil {
+		LogValidationError(r, "id", "invalid format")
 		RespondError(w, "Can't delete post because invalid id")
 		return
 	}
@@ -291,19 +323,21 @@ func (h *Handler) HandleDeletePost(w http.ResponseWriter, r *http.Request, user 
 	// Verify user owns the post
 	existing, err := db.GetItemByID(h.DB, "", itemID, h.FeedConfig.BaseURL)
 	if err != nil || existing == nil || existing.Screenname != user.Screenname {
+		LogAuthFailure(r, "user does not own post")
 		RespondError(w, "Can't delete post because you don't own this post")
 		return
 	}
 
 	deleted := true
 	if err := db.UpdateItem(h.DB, db.ItemPatch{ID: itemID, FlDeleted: &deleted}); err != nil {
+		LogOperationError(r.Context(), "update_item_delete", err, map[string]interface{}{"itemID": itemID})
 		RespondError(w, "Can't delete post because "+err.Error())
 		return
 	}
 
 	// Republish feeds
 	if err := h.Publisher.UpdateFeedsOnPostWrite(h.DB, user.Screenname); err != nil {
-		log.Printf("warning: failed to republish feeds after deleting %d: %v", itemID, err)
+		LogWarning(r.Context(), "failed to republish feeds after deleting", "itemID", itemID, "err", err)
 	}
 
 	// If the deleted post was a reply, the parent's comments feed still lists
@@ -313,13 +347,14 @@ func (h *Handler) HandleDeletePost(w http.ResponseWriter, r *http.Request, user 
 		parent, err := db.GetItemByID(h.DB, "", *existing.InReplyToNum, h.FeedConfig.BaseURL)
 		if err == nil && parent != nil {
 			if err := h.Publisher.UpdateFeedsOnReply(h.DB, parent.Screenname, *existing.InReplyToNum); err != nil {
-				log.Printf("warning: failed to republish reply feeds after deleting %d: %v", itemID, err)
+				LogWarning(r.Context(), "failed to republish reply feeds after deleting", "itemID", itemID, "err", err)
 			}
 		}
 	}
 
 	// Return the deleted item, matching deletePost in rssnetwork.js.
 	existing.FlDeleted = true
+	LogOperationComplete(r.Context(), "delete_post", map[string]interface{}{"itemID": itemID})
 	RespondJSON(w, existing)
 }
 
@@ -372,7 +407,7 @@ func (h *Handler) HandleToggleLike(w http.ResponseWriter, r *http.Request, user 
 
 	// Republish everyone feed (like counts may have changed)
 	if err := h.Publisher.UpdateFeedsOnLike(h.DB); err != nil {
-		fmt.Printf("Warning: failed to republish feeds: %v\n", err)
+		LogWarning(r.Context(), "failed to republish feeds on like", "err", err)
 	}
 
 	// Broadcast like toggle event to websocket subscribers

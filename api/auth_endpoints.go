@@ -22,11 +22,13 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 	urlRedirect := r.URL.Query().Get("urlredirect")
 
 	if email == "" {
+		LogValidationError(r, "email", "required parameter missing")
 		RespondError(w, "Can't send confirmation email because email is required")
 		return
 	}
 
 	if urlRedirect == "" {
+		LogValidationError(r, "urlredirect", "required parameter missing")
 		RespondError(w, "Can't send confirmation email because urlredirect is required")
 		return
 	}
@@ -35,11 +37,13 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 	// caller names, so unthrottled it is a way to flood someone else's mailbox
 	// and burn this server's sending reputation.
 	if !h.allowAuthRequest(w, r, email, "send confirmation email") {
+		LogAuthFailure(r, "rate limit exceeded")
 		return
 	}
 
 	// Check blocklist
 	if !h.checkBlocklist(email) {
+		LogAuthFailure(r, "email is blocklisted")
 		RespondError(w, "Can't send confirmation email because this email is not allowed")
 		return
 	}
@@ -47,6 +51,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 	// Find or create the user
 	user, err := db.GetUserInfoByEmail(h.DB, email)
 	if err != nil {
+		LogOperationError(r.Context(), "get_user_by_email", err, map[string]interface{}{})
 		RespondError(w, "Can't send confirmation email because of database error")
 		return
 	}
@@ -56,6 +61,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 	if user == nil {
 		// New user: check whitelist
 		if !h.checkWhitelist(email) {
+			LogAuthFailure(r, "email is not whitelisted")
 			RespondError(w, "Can't send confirmation email because this email is not whitelisted")
 			return
 		}
@@ -74,10 +80,12 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 
 		// Send email
 		if err := h.sendConfirmationEmail(email, confirmationURL, "signup"); err != nil {
+			LogOperationError(r.Context(), "send_confirmation_email", err, map[string]interface{}{"type": "signup"})
 			RespondError(w, "Can't send confirmation email because email sending failed")
 			return
 		}
 
+		LogOperationComplete(r.Context(), "send_confirmation_email", map[string]interface{}{"type": "signup"})
 		RespondJSON(w, map[string]string{"status": "confirmation email sent"})
 		return
 	}
@@ -88,6 +96,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 		// If no secret exists, generate one and update the user
 		emailSecret = generateEmailSecret()
 		if err := db.UpdateUser(h.DB, user.Screenname, user.EmailAddress, emailSecret); err != nil {
+			LogOperationError(r.Context(), "update_user_secret", err, map[string]interface{}{})
 			RespondError(w, "Can't send confirmation email because of database error")
 			return
 		}
@@ -98,10 +107,12 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 
 	// Send email
 	if err := h.sendConfirmationEmail(email, confirmationURL, "signin"); err != nil {
+		LogOperationError(r.Context(), "send_confirmation_email", err, map[string]interface{}{"type": "signin"})
 		RespondError(w, "Can't send confirmation email because email sending failed")
 		return
 	}
 
+	LogOperationComplete(r.Context(), "send_confirmation_email", map[string]interface{}{"type": "signin"})
 	RespondJSON(w, map[string]string{"status": "confirmation email sent"})
 }
 
