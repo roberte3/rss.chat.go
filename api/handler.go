@@ -500,7 +500,7 @@ func (h *Handler) GetUserData(w http.ResponseWriter, r *http.Request) {
 
 	data, err := getUserData(h.DB, screenname, h.FeedConfig)
 	if err != nil {
-		RespondError(w, "Can't get user data because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Can't get user data: "+err.Error(), "USER_DATA_ERROR", err.Error())
 		return
 	}
 
@@ -512,13 +512,13 @@ func (h *Handler) GetUserData(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetLikersList(w http.ResponseWriter, r *http.Request) {
 	itemID := int64(parseIntParam(r, "id", 0))
 	if itemID == 0 {
-		RespondError(w, "Can't get likers list because id is required")
+		RespondValidationError(w, r, "id", "required parameter missing")
 		return
 	}
 
 	likers, err := getLikersList(h.DB, itemID)
 	if err != nil {
-		RespondError(w, "Can't get likers list because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Can't get likers list: "+err.Error(), "LIKERS_LIST_ERROR", err.Error())
 		return
 	}
 
