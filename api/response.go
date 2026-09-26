@@ -81,3 +81,13 @@ func RespondRedirect(w http.ResponseWriter, location string, statusCode int) {
 	w.Header().Set("Location", location)
 	w.WriteHeader(statusCode)
 }
+
+// addWebsubHeader adds WebSub Link header to a feed response if WebSub is enabled.
+// Must be called before writing the response body.
+func addWebsubHeader(w http.ResponseWriter, hubURL string, feedURL string) {
+	if hubURL == "" || feedURL == "" {
+		return
+	}
+	link := fmt.Sprintf("<%s>; rel=\"hub\", <%s>; rel=\"self\"", hubURL, feedURL)
+	w.Header().Set("Link", link)
+}

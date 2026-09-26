@@ -186,6 +186,14 @@ func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Build feed URL for WebSub headers
+	var feedURL string
+	if screenname == "" {
+		feedURL = h.FeedConfig.BaseURL + "feed"
+	} else {
+		feedURL = h.FeedConfig.BaseURL + "feed?screenname=" + screenname
+	}
+
 	// Handle JSON format - generate on demand
 	if format == "json" {
 		var jsonContent string
@@ -219,6 +227,7 @@ func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 		content, err := db.GetFeed(h.FeedsDB, feedType, screenname)
 		if err == nil && content != nil {
 			w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+			addWebsubHeader(w, h.Config.URLWebsubHub, feedURL)
 			w.Write(content)
 			return
 		}
@@ -227,10 +236,10 @@ func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 	// Fallback to filesystem mode
 	if screenname == "" {
 		// Serve everyone feed
-		h.Publisher.ServeEveryoneFeed(w, r)
+		h.Publisher.ServeEveryoneFeed(w, r, h.Config.URLWebsubHub, feedURL)
 	} else {
 		// Serve user feed
-		h.Publisher.ServeUserFeed(w, r, screenname)
+		h.Publisher.ServeUserFeed(w, r, screenname, h.Config.URLWebsubHub, feedURL)
 	}
 }
 
@@ -269,7 +278,12 @@ func (h *Handler) CommentsFeed(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Build comments feed URL for WebSub header
+	screenname := r.PathValue("screenname")
+	commentsFeedURL := h.FeedConfig.BaseURL + fmt.Sprintf("comments/%s/%s.xml", screenname, idStr)
+
 	w.Header().Set("Content-Type", "application/rss+xml; charset=utf-8")
+	addWebsubHeader(w, h.Config.URLWebsubHub, commentsFeedURL)
 	w.Write([]byte(rss))
 }
 
@@ -447,7 +461,11 @@ func (h *Handler) GetSubscriptionList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	// Build subscription list URL for WebSub header
+	opmlFeedURL := h.FeedConfig.BaseURL + "getsubscriptionlist"
+
 	w.Header().Set("Content-Type", "application/xml; charset=utf-8")
+	addWebsubHeader(w, h.Config.URLWebsubHub, opmlFeedURL)
 	w.Write([]byte(opml))
 }
 

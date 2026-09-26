@@ -21,6 +21,9 @@
   "flFeedsInDatabase": false,
   "feedsDBPath": "rss.chat.feeds.db",
 
+  "flWebsubEnabled": false,
+  "urlWebsubHub": "https://rpc.rsscloud.io/websub",
+
   "flRemoveBlanksAtEnd": false,
   "titleForSubscriptionList": "My News Subscriptions",
 

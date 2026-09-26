@@ -8,6 +8,7 @@ import (
 
 	"github.com/roberte3/rss.chat.go/db"
 	"github.com/roberte3/rss.chat.go/feed"
+	"github.com/roberte3/rss.chat.go/websub"
 )
 
 // Publisher handles writing feeds to disk or database.
@@ -16,6 +17,7 @@ type Publisher struct {
 	config      feed.BuilderConfig
 	FeedsDB     *sql.DB // Nil if filesystem mode
 	StorageMode string  // "filesystem" or "database"
+	pinger      *websub.Pinger
 }
 
 // NewPublisher creates a new feed publisher (filesystem mode by default).
@@ -24,6 +26,7 @@ func NewPublisher(baseDir string, config feed.BuilderConfig) *Publisher {
 		baseDir:     baseDir,
 		config:      config,
 		StorageMode: "filesystem",
+		pinger:      websub.NewPinger("", false), // Disabled by default
 	}
 }
 
@@ -31,6 +34,13 @@ func NewPublisher(baseDir string, config feed.BuilderConfig) *Publisher {
 func (p *Publisher) SetDatabaseMode(feedsDB *sql.DB) {
 	p.FeedsDB = feedsDB
 	p.StorageMode = "database"
+}
+
+// SetPinger configures the WebSub pinger for this publisher.
+func (p *Publisher) SetPinger(pinger *websub.Pinger) {
+	if pinger != nil {
+		p.pinger = pinger
+	}
 }
 
 // BaseDir returns the directory feeds are written to in filesystem mode.
@@ -63,18 +73,24 @@ func (p *Publisher) PublishUserFeed(conn *sql.DB, screenname string) error {
 	}
 
 	if p.StorageMode == "database" {
-		return db.StoreFeed(p.FeedsDB, "user", screenname, "text/xml", []byte(rss))
+		if err := db.StoreFeed(p.FeedsDB, "user", screenname, "text/xml", []byte(rss)); err != nil {
+			return err
+		}
+	} else {
+		userDir := filepath.Join(p.baseDir, screenname)
+		if err := os.MkdirAll(userDir, 0755); err != nil {
+			return fmt.Errorf("create user directory: %w", err)
+		}
+
+		path := filepath.Join(userDir, "rss.xml")
+		if err := os.WriteFile(path, []byte(rss), 0644); err != nil {
+			return fmt.Errorf("write feed file: %w", err)
+		}
 	}
 
-	userDir := filepath.Join(p.baseDir, screenname)
-	if err := os.MkdirAll(userDir, 0755); err != nil {
-		return fmt.Errorf("create user directory: %w", err)
-	}
-
-	path := filepath.Join(userDir, "rss.xml")
-	if err := os.WriteFile(path, []byte(rss), 0644); err != nil {
-		return fmt.Errorf("write feed file: %w", err)
-	}
+	// Ping WebSub hub
+	feedURL := p.config.BaseURL + "feed?screenname=" + screenname
+	p.pinger.Ping(feedURL)
 
 	return nil
 }
@@ -88,13 +104,19 @@ func (p *Publisher) PublishEveryoneFeed(conn *sql.DB) error {
 	}
 
 	if p.StorageMode == "database" {
-		return db.StoreFeed(p.FeedsDB, "global", "", "text/xml", []byte(rss))
+		if err := db.StoreFeed(p.FeedsDB, "global", "", "text/xml", []byte(rss)); err != nil {
+			return err
+		}
+	} else {
+		path := filepath.Join(p.baseDir, "rss.xml")
+		if err := os.WriteFile(path, []byte(rss), 0644); err != nil {
+			return fmt.Errorf("write everyone feed file: %w", err)
+		}
 	}
 
-	path := filepath.Join(p.baseDir, "rss.xml")
-	if err := os.WriteFile(path, []byte(rss), 0644); err != nil {
-		return fmt.Errorf("write everyone feed file: %w", err)
-	}
+	// Ping WebSub hub
+	feedURL := p.config.BaseURL + "feed"
+	p.pinger.Ping(feedURL)
 
 	return nil
 }
@@ -117,6 +139,10 @@ func (p *Publisher) PublishCommentsFeed(conn *sql.DB, screenname string, itemID 
 	if err := os.WriteFile(path, []byte(rss), 0644); err != nil {
 		return fmt.Errorf("write comments feed file: %w", err)
 	}
+
+	// Ping WebSub hub for comments feed
+	feedURL := fmt.Sprintf("%scomments/%s/%d.xml", p.config.BaseURL, screenname, itemID)
+	p.pinger.Ping(feedURL)
 
 	return nil
 }

@@ -10,6 +10,38 @@ A Go implementation of Dave Winer's RSS Chat, aiming for feature parity with v0.
 
 ## 📋 Remaining Work (Prioritized by Tier)
 
+### Tier 1: Feature Parity with Upstream (Dave Winer's v0.6.14)
+
+#### 1. WebSub (Web Push) Support (5-7 hours) — BLOCKING PARITY
+**Feature**: Real-time feed notifications via WebSub protocol
+- [ ] Add config fields: `flWebsubEnabled` and `urlWebsubHub`
+- [ ] Create `websub/pinger.go` with HTTP POST logic to notify hub on feed updates
+- [ ] Add WebSub `Link` headers to feed responses (hub + self URLs)
+- [ ] Integrate pinger into `publish/publisher.go` for user and global feed updates
+- [ ] Comprehensive test coverage (unit + integration)
+- [ ] Update config.example.json with defaults
+- [ ] Update README and CLAUDE.md documentation
+- **Why**: Dave added this August 5, 2026 as part of v0.6.14. Needed for feature parity.
+- **Impact**: Enables real-time feed readers using WebSub protocol; complements RSSCloud
+- **Timeline**: Can be done incrementally (config → core → integration → testing)
+
+#### 2. Feed URL Construction Verification (30 mins) — QUICK VALIDATION
+**Feature**: Verify feed URLs respect configured scheme and domain
+- [ ] Review `feed/builder.go` to ensure URLs use `config.BaseURL` (not hardcoded `http://`)
+- [ ] Confirm all feed responses include proper scheme (http/https)
+- [ ] Add tests if needed to validate URL construction
+- **Why**: Dave fixed a bug (Aug 2, 2026) where hardcoded `http://` broke HTTPS deployments
+- **Impact**: Ensures HTTPS deployments work correctly
+- **Status**: Likely already correct, but verify per CLAUDE.md guidance
+
+#### 3. Update Version & Sync Docs (1 hour) — CLEANUP
+**Feature**: Align project version and documentation with upstream
+- [ ] Update version from v1.0 to v0.6.14 (to match upstream JavaScript)
+- [ ] Update CLAUDE.md with WebSub architecture notes
+- [ ] Document `/readhttpfile` security fix (Dave restricted to `config.urlMenuOpml`)
+- [ ] Sync vendored client if new commits exist
+- **Why**: Stay aligned with upstream; document security improvements
+
 ### Tier 2: Important Enhancements
 
 #### 7. Autolinker Refinements (1 day) — ✅ DONE

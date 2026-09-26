@@ -58,6 +58,10 @@ type Config struct {
 	FeedsInDatabase bool   `json:"flFeedsInDatabase"` // Store feeds in database (default: false)
 	FeedsDBPath     string `json:"feedsDBPath"`       // Path to feeds database
 
+	// WebSub (Web Push) configuration
+	WebsubEnabled bool   `json:"flWebsubEnabled"` // Enable WebSub protocol support (default: false)
+	URLWebsubHub  string `json:"urlWebsubHub"`    // WebSub hub URL to ping (e.g., https://rpc.rsscloud.io/websub)
+
 	// Post cleanup
 	RemoveBlanksAtEnd        bool   `json:"flRemoveBlanksAtEnd"`      // Strip trailing empty paragraphs (default: false)
 	TitleForSubscriptionList string `json:"titleForSubscriptionList"` // Custom OPML title
@@ -154,6 +158,10 @@ func (c *Config) applyDefaults() {
 
 	if c.FeedsDBPath == "" {
 		c.FeedsDBPath = "rss.chat.feeds.db"
+	}
+
+	if c.URLWebsubHub == "" {
+		c.URLWebsubHub = "https://rpc.rsscloud.io/websub"
 	}
 
 	if c.BlocklistPath == "" {

@@ -19,6 +19,7 @@ import (
 	"github.com/roberte3/rss.chat.go/publish"
 	"github.com/roberte3/rss.chat.go/setup"
 	"github.com/roberte3/rss.chat.go/websocket"
+	"github.com/roberte3/rss.chat.go/websub"
 )
 
 func main() {
@@ -117,6 +118,10 @@ func runHttpSvr(conn *sql.DB, cfg *config.Config) {
 			log.Fatalf("failed to ensure feed directories: %v", err)
 		}
 	}
+
+	// Initialize WebSub pinger
+	pinger := websub.NewPinger(cfg.URLWebsubHub, cfg.WebsubEnabled)
+	pub.SetPinger(pinger)
 
 	// Fill in feeds for users who signed up before they were published at
 	// creation time. Runs in both storage modes: the filesystem is the

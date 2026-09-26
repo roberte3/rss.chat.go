@@ -8,7 +8,9 @@ import (
 )
 
 // ServeFeed serves a feed file (user RSS, everyone RSS, or comments feed).
-func (p *Publisher) ServeFeed(w http.ResponseWriter, r *http.Request, feedPath string) error {
+// hubURL is the WebSub hub URL; if non-empty, adds WebSub Link header.
+// feedURL is the URL of the feed itself (for rel="self" in the Link header); if empty, WebSub header is skipped.
+func (p *Publisher) ServeFeed(w http.ResponseWriter, r *http.Request, feedPath string, hubURL, feedURL string) error {
 	// Prevent directory traversal
 	if strings.Contains(feedPath, "..") {
 		return fmt.Errorf("invalid feed path")
@@ -30,26 +32,33 @@ func (p *Publisher) ServeFeed(w http.ResponseWriter, r *http.Request, feedPath s
 	}
 
 	w.Header().Set("Content-Type", "application/rss+xml")
+	if hubURL != "" && feedURL != "" {
+		link := fmt.Sprintf("<%s>; rel=\"hub\", <%s>; rel=\"self\"", hubURL, feedURL)
+		w.Header().Set("Link", link)
+	}
 	http.ServeFile(w, r, path)
 	return nil
 }
 
 // ServeUserFeed serves a user's RSS feed.
 // Expects feedPath like "dave/rss.xml"
-func (p *Publisher) ServeUserFeed(w http.ResponseWriter, r *http.Request, screenname string) error {
+// hubURL is the WebSub hub URL; feedURL is the full feed URL for rel="self".
+func (p *Publisher) ServeUserFeed(w http.ResponseWriter, r *http.Request, screenname string, hubURL, feedURL string) error {
 	feedPath := filepath.Join(screenname, "rss.xml")
-	return p.ServeFeed(w, r, feedPath)
+	return p.ServeFeed(w, r, feedPath, hubURL, feedURL)
 }
 
 // ServeEveryoneFeed serves the network-wide RSS feed.
-func (p *Publisher) ServeEveryoneFeed(w http.ResponseWriter, r *http.Request) error {
-	return p.ServeFeed(w, r, "rss.xml")
+// hubURL is the WebSub hub URL; feedURL is the full feed URL for rel="self".
+func (p *Publisher) ServeEveryoneFeed(w http.ResponseWriter, r *http.Request, hubURL, feedURL string) error {
+	return p.ServeFeed(w, r, "rss.xml", hubURL, feedURL)
 }
 
 // ServeCommentsFeed serves a comments feed.
 // Expects feedPath like "comments/dave-123.xml"
-func (p *Publisher) ServeCommentsFeed(w http.ResponseWriter, r *http.Request, screenname string, itemID int64) error {
+// hubURL is the WebSub hub URL; feedURL is the full feed URL for rel="self".
+func (p *Publisher) ServeCommentsFeed(w http.ResponseWriter, r *http.Request, screenname string, itemID int64, hubURL, feedURL string) error {
 	filename := fmt.Sprintf("%s-%d.xml", screenname, itemID)
 	feedPath := filepath.Join("comments", filename)
-	return p.ServeFeed(w, r, feedPath)
+	return p.ServeFeed(w, r, feedPath, hubURL, feedURL)
 }

@@ -69,6 +69,12 @@ Disallow: /getitembyguid
 Disallow: /getiteminfo
 `
 
+	// Set up config with WebSub defaults
+	handler.Config = &config.Config{
+		URLWebsubHub:  "https://rpc.rsscloud.io/websub",
+		WebsubEnabled: false, // Disabled by default in tests
+	}
+
 	// Create mux and register routes
 	mux := http.NewServeMux()
 	handler.RegisterRoutes(mux)
@@ -1678,5 +1684,166 @@ func TestNewUserHasFeedImmediately(t *testing.T) {
 	}
 	if !strings.Contains(body, "freshuser") {
 		t.Errorf("feed does not name the user: %q", body)
+	}
+}
+
+// TestWebSubHeaderPresent verifies that feed responses include WebSub Link headers.
+func TestWebSubHeaderPresent(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+
+	// Create a test user
+	secret := "test-secret"
+	insertTestUser(t, conn, "alice", secret)
+
+	// Publish the user's feed and everyone feed so they exist
+	if err := handler.Publisher.PublishUserFeed(conn, "alice"); err != nil {
+		t.Fatalf("failed to publish user feed: %v", err)
+	}
+	if err := handler.Publisher.PublishEveryoneFeed(conn); err != nil {
+		t.Fatalf("failed to publish everyone feed: %v", err)
+	}
+
+	tests := []struct {
+		name    string
+		path    string
+		wantURL string
+	}{
+		{
+			name:    "User feed includes self URL",
+			path:    "/feed?screenname=alice",
+			wantURL: "feed?screenname=alice",
+		},
+		{
+			name:    "Everyone feed includes self URL",
+			path:    "/feed",
+			wantURL: "feed",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			req := httptest.NewRequest("GET", tt.path, nil)
+			w := httptest.NewRecorder()
+			mux.ServeHTTP(w, req)
+
+			if w.Code != http.StatusOK {
+				t.Fatalf("status = %d, want %d", w.Code, http.StatusOK)
+			}
+
+			link := w.Header().Get("Link")
+			if link == "" {
+				t.Errorf("expected Link header, got none")
+				return
+			}
+
+			// Verify the header contains rel="self" with the feed URL
+			if !strings.Contains(link, "rel=\"self\"") {
+				t.Errorf("Link header missing rel=\"self\": %s", link)
+			}
+
+			if !strings.Contains(link, tt.wantURL) {
+				t.Errorf("Link header missing feed URL %s: %s", tt.wantURL, link)
+			}
+
+			// Verify the header contains rel="hub"
+			if !strings.Contains(link, "rel=\"hub\"") {
+				t.Errorf("Link header missing rel=\"hub\": %s", link)
+			}
+		})
+	}
+}
+
+// TestWebSubCommentsFeedHeader verifies that comments feeds include WebSub headers.
+func TestWebSubCommentsFeedHeader(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+
+	// Create a user and a post
+	secret := "test-secret"
+	insertTestUser(t, conn, "alice", secret)
+
+	// Create a post
+	form := url.Values{}
+	form.Set("jsontext", `{"description":"<p>Test post for comments feed</p>"}`)
+	form.Set("inReplyTo", "")
+
+	w := authedPost(mux, "/newpost", "alice", secret, form)
+	if w.Code != http.StatusOK {
+		t.Fatalf("newpost status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// Get the item ID from the database
+	var itemID int64
+	err := conn.QueryRow("SELECT id FROM items WHERE author = ? ORDER BY id DESC LIMIT 1", "alice").Scan(&itemID)
+	if err != nil {
+		t.Fatalf("failed to get item ID: %v", err)
+	}
+
+	// Publish the comments feed
+	if err := handler.Publisher.PublishCommentsFeed(conn, "alice", itemID); err != nil {
+		t.Fatalf("failed to publish comments feed: %v", err)
+	}
+
+	// Request the comments feed
+	path := fmt.Sprintf("/comments/alice/%d.xml", itemID)
+	req := httptest.NewRequest("GET", path, nil)
+	w = httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("comments feed status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// Verify the Link header
+	link := w.Header().Get("Link")
+	if link == "" {
+		t.Errorf("expected Link header, got none")
+		return
+	}
+
+	if !strings.Contains(link, "rel=\"self\"") {
+		t.Errorf("Link header missing rel=\"self\": %s", link)
+	}
+
+	if !strings.Contains(link, "comments") {
+		t.Errorf("Link header missing comments URL: %s", link)
+	}
+}
+
+// TestWebSubOPMLHeader verifies that OPML responses include WebSub headers.
+func TestWebSubOPMLHeader(t *testing.T) {
+	mux, conn, handler := setupTestServer(t)
+
+	// Create some users
+	for _, name := range []string{"alice", "bob"} {
+		insertTestUser(t, conn, name, "secret")
+	}
+
+	// Publish the subscription list
+	if err := handler.Publisher.PublishSubscriptionList(conn); err != nil {
+		t.Fatalf("failed to publish subscription list: %v", err)
+	}
+
+	// Request the OPML
+	req := httptest.NewRequest("GET", "/getsubscriptionlist", nil)
+	w := httptest.NewRecorder()
+	mux.ServeHTTP(w, req)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// Verify the Link header
+	link := w.Header().Get("Link")
+	if link == "" {
+		t.Errorf("expected Link header, got none")
+		return
+	}
+
+	if !strings.Contains(link, "rel=\"self\"") {
+		t.Errorf("Link header missing rel=\"self\": %s", link)
+	}
+
+	if !strings.Contains(link, "getsubscriptionlist") {
+		t.Errorf("Link header missing OPML URL: %s", link)
 	}
 }

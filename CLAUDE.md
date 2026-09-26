@@ -89,6 +89,29 @@ Things not to undo: the secret is compared with `crypto/subtle`, is `json:"-"` s
 be serialized into a response, and the mail-sending endpoints are rate-limited per mailbox and
 per source address (`api/ratelimit.go`). `clientIP` ignores `X-Forwarded-For` on purpose.
 
+### WebSub (Web Push) Support
+
+WebSub is a standard protocol for real-time feed notifications. When enabled, the server:
+- Announces the hub URL via Link headers on all feed responses (`rel="hub"`)
+- Notifies the WebSub hub whenever a feed is updated (new post, edit, like, reply)
+- Allows feed readers to receive updates in real-time instead of polling
+
+**Configuration**: `flWebsubEnabled` (bool, default false) and `urlWebsubHub` (URL, default
+`https://rpc.rsscloud.io/websub`). When disabled, no hub is announced or pinged.
+
+**Implementation**: `websub/pinger.go` sends asynchronous HTTP POSTs to the hub with the feed URL.
+The pinger is wired into `publish.Publisher` and called after feed updates in:
+- `PublishUserFeed` → ping user feed URL
+- `PublishEveryoneFeed` → ping global feed URL
+- `PublishCommentsFeed` → ping comments feed URL
+
+Feed response headers are added in `api/handler.go` by the `addWebsubHeader` helper, which
+formats the Link header as `rel="hub", rel="self"`. All feed-serving endpoints (user feed,
+global feed, comments feed, OPML) include this header when WebSub is configured.
+
+Hub ping failures (network errors, 4xx/5xx responses) are logged but do not block the user's
+operation. The pinger runs asynchronously to avoid latency impact on feed writes.
+
 ### The web client is vendored, not ours
 
 `client/code/` is Dave Winer's client, MIT, **byte-for-byte upstream with no local changes** —
