@@ -104,6 +104,13 @@ func CreateTables(db *sql.DB) error {
 			PRIMARY KEY (itemId, screenname)
 		);
 		CREATE INDEX IF NOT EXISTS idx_mentions_screenname ON mentions(screenname);
+
+		CREATE TABLE IF NOT EXISTS hashtags (
+			tag TEXT NOT NULL,
+			itemId INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+			PRIMARY KEY (tag, itemId)
+		);
+		CREATE INDEX IF NOT EXISTS idx_hashtags_itemId ON hashtags(itemId);
 	`)
 	if err != nil {
 		return fmt.Errorf("create tables: %w", err)
