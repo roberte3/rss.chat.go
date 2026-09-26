@@ -380,6 +380,30 @@ Run the full suite with the race detector, as CI does:
 go test -race ./...
 ```
 
+### End-to-End Tests
+
+Quick smoke test of the full user workflow (signup → posts → interactions):
+
+```bash
+# All E2E tests (4 tests, ~200ms)
+go test ./api -run E2E -v
+
+# Specific scenarios
+go test ./api -run TestE2ECompleteWorkflow -v     # Full workflow
+go test ./api -run TestE2EFeedFormats -v          # RSS/JSON feeds
+go test ./api -run TestE2EWebSocketIntegration -v # Real-time endpoints
+go test ./api -run TestE2EErrorRecovery -v        # Error handling
+```
+
+**What the E2E suite covers:**
+- User signup and authentication
+- Post creation with HTML sanitization
+- Interactions (likes, threaded replies)
+- Post updates and soft deletion
+- Feed generation (RSS 2.0, JSON, OPML)
+- WebSocket endpoint availability
+- Error handling and auth failures
+
 Before pushing, run everything CI checks:
 
 ```bash
@@ -395,10 +419,17 @@ go test ./api -run TestDeletePost -v
 
 ### Test Coverage
 
+- **E2E Workflows**: signup → posts → likes → replies → updates → deletion (4 tests)
 - **Database layer**: CRUD, media, blocklist sync, ID preservation
 - **API layer**: every endpoint, auth, rate limiting, blocklist hot-reload, email flow
 - **Feeds**: RSS/OPML generation, format negotiation, WebSub headers and pings
 - **Integration**: backup/restore round trips, vendored-client macro coverage
+- **WebSub**: Protocol compliance, hub pinging, concurrent operations
+
+**Test Statistics:**
+- 154+ tests across 12 packages
+- ~30 seconds total (60s with race detector)
+- Full concurrent safety checking via `-race` flag
 
 See [TESTING.md](TESTING.md) for the full guide.
 
