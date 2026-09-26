@@ -113,7 +113,7 @@ func (h *Handler) UploadMediaAuth(w http.ResponseWriter, r *http.Request) {
 
 	user, err := AuthenticateUser(h.DB, email, code)
 	if err != nil {
-		RespondError(w, "Can't upload media because "+err.Error())
+		RespondAuthError(w, r, "Authentication failed")
 		return
 	}
 
@@ -129,7 +129,7 @@ func (h *Handler) UploadAvatarAuth(w http.ResponseWriter, r *http.Request) {
 
 	user, err := AuthenticateUser(h.DB, email, code)
 	if err != nil {
-		RespondError(w, "Can't upload avatar because "+err.Error())
+		RespondAuthError(w, r, "Authentication failed")
 		return
 	}
 
@@ -211,7 +211,7 @@ func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 
 	// Validate format
 	if format != "xml" && format != "json" {
-		RespondError(w, fmt.Sprintf("Invalid format: %s (must be 'xml' or 'json')", format))
+		RespondValidationError(w, r, "format", "must be 'xml' or 'json'")
 		return
 	}
 
@@ -234,7 +234,7 @@ func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			RespondError(w, fmt.Sprintf("Can't build feed because %s", err.Error()))
+			RespondErrorWithIDAndCode(w, r, "Failed to build feed", "FEED_BUILD_ERROR", err.Error())
 			return
 		}
 
@@ -324,7 +324,7 @@ func (h *Handler) GetRecentItems(w http.ResponseWriter, r *http.Request) {
 
 	items, err := getRecentItems(h.DB, screenname, ct, h.FeedConfig.BaseURL)
 	if err != nil {
-		RespondError(w, "Can't get recent items because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get recent items", "RECENT_ITEMS_ERROR", err.Error())
 		return
 	}
 
@@ -336,7 +336,7 @@ func (h *Handler) GetRecentItems(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetRecentUserItems(w http.ResponseWriter, r *http.Request) {
 	screenname := r.URL.Query().Get("name")
 	if screenname == "" {
-		RespondError(w, "Can't get recent user items because screenname is required")
+		RespondValidationError(w, r, "name", "required parameter missing")
 		return
 	}
 
@@ -345,7 +345,7 @@ func (h *Handler) GetRecentUserItems(w http.ResponseWriter, r *http.Request) {
 
 	items, err := getRecentUserItems(h.DB, screenname, viewerScreenname, ct, h.FeedConfig.BaseURL)
 	if err != nil {
-		RespondError(w, "Can't get recent user items because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get user items", "USER_ITEMS_ERROR", err.Error())
 		return
 	}
 
@@ -402,7 +402,7 @@ func (h *Handler) GetTrendingHashtags(w http.ResponseWriter, r *http.Request) {
 
 	tags, err := db.GetTrendingHashtags(h.DB, days, limit)
 	if err != nil {
-		RespondError(w, "Can't get trending hashtags because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get trending hashtags", "TRENDING_HASHTAGS_ERROR", err.Error())
 		return
 	}
 
@@ -421,7 +421,7 @@ func (h *Handler) GetTrendingHashtags(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetItemByGuid(w http.ResponseWriter, r *http.Request) {
 	guid := r.URL.Query().Get("guid")
 	if guid == "" {
-		RespondError(w, "Can't get item by guid because guid is required")
+		RespondValidationError(w, r, "guid", "required parameter missing")
 		return
 	}
 
@@ -429,12 +429,12 @@ func (h *Handler) GetItemByGuid(w http.ResponseWriter, r *http.Request) {
 
 	item, err := getItemByGuid(h.DB, guid, viewerScreenname, h.FeedConfig.BaseURL)
 	if err != nil {
-		RespondError(w, "Can't get item by guid because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get item", "ITEM_FETCH_ERROR", err.Error())
 		return
 	}
 
 	if item == nil {
-		RespondError(w, "Can't get item by guid because item not found")
+		RespondNotFound(w, r, "Item not found")
 		return
 	}
 
@@ -446,7 +446,7 @@ func (h *Handler) GetItemByGuid(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetItemAndReplies(w http.ResponseWriter, r *http.Request) {
 	idParent := int64(parseIntParam(r, "idparent", 0))
 	if idParent == 0 {
-		RespondError(w, "Can't get item and replies because idparent is required")
+		RespondValidationError(w, r, "idparent", "required parameter missing")
 		return
 	}
 
@@ -454,7 +454,7 @@ func (h *Handler) GetItemAndReplies(w http.ResponseWriter, r *http.Request) {
 
 	items, err := getItemAndReplies(h.DB, viewerScreenname, idParent, h.FeedConfig.BaseURL)
 	if err != nil {
-		RespondError(w, "Can't get item and replies because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get item and replies", "ITEM_REPLIES_ERROR", err.Error())
 		return
 	}
 
@@ -475,12 +475,12 @@ func (h *Handler) GetItemInfo(w http.ResponseWriter, r *http.Request) {
 
 	item, err := getItemInfo(h.DB, guid, idStr, viewerScreenname, h.FeedConfig.BaseURL)
 	if err != nil {
-		RespondError(w, "Can't get item info because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get item info", "ITEM_INFO_ERROR", err.Error())
 		return
 	}
 
 	if item == nil {
-		RespondError(w, "Can't get item info because item not found")
+		RespondNotFound(w, r, "Item not found")
 		return
 	}
 
@@ -489,7 +489,7 @@ func (h *Handler) GetItemInfo(w http.ResponseWriter, r *http.Request) {
 	} else if format == "rss" {
 		RespondJSONString(w, item.Description) // Should return RSS-formatted item
 	} else {
-		RespondError(w, "Can't get item info because invalid format "+format)
+		RespondValidationError(w, r, "format", "invalid format")
 	}
 }
 
@@ -530,7 +530,7 @@ func (h *Handler) GetLikersList(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetMostActiveToday(w http.ResponseWriter, r *http.Request) {
 	users, err := getMostActiveToday(h.DB)
 	if err != nil {
-		RespondError(w, "Can't get most active today because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get most active users", "ACTIVE_USERS_ERROR", err.Error())
 		return
 	}
 
@@ -573,7 +573,7 @@ func (h *Handler) IsUserInDatabase(w http.ResponseWriter, r *http.Request) {
 
 	exists, err := isUserInDatabase(h.DB, screenname)
 	if err != nil {
-		RespondError(w, "Can't check user because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to check user", "DB_LOOKUP_ERROR", err.Error())
 		return
 	}
 
@@ -585,13 +585,13 @@ func (h *Handler) IsUserInDatabase(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) IsEmailInDatabase(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("email")
 	if email == "" {
-		RespondError(w, "Can't check email because email is required")
+		RespondValidationError(w, r, "email", "required parameter missing")
 		return
 	}
 
 	exists, err := isEmailInDatabase(h.DB, email)
 	if err != nil {
-		RespondError(w, "Can't check email because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to check email", "DB_LOOKUP_ERROR", err.Error())
 		return
 	}
 
@@ -603,7 +603,7 @@ func (h *Handler) IsEmailInDatabase(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CheckWhitelist(w http.ResponseWriter, r *http.Request) {
 	email := r.URL.Query().Get("emailaddress")
 	if email == "" {
-		RespondError(w, "Can't check whitelist because email is required")
+		RespondValidationError(w, r, "emailaddress", "required parameter missing")
 		return
 	}
 
@@ -627,7 +627,7 @@ func (h *Handler) NewPost(w http.ResponseWriter, r *http.Request) {
 
 	user, err := AuthenticateUser(h.DB, email, code)
 	if err != nil {
-		RespondError(w, "Can't create post because "+err.Error())
+		RespondAuthError(w, r, "Authentication failed")
 		return
 	}
 
@@ -644,7 +644,7 @@ func (h *Handler) UpdatePost(w http.ResponseWriter, r *http.Request) {
 
 	user, err := AuthenticateUser(h.DB, email, code)
 	if err != nil {
-		RespondError(w, "Can't update post because "+err.Error())
+		RespondAuthError(w, r, "Authentication failed")
 		return
 	}
 
@@ -661,7 +661,7 @@ func (h *Handler) DeletePost(w http.ResponseWriter, r *http.Request) {
 
 	user, err := AuthenticateUser(h.DB, email, code)
 	if err != nil {
-		RespondError(w, "Can't delete post because "+err.Error())
+		RespondAuthError(w, r, "Authentication failed")
 		return
 	}
 
@@ -678,7 +678,7 @@ func (h *Handler) ToggleLike(w http.ResponseWriter, r *http.Request) {
 
 	user, err := AuthenticateUser(h.DB, email, code)
 	if err != nil {
-		RespondError(w, "Can't toggle like because "+err.Error())
+		RespondAuthError(w, r, "Authentication failed")
 		return
 	}
 

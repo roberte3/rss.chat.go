@@ -431,20 +431,24 @@ func TestGetUserData(t *testing.T) {
 func TestErrorResponseFormat(t *testing.T) {
 	mux, _, _ := setupTestServer(t)
 
-	// Try to get a non-existent item
+	// Try to get items without required parameter
 	req := httptest.NewRequest("GET", "/getitemandreplies?id=999", nil)
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	// Should get 503 for error responses per spec
-	if w.Code != http.StatusServiceUnavailable {
-		t.Errorf("status = %d, want %d", w.Code, http.StatusServiceUnavailable)
+	// Should get 400 for validation errors (missing idparent parameter)
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
 
 	body := w.Body.String()
-	// Error responses are plain text with format "Can't X because Y."
-	if !strings.HasPrefix(body, "Can't") {
-		t.Errorf("error message doesn't start with 'Can't': %s", body)
+	// Error responses are JSON with structured error format
+	var errResp map[string]interface{}
+	if err := json.Unmarshal([]byte(body), &errResp); err != nil {
+		t.Errorf("error response should be valid JSON: %v", err)
+	}
+	if _, ok := errResp["errorId"]; !ok {
+		t.Errorf("error response missing errorId field: %s", body)
 	}
 }
 
@@ -779,13 +783,18 @@ func TestFeedInvalidFormat(t *testing.T) {
 	w := httptest.NewRecorder()
 	mux.ServeHTTP(w, req)
 
-	if w.Code != http.StatusOK {
-		// Note: Our error response is not an HTTP error, it's a JSON response with error message
-		// This is consistent with other API error responses
+	// Validation error returns 400 Bad Request
+	if w.Code != http.StatusBadRequest {
+		t.Errorf("status = %d, want %d", w.Code, http.StatusBadRequest)
 	}
 
-	if !strings.Contains(w.Body.String(), "Invalid format") {
-		t.Errorf("expected error message about invalid format")
+	// Response should be valid JSON with error details
+	var errResp map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &errResp); err != nil {
+		t.Errorf("expected JSON error response: %v", err)
+	}
+	if errResp["code"] != "VALIDATION_ERROR" {
+		t.Errorf("expected VALIDATION_ERROR code, got %v", errResp["code"])
 	}
 }
 
