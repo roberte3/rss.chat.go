@@ -2,6 +2,7 @@ package api
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
@@ -49,6 +50,9 @@ func findOrCreateLocalUser(conn *sql.DB, screenname, email string) (*db.User, bo
 	if err != nil {
 		return nil, false, err
 	}
+	if created == nil {
+		return nil, false, fmt.Errorf("user was created but could not be retrieved")
+	}
 	return created, true, nil
 }
 
@@ -90,6 +94,10 @@ func (h *Handler) LocalNewUser(w http.ResponseWriter, r *http.Request) {
 	user, isNewUser, err := findOrCreateLocalUser(h.DB, screenname, email)
 	if err != nil {
 		RespondError(w, "Can't create the user because "+err.Error())
+		return
+	}
+	if user == nil {
+		RespondError(w, "Can't create the user because user object is nil")
 		return
 	}
 
