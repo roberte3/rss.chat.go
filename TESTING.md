@@ -20,11 +20,11 @@ go test -cover ./...
 
 ## Complete Test Suite Overview
 
-The project includes **150+ tests** across 12 packages:
+The project includes **154+ tests** across 12 packages:
 
 | Package | Tests | Focus | Time |
 |---------|-------|-------|------|
-| `api/` | 45+ | HTTP endpoints, auth, headers | 2-5s |
+| `api/` | 49+ | HTTP endpoints, auth, E2E workflows, headers | 2-5s |
 | `websub/` | 38 | WebSub protocol, hub pinging | 4-5s |
 | `websocket/` | 10+ | Real-time updates, broadcasting | 0.8s |
 | `db/` | 20+ | Database operations, CRUD | 1-2s |
@@ -36,7 +36,7 @@ The project includes **150+ tests** across 12 packages:
 | `tools/backup/` | 8+ | Backup/restore operations | 1-2s |
 | `tools/bluesky-subscribe/` | 15+ | Bluesky integration | 0.3s |
 | `tools/restore/` | 2 | Restore operations | 0.2s |
-| **Total** | **150+** | **All subsystems** | **~30s** |
+| **Total** | **154+** | **All subsystems** | **~30s** |
 
 ## Running Tests by Category
 
@@ -87,7 +87,31 @@ go test ./api -run "Ping" -v           # Ping integration tests
 go test ./api -run "Header" -v         # Header tests
 ```
 
-### 3. API Tests
+### 3. End-to-End (E2E) Tests
+
+Full workflow integration tests covering user signup through post interactions:
+
+```bash
+# All E2E tests (comprehensive workflow)
+go test ./api -run "E2E" -v
+
+# Specific E2E test scenarios
+go test ./api -run "TestE2ECompleteWorkflow" -v      # Full user journey
+go test ./api -run "TestE2EFeedFormats" -v            # RSS/JSON feed generation
+go test ./api -run "TestE2EWebSocketIntegration" -v   # Real-time endpoint availability
+go test ./api -run "TestE2EErrorRecovery" -v          # Error handling
+
+# E2E tests with race detector (recommended)
+go test -race ./api -run "E2E" -v
+```
+
+**Test Coverage:**
+- **TestE2ECompleteWorkflow**: Signup → posts → likes → replies → updates → deletion → metadata (~9 phases)
+- **TestE2EFeedFormats**: RSS 2.0 and JSON feed generation validation
+- **TestE2EWebSocketIntegration**: WebSocket endpoint availability checks
+- **TestE2EErrorRecovery**: Authentication failures and invalid operations
+
+### 4. API Tests
 
 HTTP endpoints and handlers:
 
@@ -385,6 +409,46 @@ go test -race ./...
 
 ## Test-Specific Scenarios
 
+### Testing End-to-End Workflows
+
+Complete user journeys from signup through interactions:
+
+```bash
+# All E2E tests
+go test -race ./api -run "E2E" -v
+
+# Full workflow (signup → posts → likes → replies → updates → deletion)
+go test ./api -run "TestE2ECompleteWorkflow" -v
+
+# Feed format negotiation (RSS 2.0 vs JSON)
+go test ./api -run "TestE2EFeedFormats" -v
+
+# Real-time WebSocket integration
+go test ./api -run "TestE2EWebSocketIntegration" -v
+
+# Error handling and edge cases
+go test ./api -run "TestE2EErrorRecovery" -v
+
+# With race detector (catches concurrent bugs)
+go test -race ./api -run "E2E"
+```
+
+**What's tested:**
+- User account creation and authentication
+- Post creation with HTML sanitization and linkification
+- Interactions (likes, replies with threading)
+- Feed publishing in multiple formats (RSS 2.0, JSON)
+- Post updates and soft deletion
+- User metadata and discovery endpoints
+- WebSocket endpoint availability
+- Auth failure handling and nonexistent user validation
+
+**Test infrastructure:**
+- Uses `insertTestUser()` to create test accounts without HTTP calls
+- Uses `authedPost()` helper for authenticated POST requests
+- Uses `setupTestServerWithFeedsDB()` for proper feed storage
+- Runs in ~200ms with full race detection enabled
+
 ### Testing WebSub Protocol
 
 ```bash
@@ -566,6 +630,7 @@ go test -cover ./websub ./api
 | `go test ./...` | Run all tests | ~30s |
 | `go test -race ./...` | All tests + race detector | ~60s |
 | `go test -cover ./...` | Coverage for all packages | ~30s |
+| `go test ./api -run E2E` | End-to-end workflow tests | ~0.2s |
 | `go test ./websub` | WebSub protocol tests | ~5s |
 | `go test ./api -run WebSub` | WebSub integration tests | ~3s |
 | `go test -run TestName -v` | Single test with details | <1s |
