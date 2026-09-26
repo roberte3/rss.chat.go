@@ -96,6 +96,14 @@ func CreateTables(db *sql.DB) error {
 			email TEXT PRIMARY KEY,
 			whenAdded DATETIME DEFAULT CURRENT_TIMESTAMP
 		);
+
+		CREATE TABLE IF NOT EXISTS mentions (
+			itemId INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+			screenname TEXT NOT NULL REFERENCES users(screenname),
+			whenCreated DATETIME DEFAULT CURRENT_TIMESTAMP,
+			PRIMARY KEY (itemId, screenname)
+		);
+		CREATE INDEX IF NOT EXISTS idx_mentions_screenname ON mentions(screenname);
 	`)
 	if err != nil {
 		return fmt.Errorf("create tables: %w", err)
