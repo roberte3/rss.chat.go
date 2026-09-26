@@ -98,6 +98,14 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 		}
 	}
 
+	// Extract and store hashtags from the post
+	if hashtags := ExtractHashtags(sanitized); len(hashtags) > 0 {
+		if err := db.StoreHashtags(h.DB, int(itemID), hashtags); err != nil {
+			// Log but don't fail the request - hashtags are secondary feature
+			fmt.Printf("Warning: failed to store hashtags: %v\n", err)
+		}
+	}
+
 	// Fetch the created item
 	item, err := db.GetItemByID(h.DB, user.Screenname, itemID, h.FeedConfig.BaseURL)
 	if err != nil {
@@ -219,6 +227,16 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 			if err := db.StoreMentions(h.DB, int(itemID), mentions); err != nil {
 				// Log but don't fail the request
 				fmt.Printf("Warning: failed to update mentions: %v\n", err)
+			}
+		}
+	}
+
+	// Extract and store hashtags from the updated post (if description was updated)
+	if description != "" {
+		if hashtags := ExtractHashtags(description); len(hashtags) > 0 {
+			if err := db.StoreHashtags(h.DB, int(itemID), hashtags); err != nil {
+				// Log but don't fail the request
+				fmt.Printf("Warning: failed to update hashtags: %v\n", err)
 			}
 		}
 	}

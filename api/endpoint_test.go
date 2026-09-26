@@ -174,6 +174,12 @@ func createTestSchema(conn *sql.DB) error {
 			PRIMARY KEY (itemId, screenname)
 		)`,
 		`CREATE INDEX idx_mentions_screenname ON mentions(screenname)`,
+		`CREATE TABLE hashtags (
+			tag TEXT NOT NULL,
+			itemId INTEGER NOT NULL REFERENCES items(id) ON DELETE CASCADE,
+			PRIMARY KEY (tag, itemId)
+		)`,
+		`CREATE INDEX idx_hashtags_itemId ON hashtags(itemId)`,
 	}
 
 	for _, query := range queries {
@@ -2029,5 +2035,198 @@ func TestMentionExtractionNonexistentUser(t *testing.T) {
 	mentions, _ := db.GetMentionsForItem(conn, itemID)
 	if len(mentions) != 1 || mentions[0] != "alice" {
 		t.Errorf("expected only alice mention, got %v", mentions)
+	}
+}
+
+// TestHashtagExtractionOnNewPost verifies hashtags are extracted and stored when creating a post.
+func TestHashtagExtractionOnNewPost(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Alice creates a post with hashtags
+	postReq := PostRequest{
+		Description: "<p>check out #golang and #rust programming</p>",
+		Title:       "Test post with tags",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form := url.Values{
+		"jsontext": {string(jsonData)},
+	}
+
+	w := authedPost(mux, "/newpost", "alice", "secret_alice", form)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("status = %d, expected %d: %s", w.Code, http.StatusOK, w.Body.String())
+	}
+
+	// Parse response to get item ID
+	var result map[string]interface{}
+	if err := json.Unmarshal(w.Body.Bytes(), &result); err != nil {
+		t.Fatalf("failed to parse response: %v", err)
+	}
+	itemID := int(result["id"].(float64))
+
+	// Verify hashtags were stored
+	tags, err := db.GetHashtagsForItem(conn, itemID)
+	if err != nil {
+		t.Fatalf("failed to get hashtags: %v", err)
+	}
+
+	if len(tags) != 2 {
+		t.Errorf("expected 2 tags, got %d: %v", len(tags), tags)
+	}
+
+	tagMap := make(map[string]bool)
+	for _, tag := range tags {
+		tagMap[tag] = true
+	}
+
+	if !tagMap["golang"] || !tagMap["rust"] {
+		t.Errorf("expected golang and rust tags, got %v", tags)
+	}
+}
+
+// TestHashtagExtractionOnUpdatePost verifies hashtags are updated when editing a post.
+func TestHashtagExtractionOnUpdatePost(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Alice creates a post with one tag
+	postReq := PostRequest{
+		Description: "<p>#golang is great</p>",
+		Title:       "Original title",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form := url.Values{
+		"jsontext": {string(jsonData)},
+	}
+
+	w := authedPost(mux, "/newpost", "alice", "secret_alice", form)
+	var result map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &result)
+	itemID := result["id"].(float64)
+
+	// Verify initial tag
+	tags, _ := db.GetHashtagsForItem(conn, int(itemID))
+	if len(tags) != 1 || tags[0] != "golang" {
+		t.Errorf("expected golang tag initially, got %v", tags)
+	}
+
+	// Update post with different tags
+	updateReq := PostRequest{
+		Description: "<p>#rust #python are also nice</p>",
+	}
+	updateData, _ := json.Marshal(updateReq)
+	updateForm := url.Values{
+		"id":       {fmt.Sprintf("%.0f", itemID)},
+		"jsontext": {string(updateData)},
+	}
+
+	w = authedPost(mux, "/updatepost", "alice", "secret_alice", updateForm)
+	if w.Code != http.StatusOK {
+		t.Fatalf("failed to update post: %s", w.Body.String())
+	}
+
+	// Verify tags were replaced
+	tags, _ = db.GetHashtagsForItem(conn, int(itemID))
+	if len(tags) != 2 {
+		t.Errorf("expected 2 tags after update, got %d: %v", len(tags), tags)
+	}
+
+	tagMap := make(map[string]bool)
+	for _, tag := range tags {
+		tagMap[tag] = true
+	}
+
+	if !tagMap["rust"] || !tagMap["python"] {
+		t.Errorf("expected rust and python tags after update, got %v", tags)
+	}
+
+	// golang should be gone
+	if tagMap["golang"] {
+		t.Errorf("golang tag should be gone, got %v", tags)
+	}
+}
+
+// TestHashtagExtractionCaseNormalization verifies hashtag tags are normalized to lowercase.
+func TestHashtagExtractionCaseNormalization(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Alice creates a post with mixed-case hashtags
+	postReq := PostRequest{
+		Description: "<p>#GoLang #RUST #Python are fun</p>",
+		Title:       "Mixed case tags",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form := url.Values{
+		"jsontext": {string(jsonData)},
+	}
+
+	w := authedPost(mux, "/newpost", "alice", "secret_alice", form)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("failed to create post: %s", w.Body.String())
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &result)
+	itemID := int(result["id"].(float64))
+
+	// Verify all tags are normalized to lowercase
+	tags, _ := db.GetHashtagsForItem(conn, itemID)
+	if len(tags) != 3 {
+		t.Errorf("expected 3 tags, got %d: %v", len(tags), tags)
+	}
+
+	for _, tag := range tags {
+		if tag != strings.ToLower(tag) {
+			t.Errorf("tag %q not normalized to lowercase", tag)
+		}
+	}
+
+	tagMap := make(map[string]bool)
+	for _, tag := range tags {
+		tagMap[tag] = true
+	}
+
+	if !tagMap["golang"] || !tagMap["rust"] || !tagMap["python"] {
+		t.Errorf("expected golang, rust, python in lowercase, got %v", tags)
+	}
+}
+
+// TestHashtagExtractionDuplicates verifies duplicate hashtags in a post are stored only once.
+func TestHashtagExtractionDuplicates(t *testing.T) {
+	mux, conn, _ := setupTestServer(t)
+
+	insertTestUser(t, conn, "alice", "secret_alice")
+
+	// Alice creates a post with duplicate hashtags
+	postReq := PostRequest{
+		Description: "<p>#golang is great and #golang is fast</p>",
+		Title:       "Duplicate tags",
+	}
+	jsonData, _ := json.Marshal(postReq)
+	form := url.Values{
+		"jsontext": {string(jsonData)},
+	}
+
+	w := authedPost(mux, "/newpost", "alice", "secret_alice", form)
+
+	if w.Code != http.StatusOK {
+		t.Fatalf("failed to create post: %s", w.Body.String())
+	}
+
+	var result map[string]interface{}
+	json.Unmarshal(w.Body.Bytes(), &result)
+	itemID := int(result["id"].(float64))
+
+	// Verify golang appears only once
+	tags, _ := db.GetHashtagsForItem(conn, itemID)
+	if len(tags) != 1 || tags[0] != "golang" {
+		t.Errorf("expected only golang tag, got %v", tags)
 	}
 }
