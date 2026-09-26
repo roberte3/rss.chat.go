@@ -155,6 +155,8 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	register("GET", "/getmentions", h.GetMentions)
 	register("GET", "/gethashtagitems", h.GetHashtagItems)
 	register("GET", "/gettrendinghashtags", h.GetTrendingHashtags)
+	register("GET", "/getuseravatar", h.GetUserAvatar)
+	register("GET", "/getuserswithavars", h.GetUsersWithAvatars)
 	register("GET", "/getitembyguid", h.GetItemByGuid)
 	register("GET", "/getitemandreplies", h.GetItemAndReplies)
 	register("GET", "/getiteminfo", h.GetItemInfo)

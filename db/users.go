@@ -104,6 +104,44 @@ func UpdateUserImageURL(conn *sql.DB, screenname, imageURL string) error {
 	return nil
 }
 
+// GetUsersWithAvatars returns users who have avatars, ordered by screenname.
+// ct (continuation token) is used for pagination - if non-empty, only users
+// with screenname > ct are returned.
+func GetUsersWithAvatars(conn *sql.DB, ct string, limit int) ([]*User, error) {
+	query := `select screenname, emailAddress, emailSecret, imageUrl, prefs, whenCreated, whenUpdated
+		from users where imageUrl is not null and imageUrl != ''`
+	args := []interface{}{}
+
+	if ct != "" {
+		query += ` and screenname > ?`
+		args = append(args, ct)
+	}
+
+	query += ` order by screenname asc`
+
+	if limit > 0 {
+		query += ` limit ?`
+		args = append(args, limit)
+	}
+
+	rows, err := conn.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("query users with avatars: %w", err)
+	}
+	defer rows.Close()
+
+	var users []*User
+	for rows.Next() {
+		user, err := scanUser(rows)
+		if err != nil {
+			return nil, fmt.Errorf("scan user: %w", err)
+		}
+		users = append(users, user)
+	}
+
+	return users, rows.Err()
+}
+
 // GetAllScreennames ports getAllScreennames.
 func GetAllScreennames(conn *sql.DB) ([]string, error) {
 	rows, err := conn.Query(`select screenname from users`)
