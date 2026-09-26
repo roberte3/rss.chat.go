@@ -1,10 +1,10 @@
 package api
 
 import (
+	"context"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
 	"os"
@@ -12,6 +12,7 @@ import (
 
 	"github.com/roberte3/rss.chat.go/config"
 	"github.com/roberte3/rss.chat.go/db"
+	applog "github.com/roberte3/rss.chat.go/log"
 )
 
 // SendConfirmingEmail handles the /sendconfirmingemail endpoint.
@@ -23,13 +24,13 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 
 	if email == "" {
 		LogValidationError(r, "email", "required parameter missing")
-		RespondError(w, "Can't send confirmation email because email is required")
+		RespondValidationError(w, r, "email", "required parameter missing")
 		return
 	}
 
 	if urlRedirect == "" {
 		LogValidationError(r, "urlredirect", "required parameter missing")
-		RespondError(w, "Can't send confirmation email because urlredirect is required")
+		RespondValidationError(w, r, "urlredirect", "required parameter missing")
 		return
 	}
 
@@ -44,7 +45,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 	// Check blocklist
 	if !h.checkBlocklist(email) {
 		LogAuthFailure(r, "email is blocklisted")
-		RespondError(w, "Can't send confirmation email because this email is not allowed")
+		RespondErrorWithIDAndCode(w, r, "This email is not allowed", "EMAIL_BLOCKLISTED", "Email address is on the blocklist")
 		return
 	}
 
@@ -52,7 +53,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 	user, err := db.GetUserInfoByEmail(h.DB, email)
 	if err != nil {
 		LogOperationError(r.Context(), "get_user_by_email", err, map[string]interface{}{})
-		RespondError(w, "Can't send confirmation email because of database error")
+		RespondErrorWithIDAndCode(w, r, "Database error looking up user", "DB_ERROR", err.Error())
 		return
 	}
 
@@ -62,7 +63,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 		// New user: check whitelist
 		if !h.checkWhitelist(email) {
 			LogAuthFailure(r, "email is not whitelisted")
-			RespondError(w, "Can't send confirmation email because this email is not whitelisted")
+			RespondErrorWithIDAndCode(w, r, "This email is not whitelisted", "EMAIL_NOT_WHITELISTED", "Email address is not on the whitelist")
 			return
 		}
 
@@ -81,7 +82,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 		// Send email
 		if err := h.sendConfirmationEmail(email, confirmationURL, "signup"); err != nil {
 			LogOperationError(r.Context(), "send_confirmation_email", err, map[string]interface{}{"type": "signup"})
-			RespondError(w, "Can't send confirmation email because email sending failed")
+			RespondErrorWithIDAndCode(w, r, "Failed to send confirmation email", "EMAIL_SEND_FAILED", err.Error())
 			return
 		}
 
@@ -97,7 +98,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 		emailSecret = generateEmailSecret()
 		if err := db.UpdateUser(h.DB, user.Screenname, user.EmailAddress, emailSecret); err != nil {
 			LogOperationError(r.Context(), "update_user_secret", err, map[string]interface{}{})
-			RespondError(w, "Can't send confirmation email because of database error")
+			RespondErrorWithIDAndCode(w, r, "Database error updating user", "DB_ERROR", err.Error())
 			return
 		}
 	}
@@ -108,7 +109,7 @@ func (h *Handler) SendConfirmingEmail(w http.ResponseWriter, r *http.Request) {
 	// Send email
 	if err := h.sendConfirmationEmail(email, confirmationURL, "signin"); err != nil {
 		LogOperationError(r.Context(), "send_confirmation_email", err, map[string]interface{}{"type": "signin"})
-		RespondError(w, "Can't send confirmation email because email sending failed")
+		RespondErrorWithIDAndCode(w, r, "Failed to send confirmation email", "EMAIL_SEND_FAILED", err.Error())
 		return
 	}
 
@@ -125,12 +126,12 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	urlRedirect := r.URL.Query().Get("urlredirect")
 
 	if email == "" || screenname == "" {
-		RespondError(w, "Can't create new user because email and name are required")
+		RespondValidationError(w, r, "email/name", "email and name are required")
 		return
 	}
 
 	if urlRedirect == "" {
-		RespondError(w, "Can't create new user because urlredirect is required")
+		RespondValidationError(w, r, "urlredirect", "required parameter missing")
 		return
 	}
 
@@ -142,41 +143,41 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 
 	// Validate screenname
 	if !isValidScreenname(screenname) {
-		RespondError(w, "Can't create new user because screenname is invalid")
+		RespondValidationError(w, r, "name", "screenname is invalid")
 		return
 	}
 
 	// Check blocklist
 	if !h.checkBlocklist(email) {
-		RespondError(w, "Can't create new user because this email is not allowed")
+		RespondErrorWithIDAndCode(w, r, "This email is not allowed", "EMAIL_BLOCKLISTED", "Email address is on the blocklist")
 		return
 	}
 
 	// Check whitelist
 	if !h.checkWhitelist(email) {
-		RespondError(w, "Can't create new user because this email is not whitelisted")
+		RespondErrorWithIDAndCode(w, r, "This email is not whitelisted", "EMAIL_NOT_WHITELISTED", "Email address is not on the whitelist")
 		return
 	}
 
 	// Check if email already exists
 	existingUser, err := db.GetUserInfoByEmail(h.DB, email)
 	if err != nil {
-		RespondError(w, "Can't create new user because of database error")
+		RespondErrorWithIDAndCode(w, r, "Database error looking up user", "DB_ERROR", err.Error())
 		return
 	}
 	if existingUser != nil {
-		RespondError(w, "Can't create new user because this email is already registered")
+		RespondErrorWithIDAndCode(w, r, "This email is already registered", "EMAIL_ALREADY_REGISTERED", "An account with this email already exists")
 		return
 	}
 
 	// Check if screenname already exists
 	existingScreenname, err := db.GetUserInfoByScreenname(h.DB, screenname)
 	if err != nil {
-		RespondError(w, "Can't create new user because of database error")
+		RespondErrorWithIDAndCode(w, r, "Database error looking up screenname", "DB_ERROR", err.Error())
 		return
 	}
 	if existingScreenname != nil {
-		RespondError(w, "Can't create new user because this screenname is already taken")
+		RespondErrorWithIDAndCode(w, r, "This screenname is already taken", "SCREENNAME_TAKEN", "The requested screenname is already in use")
 		return
 	}
 
@@ -185,7 +186,7 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 
 	// Create the user
 	if err := db.AddUser(h.DB, screenname, email, emailSecret); err != nil {
-		RespondError(w, "Can't create new user because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to create user", "DB_ERROR", err.Error())
 		return
 	}
 
@@ -194,7 +195,7 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	// rssnetwork.js. The user exists either way, so a failure here is logged
 	// rather than surfaced.
 	if err := h.Publisher.PublishSubscriptionList(h.DB); err != nil {
-		log.Printf("warning: failed to publish subscription list after creating %s: %v", screenname, err)
+		LogWarning(r.Context(), "failed to publish subscription list after creating user", "screenname", screenname, "err", err)
 	}
 
 	// Publish the new user's feed straight away, so it answers with a valid
@@ -203,7 +204,7 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	// until the user's first post triggers UpdateFeedsOnPostWrite. Ports the
 	// addEmailToUserInDatabase change of 7/25/26 (server v0.6.5).
 	if err := h.Publisher.PublishUserFeed(h.DB, screenname); err != nil {
-		log.Printf("warning: failed to publish feed for new user %s: %v", screenname, err)
+		LogWarning(r.Context(), "failed to publish feed for new user", "screenname", screenname, "err", err)
 	}
 
 	// Build confirmation URL
@@ -213,7 +214,7 @@ func (h *Handler) CreateNewUser(w http.ResponseWriter, r *http.Request) {
 	if err := h.sendConfirmationEmail(email, confirmationURL, "signup"); err != nil {
 		// User was created but email failed—log but don't fail the request
 		// User can resend via /sendconfirmingemail
-		fmt.Printf("Warning: failed to send confirmation email to %s: %v\n", email, err)
+		LogWarning(r.Context(), "failed to send confirmation email to new user", "screenname", screenname, "err", err)
 	}
 
 	RespondJSON(w, map[string]interface{}{
@@ -288,7 +289,9 @@ func (h *Handler) refreshBlocklist() {
 
 	fileEmails, err := config.LoadBlocklist(h.Config.BlocklistPath)
 	if err != nil {
-		log.Printf("warning: failed to load blocklist: %v", err)
+		ctx := context.Background()
+		logger := applog.WithContext(ctx)
+		logger.WarnContext(ctx, "failed to load blocklist", "err", err)
 		return
 	}
 
@@ -296,7 +299,9 @@ func (h *Handler) refreshBlocklist() {
 	merged = append(merged, h.Config.BlockedUsersList...)
 	merged = append(merged, fileEmails...)
 	if err := db.SyncBlocklistToDB(h.DB, dedupeEmails(merged)); err != nil {
-		log.Printf("warning: failed to sync blocklist to database: %v", err)
+		ctx := context.Background()
+		logger := applog.WithContext(ctx)
+		logger.WarnContext(ctx, "failed to sync blocklist to database", "err", err)
 		return
 	}
 
@@ -332,7 +337,9 @@ func (h *Handler) checkBlocklist(email string) bool {
 
 	blocked, err := db.IsEmailBlocked(h.DB, email)
 	if err != nil {
-		log.Printf("warning: failed to check blocklist: %v", err)
+		ctx := context.Background()
+		logger := applog.WithContext(ctx)
+		logger.WarnContext(ctx, "failed to check blocklist", "err", err)
 		return true
 	}
 	return !blocked
