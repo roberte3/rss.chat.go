@@ -136,6 +136,7 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	register("GET", "/comments/{screenname}/{file}", h.CommentsFeed)
 	register("GET", "/getrecentitems", h.GetRecentItems)
 	register("GET", "/getrecentuseritems", h.GetRecentUserItems)
+	register("GET", "/getmentions", h.GetMentions)
 	register("GET", "/getitembyguid", h.GetItemByGuid)
 	register("GET", "/getitemandreplies", h.GetItemAndReplies)
 	register("GET", "/getiteminfo", h.GetItemInfo)
@@ -324,6 +325,27 @@ func (h *Handler) GetRecentUserItems(w http.ResponseWriter, r *http.Request) {
 	items, err := getRecentUserItems(h.DB, screenname, viewerScreenname, ct, h.FeedConfig.BaseURL)
 	if err != nil {
 		RespondError(w, "Can't get recent user items because "+err.Error())
+		return
+	}
+
+	RespondJSON(w, items)
+}
+
+// GetMentions returns posts that mention a specific user.
+// Query params: screenname (required), ct (optional continuation token)
+func (h *Handler) GetMentions(w http.ResponseWriter, r *http.Request) {
+	screenname := r.URL.Query().Get("screenname")
+	if screenname == "" {
+		RespondError(w, "Can't get mentions because screenname is required")
+		return
+	}
+
+	ct := r.URL.Query().Get("ct")
+	maxCt := parseIntParam(r, "maxct", 100)
+
+	items, err := getMentions(h.DB, screenname, ct, maxCt, h.FeedConfig.BaseURL)
+	if err != nil {
+		RespondError(w, "Can't get mentions because "+err.Error())
 		return
 	}
 

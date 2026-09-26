@@ -21,6 +21,26 @@ func getRecentUserItems(conn *sql.DB, screenname, viewerScreenname string, maxCt
 	return db.GetRecentUserItems(conn, viewerScreenname, feedURL, maxCt, baseURL)
 }
 
+// getMentions fetches items that mention a specific user.
+func getMentions(conn *sql.DB, screenname, ct string, maxCt int, baseURL string) ([]db.Item, error) {
+	// GetItemsForMention already returns full items with all details populated
+	// We just need to filter out deleted items
+	items, err := db.GetItemsForMention(conn, screenname, ct, maxCt)
+	if err != nil {
+		return nil, err
+	}
+
+	// Filter out deleted items
+	var result []db.Item
+	for _, item := range items {
+		if !item.FlDeleted {
+			result = append(result, item)
+		}
+	}
+
+	return result, nil
+}
+
 // getItemByGuid fetches a post by its GUID.
 func getItemByGuid(conn *sql.DB, guid, viewerScreenname, baseURL string) (*db.Item, error) {
 	// Parse the guid to get the item ID
