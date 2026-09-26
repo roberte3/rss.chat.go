@@ -26,34 +26,34 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 
 	if err := r.ParseForm(); err != nil {
 		LogValidationError(r, "form", err.Error())
-		RespondError(w, "Can't create post because "+err.Error())
+		RespondValidationError(w, r, "form", err.Error())
 		return
 	}
 
 	jsonText := r.FormValue("jsontext")
 	if jsonText == "" {
 		LogValidationError(r, "jsontext", "required parameter missing")
-		RespondError(w, "Can't create post because jsontext is required")
+		RespondValidationError(w, r, "jsontext", "required parameter missing")
 		return
 	}
 
 	var req PostRequest
 	if err := json.Unmarshal([]byte(jsonText), &req); err != nil {
 		LogValidationError(r, "jsontext", "invalid JSON: "+err.Error())
-		RespondError(w, "Can't create post because "+err.Error())
+		RespondValidationError(w, r, "jsontext", "invalid JSON")
 		return
 	}
 
 	if req.Description == "" {
 		LogValidationError(r, "description", "required field missing")
-		RespondError(w, "Can't create post because description is required")
+		RespondValidationError(w, r, "description", "required field missing")
 		return
 	}
 
 	// Linkify bare URLs in description
 	linkified, err := LinkifyURLs(req.Description)
 	if err != nil {
-		RespondError(w, "Can't create post because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to process URL links", "URL_PROCESSING_ERROR", err.Error())
 		return
 	}
 
@@ -92,7 +92,7 @@ func (h *Handler) HandleNewPost(w http.ResponseWriter, r *http.Request, user *db
 	itemID, err := db.AddItem(h.DB, newItem)
 	if err != nil {
 		LogOperationError(r.Context(), "add_item", err, map[string]interface{}{})
-		RespondError(w, "Can't create post because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to create post", "POST_CREATION_ERROR", err.Error())
 		return
 	}
 
@@ -171,14 +171,14 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 	idStr := r.FormValue("id")
 	if idStr == "" {
 		LogValidationError(r, "id", "required parameter missing")
-		RespondError(w, "Can't update post because id is required")
+		RespondValidationError(w, r, "id", "required parameter missing")
 		return
 	}
 
 	var itemID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &itemID); err != nil {
 		LogValidationError(r, "id", "invalid format")
-		RespondError(w, "Can't update post because invalid id")
+		RespondValidationError(w, r, "id", "invalid format")
 		return
 	}
 
@@ -186,21 +186,21 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 	existing, err := db.GetItemByID(h.DB, "", itemID, h.FeedConfig.BaseURL)
 	if err != nil || existing == nil || existing.Screenname != user.Screenname {
 		LogAuthFailure(r, "user does not own post")
-		RespondError(w, "Can't update post because you don't own this post")
+		RespondAuthError(w, r, "You don't own this post")
 		return
 	}
 
 	jsonText := r.FormValue("jsontext")
 	if jsonText == "" {
 		LogValidationError(r, "jsontext", "required parameter missing")
-		RespondError(w, "Can't update post because jsontext is required")
+		RespondValidationError(w, r, "jsontext", "required parameter missing")
 		return
 	}
 
 	var req PostRequest
 	if err := json.Unmarshal([]byte(jsonText), &req); err != nil {
 		LogValidationError(r, "jsontext", "invalid JSON: "+err.Error())
-		RespondError(w, "Can't update post because "+err.Error())
+		RespondValidationError(w, r, "jsontext", "invalid JSON")
 		return
 	}
 
@@ -211,7 +211,7 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 	if description != "" {
 		linkified, err := LinkifyURLs(description)
 		if err != nil {
-			RespondError(w, "Can't update post because "+err.Error())
+			RespondErrorWithIDAndCode(w, r, "Failed to process URL links", "URL_PROCESSING_ERROR", err.Error())
 			return
 		}
 
@@ -238,7 +238,7 @@ func (h *Handler) HandleUpdatePost(w http.ResponseWriter, r *http.Request, user 
 	err = db.UpdateItem(h.DB, patch)
 	if err != nil {
 		LogOperationError(r.Context(), "update_item", err, map[string]interface{}{"itemID": itemID})
-		RespondError(w, "Can't update post because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to update post", "POST_UPDATE_ERROR", err.Error())
 		return
 	}
 
@@ -309,14 +309,14 @@ func (h *Handler) HandleDeletePost(w http.ResponseWriter, r *http.Request, user 
 	idStr := r.FormValue("id")
 	if idStr == "" {
 		LogValidationError(r, "id", "required parameter missing")
-		RespondError(w, "Can't delete post because id is required")
+		RespondValidationError(w, r, "id", "required parameter missing")
 		return
 	}
 
 	var itemID int64
 	if _, err := fmt.Sscanf(idStr, "%d", &itemID); err != nil {
 		LogValidationError(r, "id", "invalid format")
-		RespondError(w, "Can't delete post because invalid id")
+		RespondValidationError(w, r, "id", "invalid format")
 		return
 	}
 
@@ -324,14 +324,14 @@ func (h *Handler) HandleDeletePost(w http.ResponseWriter, r *http.Request, user 
 	existing, err := db.GetItemByID(h.DB, "", itemID, h.FeedConfig.BaseURL)
 	if err != nil || existing == nil || existing.Screenname != user.Screenname {
 		LogAuthFailure(r, "user does not own post")
-		RespondError(w, "Can't delete post because you don't own this post")
+		RespondAuthError(w, r, "You don't own this post")
 		return
 	}
 
 	deleted := true
 	if err := db.UpdateItem(h.DB, db.ItemPatch{ID: itemID, FlDeleted: &deleted}); err != nil {
 		LogOperationError(r.Context(), "update_item_delete", err, map[string]interface{}{"itemID": itemID})
-		RespondError(w, "Can't delete post because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to delete post", "POST_DELETE_ERROR", err.Error())
 		return
 	}
 
@@ -429,26 +429,26 @@ func (h *Handler) HandleToggleLike(w http.ResponseWriter, r *http.Request, user 
 // HandleSavePrefs saves user preferences.
 func (h *Handler) HandleSavePrefs(w http.ResponseWriter, r *http.Request, user *db.User) {
 	if err := r.ParseForm(); err != nil {
-		RespondError(w, "Can't save prefs because "+err.Error())
+		RespondValidationError(w, r, "form", err.Error())
 		return
 	}
 
 	jsonText := r.FormValue("jsontext")
 	if jsonText == "" {
-		RespondError(w, "Can't save prefs because jsontext is required")
+		RespondValidationError(w, r, "jsontext", "required parameter missing")
 		return
 	}
 
 	// Update user prefs
 	if err := db.UpdateUserPrefs(h.DB, user.Screenname, []byte(jsonText)); err != nil {
-		RespondError(w, "Can't save prefs because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to save preferences", "PREFS_UPDATE_ERROR", err.Error())
 		return
 	}
 
 	// Re-fetch user to return updated data
 	updated, err := db.GetUserInfoByScreenname(h.DB, user.Screenname)
 	if err != nil {
-		RespondError(w, "Can't save prefs because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to fetch updated user data", "DB_ERROR", err.Error())
 		return
 	}
 

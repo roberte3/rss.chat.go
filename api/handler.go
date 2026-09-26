@@ -291,19 +291,19 @@ func (h *Handler) Feed(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) CommentsFeed(w http.ResponseWriter, r *http.Request) {
 	idStr, ok := strings.CutSuffix(r.PathValue("file"), ".xml")
 	if !ok {
-		RespondError(w, "Can't get the comments feed because the path must end in .xml")
+		RespondValidationError(w, r, "file", "path must end with .xml")
 		return
 	}
 
 	itemID, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
-		RespondError(w, "Can't get the comments feed because "+idStr+" is not a post id")
+		RespondValidationError(w, r, "id", "invalid post ID format")
 		return
 	}
 
 	rss, err := feed.BuildCommentsFeed(h.DB, itemID, h.FeedConfig.BaseURL, h.FeedConfig)
 	if err != nil {
-		RespondError(w, "Can't get the comments feed because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to build comments feed", "FEED_BUILD_ERROR", err.Error())
 		return
 	}
 
@@ -357,7 +357,7 @@ func (h *Handler) GetRecentUserItems(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetMentions(w http.ResponseWriter, r *http.Request) {
 	screenname := r.URL.Query().Get("screenname")
 	if screenname == "" {
-		RespondError(w, "Can't get mentions because screenname is required")
+		RespondValidationError(w, r, "screenname", "required parameter missing")
 		return
 	}
 
@@ -366,7 +366,7 @@ func (h *Handler) GetMentions(w http.ResponseWriter, r *http.Request) {
 
 	items, err := getMentions(h.DB, screenname, ct, maxCt, h.FeedConfig.BaseURL)
 	if err != nil {
-		RespondError(w, "Can't get mentions because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get mentions", "MENTIONS_ERROR", err.Error())
 		return
 	}
 
@@ -378,7 +378,7 @@ func (h *Handler) GetMentions(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetHashtagItems(w http.ResponseWriter, r *http.Request) {
 	tag := r.URL.Query().Get("tag")
 	if tag == "" {
-		RespondError(w, "Can't get hashtag items because tag is required")
+		RespondValidationError(w, r, "tag", "required parameter missing")
 		return
 	}
 
@@ -387,7 +387,7 @@ func (h *Handler) GetHashtagItems(w http.ResponseWriter, r *http.Request) {
 
 	items, err := getHashtagItems(h.DB, tag, ct, maxCt, h.FeedConfig.BaseURL)
 	if err != nil {
-		RespondError(w, "Can't get hashtag items because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to get hashtag items", "HASHTAGS_ERROR", err.Error())
 		return
 	}
 
@@ -550,7 +550,7 @@ func (h *Handler) GetMostActiveToday(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) GetSubscriptionList(w http.ResponseWriter, r *http.Request) {
 	opml, err := feed.BuildSubscriptionList(h.DB, h.FeedConfig.BaseURL, h.FeedConfig)
 	if err != nil {
-		RespondError(w, "Can't get the subscription list because "+err.Error())
+		RespondErrorWithIDAndCode(w, r, "Failed to build subscription list", "SUBSCRIPTION_LIST_ERROR", err.Error())
 		return
 	}
 
@@ -567,7 +567,7 @@ func (h *Handler) GetSubscriptionList(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) IsUserInDatabase(w http.ResponseWriter, r *http.Request) {
 	screenname := r.URL.Query().Get("screenname")
 	if screenname == "" {
-		RespondError(w, "Can't check user because screenname is required")
+		RespondValidationError(w, r, "screenname", "required parameter missing")
 		return
 	}
 
@@ -695,7 +695,7 @@ func (h *Handler) SavePrefs(w http.ResponseWriter, r *http.Request) {
 
 	user, err := AuthenticateUser(h.DB, email, code)
 	if err != nil {
-		RespondError(w, "Can't save prefs because "+err.Error())
+		RespondAuthError(w, r, "Authentication failed")
 		return
 	}
 
