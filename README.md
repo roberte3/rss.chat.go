@@ -72,6 +72,7 @@ go build ./...
 # (Optional) Build CLI tools
 go build -o backup ./tools/backup
 go build -o restore ./tools/restore
+go build -o bluesky-subscribe ./tools/bluesky-subscribe
 ```
 
 ### Running the Server
@@ -114,10 +115,15 @@ Configuration is stored in `config.json`. Create or modify this file to customiz
   "smtpPassword": "",
   "mailSender": "noreply@localhost",
   "urlServerForClient": "http://localhost:8081/api",
+  "urlServerForEmail": "http://localhost:8081/",
   "urlWebsocketServerForClient": "ws://localhost:8081",
   "flWebsocketEnabled": true,
   "whitelist": [],
-  "blockedUsersList": []
+  "blockedUsersList": [],
+  "blocklistPath": "blocklist.json",
+  "flFeedsInDatabase": false,
+  "flWebsubEnabled": false,
+  "urlWebsubHub": "https://rpc.rsscloud.io/websub"
 }
 ```
 
@@ -125,17 +131,48 @@ Configuration is stored in `config.json`. Create or modify this file to customiz
 
 | Option | Description | Default |
 |--------|-------------|---------|
-| `myDomain` | Public domain for RSS generation | `http://localhost:8081` |
-| `productName` | Internal product name | `RSS Chat` |
+| `myDomain` | Public base URL, including scheme, no trailing slash (**required**) | — |
+| `productNameForDisplay` | Name shown in the client and emails | value of `myDomain` |
+| `urlServerForClient` | API base URL handed to the web client (**required**) | — |
+| `urlServerForEmail` | Base URL used in confirmation links (**required**) | — |
+| `mailSender` | From address for confirmation emails (**required**) | — |
+| `productName` | Internal product name | `rssChat` |
 | `httpPort` | HTTP server port | `8081` |
-| `websocketPort` | WebSocket server port | `1462` |
+| `websocketPort` | Currently unused; WebSockets are served on `httpPort` | `1462` |
 | `databasePath` | Main SQLite database file | `rss.chat.db` |
 | `mediaDBPath` | Media SQLite database file | `rss.chat.media.db` |
 | `tempMediaPath` | Temporary storage directory for uploads | `temp_media` |
 | `maxMediaUploadBytes` | Maximum file size for uploads (bytes) | `2097152` (2MB) |
-| `smtpHost` | SMTP server for email | `localhost` |
-| `smtpPort` | SMTP server port | `25` |
-| `flWebsocketEnabled` | Enable real-time WebSocket updates | `true` |
+| `smtpHost` | SMTP server; empty disables email and confirmation links are logged instead | empty |
+| `smtpPort` | SMTP server port | `587` |
+| `smtpUsername` / `smtpPassword` | SMTP credentials | empty |
+| `flWebsocketEnabled` | Enable real-time WebSocket updates | `false` |
+| `whitelist` | If non-empty, only these emails may sign up | `[]` |
+| `blockedUsersList` | Emails that may not sign up or sign in | `[]` |
+| `blocklistPath` | Hot-reloaded blocklist file (see [Blocking](#blocking)) | `blocklist.json` |
+| `flFeedsInDatabase` | Store generated feeds in SQLite instead of `feedsPath` | `false` |
+| `flWebsubEnabled` | Announce and ping a WebSub hub (see [WebSub](#websub)) | `false` |
+| `urlWebsubHub` | WebSub hub URL | `https://rpc.rsscloud.io/websub` |
+
+### WebSub
+
+When `flWebsubEnabled` is true, every feed response (user, everyone, comments and
+OPML) carries `Link: <hub>; rel="hub"` and `Link: <feed>; rel="self"` headers, and
+the hub is pinged whenever a feed changes: a post is created, edited or deleted,
+liked, or replied to. Pings are asynchronous; a hub failure is logged and never
+blocks the write. See [websub/TESTING.md](websub/TESTING.md).
+
+### Blocking
+
+Two lists are enforced together: `blockedUsersList` in `config.json`, and the
+`blockedEmails` array in `blocklistPath`. Matching is case-insensitive.
+
+`blocklist.json` is hot-reloaded: edits take effect on the next signup or sign-in
+without a restart, and deleting the file unblocks everything it listed. Changes
+to `blockedUsersList` need a restart.
+
+> Upgrading: earlier versions only checked `blocklist.json`. Addresses in
+> `blockedUsersList` are now blocked too.
 
 ## API Endpoints
 
@@ -255,6 +292,18 @@ Monitor real-time events:
 ./websocket-status -server ws://localhost:8081 -v
 ```
 
+### Bluesky Subscribe
+
+Import posts from tracked Bluesky handles, each as its own local rss.chat user:
+
+```bash
+cp tools/bluesky-subscribe/handles.example.json handles.json
+./bluesky-subscribe -handles handles.json -rss-chat-url http://localhost:8081 [-dry-run]
+```
+
+It provisions users through `/localnewuser`, so it must run on the same host as
+the server.
+
 See [tools/TOOLS.md](tools/TOOLS.md) for detailed documentation.
 
 ## Project Structure
@@ -274,12 +323,15 @@ rss.chat.go/
 ├── feed/                   # RSS feed generation
 ├── publish/                # Feed publishing to disk
 ├── websocket/              # Real-time updates
+├── websub/                 # WebSub hub pinger
+├── email/                  # SMTP confirmation emails
 ├── client/                 # Web client server
 │   ├── client.go          # Serves client/code, substitutes [%macros%]
 │   └── code/              # Vendored upstream web client (MIT, Dave Winer)
 ├── setup/                  # Database initialization
 └── tools/                  # CLI tools
     ├── backup/            # Database export
+    ├── bluesky-subscribe/ # Bluesky -> rss.chat importer
     ├── restore/           # Database import
     ├── reset/             # Database/config reset
     ├── testdata/          # Sample data generator
@@ -322,34 +374,33 @@ WebSocket hub broadcasts events to connected clients:
 
 ## Testing
 
-Run all tests:
+Run the full suite with the race detector, as CI does:
 
 ```bash
-go test ./...
+go test -race ./...
 ```
 
-Run tests with verbose output:
+Before pushing, run everything CI checks:
 
 ```bash
-go test ./... -v
+go build ./... && go vet ./... && gofmt -l . && go test -race ./...
 ```
 
-Run tests for a specific package:
+`gofmt -l .` must print nothing. Run a single package or test:
 
 ```bash
 go test ./api -v
-go test ./db -v
-go test ./tools/backup -v
+go test ./api -run TestDeletePost -v
 ```
 
 ### Test Coverage
 
-- **Database Layer**: CRUD operations, media handling, ID preservation
-- **API Layer**: Upload validation, handler authentication, error responses
-- **Integration**: Full backup/restore roundtrips with data integrity
-- **Media**: Magic byte verification, signature detection, base64 encoding
+- **Database layer**: CRUD, media, blocklist sync, ID preservation
+- **API layer**: every endpoint, auth, rate limiting, blocklist hot-reload, email flow
+- **Feeds**: RSS/OPML generation, format negotiation, WebSub headers and pings
+- **Integration**: backup/restore round trips, vendored-client macro coverage
 
-**Current Status:** 168 tests passing
+See [TESTING.md](TESTING.md) for the full guide.
 
 ## Development
 
@@ -392,7 +443,7 @@ Monitor WebSocket events:
 
 ## Feature Parity
 
-This implementation targets feature parity with [RSS.Chat v0.6.3](https://github.com/scripting/rss.chat/releases/tag/v0.6.3):
+This implementation targets feature parity with [RSS.Chat v0.6.14](https://github.com/scripting/rss.chat):
 
 - ✅ User management and authentication
 - ✅ Post creation, updates, deletion
@@ -402,9 +453,12 @@ This implementation targets feature parity with [RSS.Chat v0.6.3](https://github
 - ✅ Media uploads with validation
 - ✅ Real-time WebSocket updates
 - ✅ Backup/restore tools
-- 🔄 Email notifications (in progress)
+- ✅ Email confirmation via SMTP
+- ✅ WebSub hub notifications
+- ✅ JSON/XML feed format negotiation (`?format=`)
 - 🔄 rssCloud ping support
 - 🔄 Advanced preferences/profiles
+- ⏳ `/readhttpfile` (Scripts menu) and `/version`
 
 See [todolist.md](todolist.md) for detailed roadmap.
 
@@ -590,18 +644,20 @@ For issues, questions, or suggestions:
 - ✅ Media database and uploads
 - ✅ HTML sanitization
 - ✅ Backup/restore tools
+- ✅ Email notifications
+- ✅ Feed format negotiation
+- ✅ Configurable ports and domains
+- ✅ WebSub support
+- ✅ Hot-reloadable blocklist
 
 ### Phase 2 (In Progress)
 - 🔄 HTMX based front end
 - 🔄 Mobile based front end
-- 🔄 Bluesky (ATProtocol) Bridge 
-- 🔄 Email notifications
-- 🔄 Feed format negotiation
-- 🔄 Configurable ports and domains
+- 🔄 Bluesky (ATProtocol) Bridge: inbound import ✅ (`bluesky-subscribe`), outbound posting 🔄
 
 ### Phase 3 (Planned)
 - ⏳ Post cleanup/archival
-- ⏳ Advanced blocking/filtering
+- ⏳ Advanced filtering
 - ⏳ rssCloud support
 - ⏳ Kubernetes/container deployment
 
