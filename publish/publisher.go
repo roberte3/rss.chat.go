@@ -1,10 +1,12 @@
 package publish
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/roberte3/rss.chat.go/db"
 	"github.com/roberte3/rss.chat.go/feed"
@@ -67,26 +69,35 @@ func (p *Publisher) EnsureDir() error {
 // PublishUserFeed generates and writes a user's feed to disk or database.
 // File (filesystem): feeds/<screenname>/rss.xml
 func (p *Publisher) PublishUserFeed(conn *sql.DB, screenname string) error {
+	ctx := context.Background()
+	startTime := time.Now()
+
 	rss, err := feed.BuildFeedForUser(conn, screenname, p.config.BaseURL, p.config)
 	if err != nil {
+		LogFeedGeneration(ctx, "user", screenname, startTime, fmt.Errorf("build feed: %w", err))
 		return fmt.Errorf("build feed for user %s: %w", screenname, err)
 	}
 
 	if p.StorageMode == "database" {
 		if err := db.StoreFeed(p.FeedsDB, "user", screenname, "text/xml", []byte(rss)); err != nil {
+			LogFeedGeneration(ctx, "user", screenname, startTime, fmt.Errorf("store feed: %w", err))
 			return err
 		}
 	} else {
 		userDir := filepath.Join(p.baseDir, screenname)
 		if err := os.MkdirAll(userDir, 0755); err != nil {
+			LogFeedGeneration(ctx, "user", screenname, startTime, fmt.Errorf("create directory: %w", err))
 			return fmt.Errorf("create user directory: %w", err)
 		}
 
 		path := filepath.Join(userDir, "rss.xml")
 		if err := os.WriteFile(path, []byte(rss), 0644); err != nil {
+			LogFeedGeneration(ctx, "user", screenname, startTime, fmt.Errorf("write file: %w", err))
 			return fmt.Errorf("write feed file: %w", err)
 		}
 	}
+
+	LogFeedGeneration(ctx, "user", screenname, startTime, nil)
 
 	// Ping WebSub hub
 	feedURL := p.config.BaseURL + "feed?screenname=" + screenname
@@ -98,21 +109,29 @@ func (p *Publisher) PublishUserFeed(conn *sql.DB, screenname string) error {
 // PublishEveryoneFeed generates and writes the network-wide feed to disk or database.
 // File (filesystem): feeds/rss.xml
 func (p *Publisher) PublishEveryoneFeed(conn *sql.DB) error {
+	ctx := context.Background()
+	startTime := time.Now()
+
 	rss, err := feed.BuildFeedForEveryone(conn, p.config.BaseURL, p.config)
 	if err != nil {
+		LogFeedGeneration(ctx, "global", "everyone", startTime, fmt.Errorf("build feed: %w", err))
 		return fmt.Errorf("build everyone feed: %w", err)
 	}
 
 	if p.StorageMode == "database" {
 		if err := db.StoreFeed(p.FeedsDB, "global", "", "text/xml", []byte(rss)); err != nil {
+			LogFeedGeneration(ctx, "global", "everyone", startTime, fmt.Errorf("store feed: %w", err))
 			return err
 		}
 	} else {
 		path := filepath.Join(p.baseDir, "rss.xml")
 		if err := os.WriteFile(path, []byte(rss), 0644); err != nil {
+			LogFeedGeneration(ctx, "global", "everyone", startTime, fmt.Errorf("write file: %w", err))
 			return fmt.Errorf("write everyone feed file: %w", err)
 		}
 	}
+
+	LogFeedGeneration(ctx, "global", "everyone", startTime, nil)
 
 	// Ping WebSub hub
 	feedURL := p.config.BaseURL + "feed"
@@ -124,21 +143,30 @@ func (p *Publisher) PublishEveryoneFeed(conn *sql.DB) error {
 // PublishCommentsFeed generates and writes a comments feed to disk.
 // File: feeds/comments/<screenname>-<itemId>.xml
 func (p *Publisher) PublishCommentsFeed(conn *sql.DB, screenname string, itemID int64) error {
+	ctx := context.Background()
+	startTime := time.Now()
+	identifier := fmt.Sprintf("%s-%d", screenname, itemID)
+
 	rss, err := feed.BuildCommentsFeed(conn, itemID, p.config.BaseURL, p.config)
 	if err != nil {
+		LogFeedGeneration(ctx, "comments", identifier, startTime, fmt.Errorf("build feed: %w", err))
 		return fmt.Errorf("build comments feed for item %d: %w", itemID, err)
 	}
 
 	commentsDir := filepath.Join(p.baseDir, "comments")
 	if err := os.MkdirAll(commentsDir, 0755); err != nil {
+		LogFeedGeneration(ctx, "comments", identifier, startTime, fmt.Errorf("create directory: %w", err))
 		return fmt.Errorf("create comments directory: %w", err)
 	}
 
 	filename := fmt.Sprintf("%s-%d.xml", screenname, itemID)
 	path := filepath.Join(commentsDir, filename)
 	if err := os.WriteFile(path, []byte(rss), 0644); err != nil {
+		LogFeedGeneration(ctx, "comments", identifier, startTime, fmt.Errorf("write file: %w", err))
 		return fmt.Errorf("write comments feed file: %w", err)
 	}
+
+	LogFeedGeneration(ctx, "comments", identifier, startTime, nil)
 
 	// Ping WebSub hub for comments feed
 	feedURL := fmt.Sprintf("%scomments/%s/%d.xml", p.config.BaseURL, screenname, itemID)
@@ -283,14 +311,18 @@ func (p *Publisher) UserFeedExists(screenname string) (bool, error) {
 // subscription list are always regenerated, as upstream does alongside it.
 // The count returned is the number of user feeds filled in.
 func (p *Publisher) BackfillMissingFeeds(conn *sql.DB) (int, error) {
+	ctx := context.Background()
+	startTime := time.Now()
 	count := 0
 
 	// Always generate global feed and OPML
 	if err := p.PublishEveryoneFeed(conn); err != nil {
+		LogBackfillOperation(ctx, "feeds_backfill", count, startTime, fmt.Errorf("publish everyone feed: %w", err))
 		return count, fmt.Errorf("publish everyone feed: %w", err)
 	}
 
 	if err := p.PublishSubscriptionList(conn); err != nil {
+		LogBackfillOperation(ctx, "feeds_backfill", count, startTime, fmt.Errorf("publish subscription list: %w", err))
 		return count, fmt.Errorf("publish subscription list: %w", err)
 	}
 
@@ -325,10 +357,12 @@ func (p *Publisher) BackfillMissingFeeds(conn *sql.DB) (int, error) {
 			continue
 		}
 		if err := p.PublishUserFeed(conn, screenname); err != nil {
+			LogBackfillOperation(ctx, "feeds_backfill", count, startTime, fmt.Errorf("publish user feed for %s: %w", screenname, err))
 			return count, fmt.Errorf("publish user feed for %s: %w", screenname, err)
 		}
 		count++
 	}
 
+	LogBackfillOperation(ctx, "feeds_backfill", count, startTime, nil)
 	return count, nil
 }
