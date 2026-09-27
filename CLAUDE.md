@@ -17,7 +17,7 @@ reference is gitignored, so clone it separately when you need it:
     go build ./...                       # build
     go run . -setup                      # create config.json, databases, settings, blocklist
     go run .                             # run (requires config.json)
-    go test ./...                        # full suite (~170+ tests, 12 packages)
+    go test ./...                        # full suite (630+ tests, 13 packages)
     go test -race ./...                  # what CI runs; always check before pushing
     go test ./api/ -run TestDeletePost -v # single test
     gofmt -l .                           # must be empty; CI fails otherwise
@@ -184,16 +184,17 @@ When fixing a bug, confirm the new test fails against the old behaviour before c
 - `websocketPort` (1462) is config-only — **nothing listens on it**. `/subscribe` and `/ws` are
   served on the main HTTP port, but the client is handed `ws://localhost:1462/` via
   `urlWebsocketServerForClient`, so in-browser real-time updates connect to a dead address.
-- `/version` is called by the client's debug helpers but not implemented.
 - `IsUserAdmin` always returns false, as in the original.
-- `/readhttpfile` is not implemented, so the client's Scripts menu cannot work. `urlMenuOpml`
-  is wired through to `[%urlMenuOpml%]` and defaults to empty, which is how the client is
-  told there is no menu — leave it empty and nothing calls the endpoint. Setting it without
-  implementing `/readhttpfile` is not fatal: the fetch fails and `startScriptsMenus` logs to
-  the console, so the menu simply never appears.
 
-  Upstream's version originally took a `url` parameter and returned whatever it fetched, with no
-  authentication, scheme check, host check or size limit — an unauthenticated SSRF risk.
-  Dave Winer fixed this (August 1, 2026, v0.6.14) by restricting `/readhttpfile` to only
-  fetch from `config.urlMenuOpml`, eliminating the SSRF surface. If this endpoint is ever
-  implemented in Go, include that same authorization check from the start.
+## Implemented endpoints
+
+These endpoints were previously marked as "not implemented" but are now complete:
+
+- **`/version`** ✅ Returns application version and timestamp. Called by client debug helpers.
+  Implemented in `api/endpoints_missing.go`.
+
+- **`/readhttpfile`** ✅ Serves menu OPML with security validation. Implemented with the 
+  upstream security fix (August 1, 2026, v0.6.14) that restricts fetches to `config.urlMenuOpml`
+  only, preventing SSRF attacks. Returns 404 if no menu is configured (default behavior).
+  Includes 1MB response size limit and HTTP/HTTPS scheme validation. Implemented in
+  `api/endpoints_missing.go`.

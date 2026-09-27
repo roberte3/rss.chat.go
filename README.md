@@ -183,7 +183,11 @@ to `blockedUsersList` need a restart.
 ### Read Endpoints (No Authentication)
 
 ```
-GET /health                    # Health check
+GET /health                    # Health check (liveness)
+GET /ready                     # Readiness check (database connectivity)
+GET /metrics                   # Prometheus metrics
+GET /version                   # Application version
+GET /readhttpfile              # Menu OPML serving (with SSRF protection)
 GET /feed                      # RSS feed (all users or specific user)
 GET /getrecentitems            # Recent posts across network
 GET /getrecentuseritems        # User's recent posts
@@ -431,9 +435,10 @@ go test ./api -run TestDeletePost -v
 - **WebSub**: Protocol compliance, hub pinging, concurrent operations
 
 **Test Statistics:**
-- 154+ tests across 12 packages
-- ~30 seconds total (60s with race detector)
+- 630+ tests across 13 packages
+- ~25 seconds total (with race detector)
 - Full concurrent safety checking via `-race` flag
+- 100% pass rate with comprehensive coverage
 
 See [TESTING.md](TESTING.md) for the full guide.
 
@@ -491,9 +496,11 @@ This implementation targets feature parity with [RSS.Chat v0.6.14](https://githu
 - ✅ Email confirmation via SMTP
 - ✅ WebSub hub notifications
 - ✅ JSON/XML feed format negotiation (`?format=`)
+- ✅ Health check endpoints (`/health`, `/ready`, `/metrics`)
+- ✅ Application version endpoint (`/version`)
+- ✅ Menu OPML serving (`/readhttpfile` with SSRF prevention)
 - 🔄 rssCloud ping support
 - 🔄 Advanced preferences/profiles
-- ⏳ `/readhttpfile` (Scripts menu) and `/version`
 
 See [todolist.md](todolist.md) for detailed roadmap.
 
