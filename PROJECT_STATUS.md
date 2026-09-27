@@ -1,8 +1,8 @@
 # rss.chat.go Project Status
 
 **Last Updated**: September 26, 2026  
-**Project Phase**: Operational Excellence (Health Checks & Metrics)  
-**Overall Status**: 🟢 Production Ready with Observability
+**Project Phase**: Operational Excellence (Missing Endpoints Completed)  
+**Overall Status**: 🟢 Feature Complete & Production Ready
 
 ---
 
@@ -19,6 +19,44 @@ rss.chat.go is a Go port of Dave Winer's RSS.Chat platform. The project has comp
 ---
 
 ## Completed Work
+
+### Phase 5: Missing Endpoints ✅
+**Status**: COMPLETE (September 26, 2026)
+
+- **`/version` Endpoint** - Application version information
+  - Returns app version (0.7.0) and timestamp
+  - Called by client debug helpers and monitoring
+  - Structured JSON response format
+
+- **`/readhttpfile` Endpoint** - Menu OPML serving with security
+  - Securely serves menu OPML from configured URL
+  - Security validation: only allows configured `urlMenuOpml`
+  - Prevents SSRF attacks via URL parameter validation
+  - Implements 1MB response size limit
+  - HTTP/HTTPS scheme validation
+  - Returns 404 if no menu configured
+  - Implements upstream security fix (prevents SSRF)
+
+- **Security Features**:
+  - `ParseMenuURL()` validates menu URL configuration
+  - Only `http://` and `https://` schemes allowed
+  - URL parameter must exactly match configured menu URL
+  - 1MB size limit prevents memory exhaustion
+  - Proper logging of unauthorized access attempts
+
+**Files**:
+- `version.go` - Application version constant (0.7.0)
+- `api/endpoints_missing.go` - Version and ReadHTTPFile handlers
+- `api/endpoints_missing_test.go` - 16 comprehensive endpoint tests
+
+**Test Coverage**: 16 new tests covering:
+- Version endpoint response and format
+- ReadHTTPFile authorization and validation
+- URL parsing and security checks
+- Error handling and edge cases
+- HTTP method validation
+- Size limit enforcement
+- Authorization failure scenarios
 
 ### Phase 4: Health Checks & Prometheus Metrics ✅
 **Status**: COMPLETE (September 26, 2026)
@@ -215,11 +253,11 @@ HTTP Response
 ## Testing Status
 
 ### Test Suite Summary
-- **Total Tests**: 615+ (including 35 log tests + 16 health check tests + 17 metrics middleware tests)
-- **Test Packages**: 13 (api package includes comprehensive health check and metrics tests)
+- **Total Tests**: 630+ (including 35 log + 16 health + 17 metrics + 16 missing endpoint tests)
+- **Test Packages**: 13 (comprehensive test coverage across all endpoints)
 - **Pass Rate**: 100%
 - **Race Detector**: ✅ All tests pass
-- **Coverage**: Core API, database layer, feed generation, publishing, logging, health checks, metrics collection
+- **Coverage**: Core API, database, feed generation, publishing, logging, health checks, metrics, security
 
 ### Test Commands
 ```bash
@@ -275,21 +313,19 @@ go test -race ./...             # Run full test suite
 
 ## Known Limitations
 
-### Not Yet Implemented
+### Not Yet Implemented (Lower Priority)
 1. **Advanced Metrics & Observability**
    - Error rate tracking per endpoint (metrics available, aggregation in Prometheus)
    - Latency percentiles (p50/p95/p99) - histogram buckets available, query in Prometheus
    - WebSocket connection tracking (architectural complexity, metrics gauge available)
 
-3. **WebSocket Features**
+2. **WebSocket Features**
    - `/subscribe` endpoint exists but incomplete
    - Real-time mention notifications
    - Real-time hashtag feeds
 
-4. **Remaining Features**
-   - `/readhttpfile` endpoint not implemented
-   - `/version` endpoint not implemented
-   - IsUserAdmin always returns false
+3. **Admin Features**
+   - `IsUserAdmin` always returns false (not implemented in upstream either)
 
 ---
 
@@ -356,7 +392,11 @@ c755066 - Logging Phase 2: Integrate structured logging
 1. **Error Analytics Dashboard** - Aggregate error codes in Prometheus queries
 2. **Performance Monitoring** - Set up alerting on latency percentiles (p95, p99)
 3. **WebSocket Connection Tracking** - Implement metrics for real-time connections
-4. **Missing Endpoints** - Implement `/version` and `/readhttpfile`
+
+### Medium Term (Enhancement)
+1. **Complete WebSocket Implementation** - Real-time mention and hashtag notifications
+2. **Advanced Observability** - Tracing, error analytics, performance dashboards
+3. **Admin Features** - Implement IsUserAdmin and admin endpoints
 
 ### Medium Term (Q4 2026)
 1. **Advanced Observability**
@@ -417,6 +457,7 @@ For questions or issues with the logging system:
 
 ```
 rss.chat.go/
+├── version.go                 # Application version constant (0.7.0)
 ├── log/
 │   ├── log.go                 # Core logging module
 │   └── log_test.go            # Comprehensive log package tests (35 tests)
@@ -432,7 +473,9 @@ rss.chat.go/
 │   ├── health.go                       # Health check endpoints (Phase 4)
 │   ├── health_test.go                  # Health check tests (16 tests)
 │   ├── metrics.go                      # Prometheus metrics definition (Phase 4)
-│   └── metrics_middleware_test.go      # Middleware metrics tests (17 tests)
+│   ├── metrics_middleware_test.go      # Middleware metrics tests (17 tests)
+│   ├── endpoints_missing.go            # /version and /readhttpfile (Phase 5)
+│   └── endpoints_missing_test.go       # Missing endpoint tests (16 tests)
 ├── db/
 │   ├── logging.go             # Database logging helpers
 │   └── db.go                  # Database operations
