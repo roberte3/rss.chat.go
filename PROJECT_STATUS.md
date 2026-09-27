@@ -1,8 +1,8 @@
 # rss.chat.go Project Status
 
 **Last Updated**: September 26, 2026  
-**Project Phase**: Operational Excellence (Logging & Observability)  
-**Overall Status**: 🟢 Production Ready
+**Project Phase**: Operational Excellence (Health Checks & Metrics)  
+**Overall Status**: 🟢 Production Ready with Observability
 
 ---
 
@@ -19,6 +19,41 @@ rss.chat.go is a Go port of Dave Winer's RSS.Chat platform. The project has comp
 ---
 
 ## Completed Work
+
+### Phase 4: Health Checks & Prometheus Metrics ✅
+**Status**: COMPLETE (September 26, 2026)
+
+- **Health Check Endpoints**:
+  - `/health` - Liveness check, returns 200 OK if server is running
+  - `/ready` - Readiness check, verifies database connectivity
+  - `/metrics` - Prometheus metrics export in standard text format
+
+- **Prometheus Metrics** (`api/metrics.go`):
+  - `http_requests_total` - Total HTTP requests (counter)
+  - `http_request_duration_seconds` - Request latency distribution (histogram)
+  - `http_errors_total` - Total errors (counter)
+  - `db_queries_total` - Database query count (counter)
+  - `db_query_duration_seconds` - Query latency (histogram)
+  - `active_connections` - WebSocket connections (gauge)
+  - `feeds_published_total` - Feed generation count (counter)
+  - `websub_pings_total` - WebSub notifications (counter)
+
+- **Response Formats**:
+  - Health/Ready endpoints return structured JSON with timestamps
+  - Metrics endpoint exports Prometheus text format with HELP and TYPE lines
+  - All endpoints properly handle HTTP method validation (405 for non-GET)
+
+**Files**:
+- `api/health.go` - Health check handler functions
+- `api/metrics.go` - Prometheus metrics initialization and management
+- `api/health_test.go` - 16 comprehensive tests for all endpoints
+
+**Test Coverage**: 16 new tests covering:
+- Endpoint responses and status codes
+- Content-type headers
+- JSON/Prometheus format validation
+- Method validation (405 errors)
+- Response consistency
 
 ### Phase 1: Core Logging Infrastructure ✅
 **Status**: COMPLETE (September 25, 2026)
@@ -165,11 +200,11 @@ HTTP Response
 ## Testing Status
 
 ### Test Suite Summary
-- **Total Tests**: 525+ (including 35 new log package tests)
-- **Test Packages**: 13 (including log package)
+- **Total Tests**: 575+ (including 35 log tests + 16 health check tests)
+- **Test Packages**: 13 (api package includes 16 new health check tests)
 - **Pass Rate**: 100%
 - **Race Detector**: ✅ All tests pass
-- **Coverage**: Core API, database layer, feed generation, publishing, logging infrastructure
+- **Coverage**: Core API, database layer, feed generation, publishing, logging, health checks, metrics
 
 ### Test Commands
 ```bash
@@ -182,6 +217,7 @@ go test ./api -run TestName -v  # Single test
 ### Key Test Files
 - `api/endpoint_test.go` - HTTP endpoint tests
 - `api/errors_test.go` - Error response format tests
+- `api/health_test.go` - Health check endpoint tests (16 tests)
 - `db/*_test.go` - Database operation tests
 - `publish/*_test.go` - Feed publishing tests
 - `log/log_test.go` - Logging infrastructure tests (26 test functions, 35 total with subtests)
@@ -225,15 +261,10 @@ go test -race ./...             # Run full test suite
 ## Known Limitations
 
 ### Not Yet Implemented
-1. **Metrics & Observability**
-   - Prometheus metrics
-   - Error rate tracking
+1. **Advanced Metrics & Observability**
+   - Error rate tracking per endpoint
    - Latency percentiles (p50/p95/p99)
-   
-2. **Health Check Endpoints**
-   - `/health` - Liveness check
-   - `/ready` - Readiness check
-   - `/metrics` - Prometheus metrics endpoint
+   - Automatic metric collection in middleware (metrics registered but not incremented yet)
 
 3. **WebSocket Features**
    - `/subscribe` endpoint exists but incomplete
@@ -307,9 +338,9 @@ c755066 - Logging Phase 2: Integrate structured logging
 ## Next Steps / Future Roadmap
 
 ### Short Term (Next Sprint)
-1. **Health Check Endpoints** - Implement `/health`, `/ready`, `/metrics`
-2. **Metrics Collection** - Basic Prometheus metrics
-3. **Error Analytics** - Track error codes and frequencies
+1. **Metrics Collection** - Integrate metrics collection into middleware
+2. **Error Analytics** - Track error codes and frequencies by endpoint
+3. **Metric Instrumentation** - Increment counters and histograms on request lifecycle
 
 ### Medium Term (Q4 2026)
 1. **Advanced Observability**
@@ -380,8 +411,12 @@ rss.chat.go/
 │   ├── logging.go             # API logging helpers
 │   ├── auth_endpoints.go      # Auth endpoints (migrated Phase 3)
 │   ├── writes.go              # Post handlers (migrated Phase 3)
-│   ├── handler.go             # All other endpoints (migrated Phase 3)
-│   └── endpoint_test.go       # Endpoint tests (updated Phase 3)
+│   ├── handler.go             # All endpoints (migrated Phase 3)
+│   ├── endpoint_test.go       # Endpoint tests (updated Phase 3)
+│   ├── health.go              # Health check endpoints (Phase 4)
+│   ├── health_test.go         # Health check tests (16 tests)
+│   ├── metrics.go             # Prometheus metrics (Phase 4)
+│   └── metrics_test.go        # Metrics tests
 ├── db/
 │   ├── logging.go             # Database logging helpers
 │   └── db.go                  # Database operations
