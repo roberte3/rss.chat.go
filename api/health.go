@@ -19,10 +19,10 @@ type HealthResponse struct {
 
 // ReadinessResponse is the response for the /ready endpoint
 type ReadinessResponse struct {
-	Ready      bool            `json:"ready"`
-	Timestamp  time.Time       `json:"timestamp"`
-	Database   bool            `json:"database"`
-	Checks     map[string]bool `json:"checks"`
+	Ready     bool            `json:"ready"`
+	Timestamp time.Time       `json:"timestamp"`
+	Database  bool            `json:"database"`
+	Checks    map[string]bool `json:"checks"`
 }
 
 // HandleHealth returns a simple 200 OK response to indicate the server is alive

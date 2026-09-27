@@ -413,8 +413,8 @@ func TestRequestIDMultipleRetrievals(t *testing.T) {
 // TestIncludeSourceOption tests that IncludeSource option is accepted
 func TestIncludeSourceOption(t *testing.T) {
 	tests := []struct {
-		name           string
-		includeSource  bool
+		name          string
+		includeSource bool
 	}{
 		{"with source", true},
 		{"without source", false},

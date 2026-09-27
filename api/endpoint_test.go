@@ -2266,7 +2266,6 @@ func TestHashtagExtractionDuplicates(t *testing.T) {
 	}
 }
 
-
 // TestGetHashtagItemsNoTag verifies missing tag parameter returns error.
 func TestGetHashtagItemsNoTag(t *testing.T) {
 	mux, _, _ := setupTestServer(t)

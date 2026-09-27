@@ -7,14 +7,14 @@ import (
 
 // Metrics holds all Prometheus metrics for the application
 type Metrics struct {
-	HTTPRequestsTotal      prometheus.Counter
-	HTTPRequestDuration    prometheus.Histogram
-	HTTPErrorsTotal        prometheus.Counter
-	DBQueriesTotal         prometheus.Counter
-	DBQueryDuration        prometheus.Histogram
-	ActiveConnections      prometheus.Gauge
-	FeedsPublishedTotal    prometheus.Counter
-	WebSubPingsTotal       prometheus.Counter
+	HTTPRequestsTotal   prometheus.Counter
+	HTTPRequestDuration prometheus.Histogram
+	HTTPErrorsTotal     prometheus.Counter
+	DBQueriesTotal      prometheus.Counter
+	DBQueryDuration     prometheus.Histogram
+	ActiveConnections   prometheus.Gauge
+	FeedsPublishedTotal prometheus.Counter
+	WebSubPingsTotal    prometheus.Counter
 }
 
 // InitMetrics creates and registers all Prometheus metrics

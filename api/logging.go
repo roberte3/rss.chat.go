@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	applog "github.com/roberte3/rss.chat.go/log"
 	"github.com/roberte3/rss.chat.go/db"
+	applog "github.com/roberte3/rss.chat.go/log"
 )
 
 // LogAuthFailure logs an authentication failure without exposing sensitive details.

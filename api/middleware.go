@@ -13,11 +13,11 @@ import (
 // RequestLogger is middleware that logs HTTP requests and responses with request IDs,
 // and collects Prometheus metrics.
 type RequestLogger struct {
-	next                http.Handler
-	requestIDHeader     string
-	logger              *slog.Logger
-	metrics             *Metrics
-	excludePaths        map[string]bool
+	next            http.Handler
+	requestIDHeader string
+	logger          *slog.Logger
+	metrics         *Metrics
+	excludePaths    map[string]bool
 }
 
 // NewRequestLogger creates a new request logging middleware.
@@ -28,10 +28,10 @@ func NewRequestLogger(next http.Handler, requestIDHeader string) *RequestLogger 
 		logger:          log.Logger(),
 		metrics:         GetMetrics(),
 		excludePaths: map[string]bool{
-			"/health":    true,
-			"/healthz":   true,
-			"/ready":     true,
-			"/metrics":   true,
+			"/health":  true,
+			"/healthz": true,
+			"/ready":   true,
+			"/metrics": true,
 		},
 	}
 }

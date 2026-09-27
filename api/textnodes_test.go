@@ -287,12 +287,12 @@ func TestTransformTextNodesMatcherReturnsNil(t *testing.T) {
 func containsSubstring(haystack, needle string) bool {
 	return len(haystack) >= len(needle) && (haystack == needle || len(needle) == 0 ||
 		(len(haystack) > 0 && len(needle) > 0 &&
-		func() bool {
-			for i := 0; i <= len(haystack)-len(needle); i++ {
-				if haystack[i:i+len(needle)] == needle {
-					return true
+			func() bool {
+				for i := 0; i <= len(haystack)-len(needle); i++ {
+					if haystack[i:i+len(needle)] == needle {
+						return true
+					}
 				}
-			}
-			return false
-		}()))
+				return false
+			}()))
 }

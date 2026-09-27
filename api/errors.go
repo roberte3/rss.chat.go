@@ -12,11 +12,11 @@ import (
 
 // ErrorResponse represents a structured error response sent to clients.
 type ErrorResponse struct {
-	Error   string `json:"error"`            // Human-readable error message
-	ErrorID string `json:"errorId"`          // Unique error ID for tracing (err-{requestID})
-	Code    string `json:"code,omitempty"`   // Machine-readable error code
+	Error   string `json:"error"`             // Human-readable error message
+	ErrorID string `json:"errorId"`           // Unique error ID for tracing (err-{requestID})
+	Code    string `json:"code,omitempty"`    // Machine-readable error code
 	Details string `json:"details,omitempty"` // Additional error details
-	Time    string `json:"time"`             // Timestamp when error occurred
+	Time    string `json:"time"`              // Timestamp when error occurred
 }
 
 // RespondErrorWithID sends a structured JSON error response with an error ID.
