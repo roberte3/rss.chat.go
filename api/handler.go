@@ -150,6 +150,10 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	register("GET", "/ready", h.Ready)
 	register("GET", "/metrics", h.Metrics)
 
+	// Version and menu endpoints
+	register("GET", "/version", h.Version)
+	register("GET", "/readhttpfile", h.ReadHTTPFile)
+
 	// Read endpoints (no auth)
 	register("GET", "/feed", h.Feed)
 	// Matches the URL getCommentsFeedURL advertises. The trailing ".xml" is
@@ -216,6 +220,23 @@ func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
 // Metrics exposes Prometheus metrics
 func (h *Handler) Metrics(w http.ResponseWriter, r *http.Request) {
 	HandleMetrics(w, r)
+}
+
+// Version returns the application version
+func (h *Handler) Version(w http.ResponseWriter, r *http.Request) {
+	HandleVersion(w, r)
+}
+
+// ReadHTTPFile serves menu OPML with security restrictions
+func (h *Handler) ReadHTTPFile(w http.ResponseWriter, r *http.Request) {
+	// Get urlMenuOpml from config, default to empty string
+	menuURL := ""
+	if h.Config != nil && h.Config.URLMenuOpml != "" {
+		menuURL = ParseMenuURL(h.Config.URLMenuOpml)
+	}
+
+	handler := HandleReadHTTPFile(menuURL)
+	handler(w, r)
 }
 
 // Feed serves an RSS feed: either user's feed or everyone's feed.
