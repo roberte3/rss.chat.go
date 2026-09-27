@@ -222,9 +222,15 @@ func TestHealthEndpoint(t *testing.T) {
 		t.Errorf("status = %d, want %d", w.Code, http.StatusOK)
 	}
 
-	// Health endpoint returns plain text
-	if w.Body.String() != "OK" {
-		t.Errorf("body = %s, want OK", w.Body.String())
+	// Health endpoint returns JSON
+	var resp HealthResponse
+	if err := json.NewDecoder(w.Body).Decode(&resp); err != nil {
+		t.Errorf("failed to decode response: %v", err)
+		return
+	}
+
+	if resp.Status != "healthy" {
+		t.Errorf("status = %q, want healthy", resp.Status)
 	}
 }
 

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"context"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -144,8 +145,12 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 		mux.HandleFunc(method+" /api"+path, handler)
 	}
 
-	// Read endpoints (no auth)
+	// Health check endpoints
 	register("GET", "/health", h.Health)
+	register("GET", "/ready", h.Ready)
+	register("GET", "/metrics", h.Metrics)
+
+	// Read endpoints (no auth)
 	register("GET", "/feed", h.Feed)
 	// Matches the URL getCommentsFeedURL advertises. The trailing ".xml" is
 	// part of {file}, not the pattern; see CommentsFeed.
@@ -195,9 +200,22 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /ws", h.WebSocket)
 }
 
-// Health is a simple health check endpoint.
+// Health is a simple health check endpoint indicating the server is alive
 func (h *Handler) Health(w http.ResponseWriter, r *http.Request) {
-	RespondText(w, "OK")
+	HandleHealth(w, r)
+}
+
+// Ready checks if the server is ready to handle traffic
+func (h *Handler) Ready(w http.ResponseWriter, r *http.Request) {
+	// Create a context value with the database for readiness checks
+	ctxWithDB := context.WithValue(r.Context(), "db", h.DB)
+	newReq := r.WithContext(ctxWithDB)
+	HandleReady(w, newReq)
+}
+
+// Metrics exposes Prometheus metrics
+func (h *Handler) Metrics(w http.ResponseWriter, r *http.Request) {
+	HandleMetrics(w, r)
 }
 
 // Feed serves an RSS feed: either user's feed or everyone's feed.
