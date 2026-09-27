@@ -38,6 +38,14 @@ rss.chat.go is a Go port of Dave Winer's RSS.Chat platform. The project has comp
   - `feeds_published_total` - Feed generation count (counter)
   - `websub_pings_total` - WebSub notifications (counter)
 
+- **Metrics Collection Middleware**:
+  - RequestLogger middleware now tracks all metrics automatically
+  - Increments request counter for each HTTP request
+  - Records request duration in histogram (automatically computed per-request)
+  - Counts errors (4xx/5xx status codes)
+  - Excludes health endpoints from metric collection
+  - Database query tracking via `LogQueryWithMetrics()` wrapper
+
 - **Response Formats**:
   - Health/Ready endpoints return structured JSON with timestamps
   - Metrics endpoint exports Prometheus text format with HELP and TYPE lines
@@ -46,14 +54,21 @@ rss.chat.go is a Go port of Dave Winer's RSS.Chat platform. The project has comp
 **Files**:
 - `api/health.go` - Health check handler functions
 - `api/metrics.go` - Prometheus metrics initialization and management
-- `api/health_test.go` - 16 comprehensive tests for all endpoints
+- `api/health_test.go` - 16 comprehensive health check tests
+- `api/middleware.go` - Updated with metrics collection
+- `api/logging.go` - Added LogQueryWithMetrics() wrapper
+- `api/metrics_middleware_test.go` - 17 metrics middleware tests
 
-**Test Coverage**: 16 new tests covering:
+**Test Coverage**: 33 new tests (16 health check + 17 metrics middleware) covering:
 - Endpoint responses and status codes
 - Content-type headers
 - JSON/Prometheus format validation
 - Method validation (405 errors)
 - Response consistency
+- Counter increments
+- Histogram observations
+- Gauge operations
+- Query metric recording
 
 ### Phase 1: Core Logging Infrastructure ✅
 **Status**: COMPLETE (September 25, 2026)
@@ -200,11 +215,11 @@ HTTP Response
 ## Testing Status
 
 ### Test Suite Summary
-- **Total Tests**: 575+ (including 35 log tests + 16 health check tests)
-- **Test Packages**: 13 (api package includes 16 new health check tests)
+- **Total Tests**: 615+ (including 35 log tests + 16 health check tests + 17 metrics middleware tests)
+- **Test Packages**: 13 (api package includes comprehensive health check and metrics tests)
 - **Pass Rate**: 100%
 - **Race Detector**: ✅ All tests pass
-- **Coverage**: Core API, database layer, feed generation, publishing, logging, health checks, metrics
+- **Coverage**: Core API, database layer, feed generation, publishing, logging, health checks, metrics collection
 
 ### Test Commands
 ```bash
@@ -262,9 +277,9 @@ go test -race ./...             # Run full test suite
 
 ### Not Yet Implemented
 1. **Advanced Metrics & Observability**
-   - Error rate tracking per endpoint
-   - Latency percentiles (p50/p95/p99)
-   - Automatic metric collection in middleware (metrics registered but not incremented yet)
+   - Error rate tracking per endpoint (metrics available, aggregation in Prometheus)
+   - Latency percentiles (p50/p95/p99) - histogram buckets available, query in Prometheus
+   - WebSocket connection tracking (architectural complexity, metrics gauge available)
 
 3. **WebSocket Features**
    - `/subscribe` endpoint exists but incomplete
@@ -338,9 +353,10 @@ c755066 - Logging Phase 2: Integrate structured logging
 ## Next Steps / Future Roadmap
 
 ### Short Term (Next Sprint)
-1. **Metrics Collection** - Integrate metrics collection into middleware
-2. **Error Analytics** - Track error codes and frequencies by endpoint
-3. **Metric Instrumentation** - Increment counters and histograms on request lifecycle
+1. **Error Analytics Dashboard** - Aggregate error codes in Prometheus queries
+2. **Performance Monitoring** - Set up alerting on latency percentiles (p95, p99)
+3. **WebSocket Connection Tracking** - Implement metrics for real-time connections
+4. **Missing Endpoints** - Implement `/version` and `/readhttpfile`
 
 ### Medium Term (Q4 2026)
 1. **Advanced Observability**
@@ -405,18 +421,18 @@ rss.chat.go/
 │   ├── log.go                 # Core logging module
 │   └── log_test.go            # Comprehensive log package tests (35 tests)
 ├── api/
-│   ├── middleware.go          # HTTP request logger
-│   ├── errors.go              # Error response functions
-│   ├── errors_test.go         # Error response tests
-│   ├── logging.go             # API logging helpers
-│   ├── auth_endpoints.go      # Auth endpoints (migrated Phase 3)
-│   ├── writes.go              # Post handlers (migrated Phase 3)
-│   ├── handler.go             # All endpoints (migrated Phase 3)
-│   ├── endpoint_test.go       # Endpoint tests (updated Phase 3)
-│   ├── health.go              # Health check endpoints (Phase 4)
-│   ├── health_test.go         # Health check tests (16 tests)
-│   ├── metrics.go             # Prometheus metrics (Phase 4)
-│   └── metrics_test.go        # Metrics tests
+│   ├── middleware.go                   # HTTP request logger with metrics collection
+│   ├── errors.go                       # Error response functions
+│   ├── errors_test.go                  # Error response tests
+│   ├── logging.go                      # API logging helpers + LogQueryWithMetrics
+│   ├── auth_endpoints.go               # Auth endpoints (migrated Phase 3)
+│   ├── writes.go                       # Post handlers (migrated Phase 3)
+│   ├── handler.go                      # All endpoints (migrated Phase 3)
+│   ├── endpoint_test.go                # Endpoint tests (updated Phase 3)
+│   ├── health.go                       # Health check endpoints (Phase 4)
+│   ├── health_test.go                  # Health check tests (16 tests)
+│   ├── metrics.go                      # Prometheus metrics definition (Phase 4)
+│   └── metrics_middleware_test.go      # Middleware metrics tests (17 tests)
 ├── db/
 │   ├── logging.go             # Database logging helpers
 │   └── db.go                  # Database operations
