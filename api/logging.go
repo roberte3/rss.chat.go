@@ -3,8 +3,10 @@ package api
 import (
 	"context"
 	"net/http"
+	"time"
 
 	applog "github.com/roberte3/rss.chat.go/log"
+	"github.com/roberte3/rss.chat.go/db"
 )
 
 // LogAuthFailure logs an authentication failure without exposing sensitive details.
@@ -83,4 +85,22 @@ func LogFeatureUsage(ctx context.Context, feature string, count int) {
 func LogWarning(ctx context.Context, message string, details ...interface{}) {
 	logger := applog.WithContext(ctx)
 	logger.WarnContext(ctx, message, details...)
+}
+
+// LogQueryWithMetrics logs a database query and records metrics.
+// This wraps db.LogQuery to also record Prometheus metrics.
+func LogQueryWithMetrics(ctx context.Context, operation string, table string, startTime time.Time, err error) {
+	// Log the query (with standard logging)
+	db.LogQuery(ctx, operation, table, startTime, err)
+
+	// Record metrics
+	metrics := GetMetrics()
+	duration := time.Since(startTime)
+	durationSeconds := duration.Seconds()
+
+	// Increment query counter
+	metrics.DBQueriesTotal.Inc()
+
+	// Record query duration histogram
+	metrics.DBQueryDuration.Observe(durationSeconds)
 }

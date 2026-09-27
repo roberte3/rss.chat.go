@@ -10,11 +10,13 @@ import (
 	"github.com/roberte3/rss.chat.go/log"
 )
 
-// RequestLogger is middleware that logs HTTP requests and responses with request IDs.
+// RequestLogger is middleware that logs HTTP requests and responses with request IDs,
+// and collects Prometheus metrics.
 type RequestLogger struct {
 	next                http.Handler
 	requestIDHeader     string
 	logger              *slog.Logger
+	metrics             *Metrics
 	excludePaths        map[string]bool
 }
 
@@ -24,6 +26,7 @@ func NewRequestLogger(next http.Handler, requestIDHeader string) *RequestLogger 
 		next:            next,
 		requestIDHeader: requestIDHeader,
 		logger:          log.Logger(),
+		metrics:         GetMetrics(),
 		excludePaths: map[string]bool{
 			"/health":    true,
 			"/healthz":   true,
@@ -35,7 +38,7 @@ func NewRequestLogger(next http.Handler, requestIDHeader string) *RequestLogger 
 
 // ServeHTTP implements the http.Handler interface.
 func (rl *RequestLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	// Skip logging for health check endpoints
+	// Skip logging and metrics for health check endpoints
 	if rl.excludePaths[r.URL.Path] {
 		rl.next.ServeHTTP(w, r)
 		return
@@ -56,7 +59,7 @@ func (rl *RequestLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		statusCode:     http.StatusOK,
 	}
 
-	// Log request start
+	// Log request start and record request count
 	startTime := time.Now()
 	rl.logger.InfoContext(
 		r.Context(),
@@ -67,11 +70,25 @@ func (rl *RequestLogger) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		"remote_addr", r.RemoteAddr,
 	)
 
+	// Increment request counter
+	rl.metrics.HTTPRequestsTotal.Inc()
+
 	// Handle the request
 	rl.next.ServeHTTP(wrapped, r)
 
-	// Log request completion
+	// Record metrics
 	duration := time.Since(startTime)
+	durationSeconds := duration.Seconds()
+
+	// Record request duration histogram
+	rl.metrics.HTTPRequestDuration.Observe(durationSeconds)
+
+	// Count errors if status >= 400
+	if wrapped.statusCode >= 400 {
+		rl.metrics.HTTPErrorsTotal.Inc()
+	}
+
+	// Log request completion
 	contextLogger := log.WithContext(r.Context())
 	durationMs := fmt.Sprintf("%.2f", float64(duration.Milliseconds()))
 
